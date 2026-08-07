@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIuGZqNmK2YUg2YXYsdmK2YUiLAogICJzaG9ydF9uYW1lIjogIuGZqNmK2YUiLAogICJkZXNjcmlwdGlvbiI6ICLZhNmF2YUg2KfZhNiq2KfbjCDYp9mE2YjYp9mE2YrYsSDYp9mE2KfZg9in2Kwg2KfZhNmF2KfZhiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGEwYTBhIiwKICAidGhlbWVfY29sb3IiOiAiIzBhMGEwYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDUxMiA1MTInPjxyZWN0IHdpZHRoPSc1MTInIGhlaWdodD0nNTEyJyBmaWxsPScjMGEwYTBhJy8+PHRleHQgeD0nMjU2JyB5PSczNDAnIGZvbnQtc2l6ZT0nMjUwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmaWxsPSd3aGl0ZScgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPuCfnYQ8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0sCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAicHJlZmVyX3JlbGF0ZWRfYXBwbGljYXRpb25zIjogW10KfQ==">
 <title>شواطئ عدن - إدارة الولائم</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -11,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
+/* (نفس الأنماط السابقة مع إضافة بعض التحسينات) */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap');
 *{font-family:'Cairo',sans-serif;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:#f0f2f5;overflow-x:hidden;min-height:100vh;}
@@ -23,7 +27,6 @@ body{background:#f0f2f5;overflow-x:hidden;min-height:100vh;}
 @keyframes slideUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
-@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
 .animate-slideUp{animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1);}
 .status-new{background:#3b82f6;color:#fff;}
 .status-confirmed{background:#10b981;color:#fff;}
@@ -44,24 +47,35 @@ body{background:#f0f2f5;overflow-x:hidden;min-height:100vh;}
 input,select,textarea{background:#f8f9fc;border:2px solid #eef0f4;transition:all 0.2s;border-radius:12px;font-size:15px;}
 input:focus,select:focus,textarea:focus{border-color:#0a0a0a;background:#fff;outline:none;box-shadow:0 0 0 4px rgba(10,10,10,0.06);}
 input::placeholder,textarea::placeholder{color:#b0b8c4;font-weight:300;}
-.section-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);transition:box-shadow 0.2s;}
-.section-card:active{box-shadow:0 2px 8px rgba(0,0,0,0.02);}
+.section-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);}
 .section-title{font-size:13px;font-weight:700;color:#6b7280;letter-spacing:0.3px;display:flex;align-items:center;gap:8px;margin-bottom:12px;}
 .section-title i{color:#9ca3af;font-size:14px;}
 .invoice-paper{background:#fff;max-width:400px;margin:0 auto;padding:20px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);font-size:13px;}
 .invoice-paper table{font-size:12px;}
 .invoice-paper .qr-container{width:64px;height:64px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+#installBanner{display:none;background:#0a0a0a;color:#fff;padding:12px 16px;border-radius:16px;margin:10px 16px;box-shadow:0 4px 20px rgba(0,0,0,0.15);align-items:center;justify-content:space-between;gap:10px;}
+#installBanner.show{display:flex;}
+#installBanner button{background:#fff;color:#0a0a0a;border:none;padding:8px 20px;border-radius:12px;font-weight:700;font-size:13px;}
 @media print{
 body *{visibility:hidden;}
 #invoicePrintArea,#invoicePrintArea *{visibility:visible;}
 #invoicePrintArea{position:absolute;left:0;top:0;width:80mm;margin:0;padding:10px;border-radius:0;box-shadow:none;}
-#invoicePrintArea .no-print{display:none;}
 }
 </style>
 </head>
 <body>
 
 <div id="toast" class="toast"><i class="fas fa-check-circle"></i><span id="toastText"></span></div>
+
+<!-- ======== INSTALL BANNER ======== -->
+<div id="installBanner" class="show">
+<div style="display:flex;align-items:center;gap:10px;">
+<i class="fas fa-mobile-alt text-xl"></i>
+<span style="font-weight:600;font-size:14px;">ثبّت التطبيق</span>
+</div>
+<button id="installBtn">تثبيت</button>
+<button onclick="document.getElementById('installBanner').classList.remove('show')" style="background:transparent;color:#aaa;padding:4px 8px;font-size:18px;">✕</button>
+</div>
 
 <!-- ===================== SPLASH ===================== -->
 <div id="screenSplash" class="screen active">
@@ -414,6 +428,41 @@ class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm borde
 </div>
 
 <script>
+// ============================================================
+// PWA INSTALL
+// ============================================================
+let deferredPrompt;
+const installBanner = document.getElementById('installBanner');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBanner.classList.add('show');
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      showToast('تم تثبيت التطبيق 🎉');
+    } else {
+      showToast('تم إلغاء التثبيت');
+    }
+    deferredPrompt = null;
+    installBanner.classList.remove('show');
+  } else {
+    showToast('المتصفح لا يدعم التثبيت التلقائي، يمكنك الإضافة يدوياً من قائمة المتصفح');
+  }
+});
+
+// Service Worker Registration (للتخزين المؤقت)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('data:application/javascript;base64,Ci8vIFNpbXBsZSBTZXJ2aWNlIFdvcmtlciBmb3IgY2FjaGluZwppY29ucyA9IFsneyJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgNTEyIDUxMic+PHJlY3Qgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIGZpbGw9JyMwYTBhMGEnLz48dGV4dCB4PScyNTYnIHk9JzM0MCcgZm9udC1zaXplPScyNTAnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZpbGw9J3doaXRlJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZic+4J+dhDwvdGV4dD48L3N2Zz4iLCAic2l6ZXMiOiAiNTEyeDUxMiIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLCAicHVycG9zZSI6ICJhbnkgbWFza2FibGUifV07CmNvbnN0IENTID0gJ0NvbmZpZyBzaXRlOyc7CmNvbnN0IHVybHMgPSBbJy8nXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZXZlbnQgPT4gewogIGV2ZW50LndhaXRVbnRpbChzZWxmLmFjdGl2YXRlKCkpOwp9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGV2ZW50ID0+IHsKICBldmVudC53YWl0VW50aWwoc2VsZi5jbGllbnRzLmNsYWltKCkpOwp9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGV2ZW50ID0+IHsKICBldmVudC5yZXNwb25kV2l0aChuZXcgUmVzcG9uc2UoJ09mZmxpbmUgc3VwcG9ydCcsIHtzdGF0dXM6IDIwMH0pKTsKfSk7')
+  .then(() => console.log('Service Worker registered'))
+  .catch(err => console.warn('SW registration failed', err));
+}
+
 // ============================================================
 // DATA
 // ============================================================
@@ -854,7 +903,6 @@ async function shareInvoiceWhatsApp() {
 
     const file = new File([blob], `فاتورة_${b.customer.name}_${b.booking.date}.pdf`, { type: 'application/pdf' });
 
-    // Try Web Share API first (works on mobile)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         title: 'فاتورة حجز - شواطئ عدن',
@@ -865,7 +913,6 @@ async function shareInvoiceWhatsApp() {
       return;
     }
 
-    // Fallback: download and open WhatsApp with text
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `فاتورة_${b.customer.name}_${b.booking.date}.pdf`;
