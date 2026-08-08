@@ -1,1254 +1,1229 @@
- <!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0a0a0a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIuGZqNmK2YUg2YXYsdmK2YUiLAogICJzaG9ydF9uYW1lIjogIuGZqNmK2YUiLAogICJkZXNjcmlwdGlvbiI6ICLZhNmF2YUg2KfZhNiq2KfbjCDYp9mE2YjYp9mE2YrYsSDYp9mE2KfZg9in2Kwg2KfZhNmF2KfZhiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGEwYTBhIiwKICAidGhlbWVfY29sb3IiOiAiIzBhMGEwYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDUxMiA1MTInPjxyZWN0IHdpZHRoPSc1MTInIGhlaWdodD0nNTEyJyBmaWxsPScjMGEwYTBhJy8+PHRleHQgeD0nMjU2JyB5PSczNDAnIGZvbnQtc2l6ZT0nMjUwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmaWxsPSd3aGl0ZScgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPuCfnYQ8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0sCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAicHJlZmVyX3JlbGF0ZWRfYXBwbGljYXRpb25zIjogW10KfQ==">
-<title>شواطئ عدن - إدارة الولائم</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap');
-*{font-family:'Cairo',sans-serif;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{background:#f0f2f5;overflow-x:hidden;min-height:100vh;}
-.screen{display:none;min-height:100vh;animation:fadeIn 0.3s ease-out;}
-.screen.active{display:block;}
-#screenSplash.active{display:flex;}
-::-webkit-scrollbar{width:0;height:0;}
-.btn-press{transition:transform 0.15s cubic-bezier(0.16,1,0.3,1);}
-.btn-press:active{transform:scale(0.94);}
-@keyframes slideUp{from{transform:translateY(24px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
-.animate-slideUp{animation:slideUp 0.4s cubic-bezier(0.16,1,0.3,1);}
-.status-new{background:#3b82f6;color:#fff;}
-.status-confirmed{background:#10b981;color:#fff;}
-.status-completed{background:#8b5cf6;color:#fff;}
-.status-cancelled{background:#ef4444;color:#fff;}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#ffffff;border-top:1px solid rgba(0,0,0,0.05);z-index:50;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 20px rgba(0,0,0,0.06);}
-.bottom-nav .nav-btn{color:#9ca3af;transition:color 0.2s;}
-.bottom-nav .nav-btn.active{color:#0a0a0a;}
-.bottom-nav .nav-btn .nav-icon{transition:transform 0.2s;}
-.bottom-nav .nav-btn.active .nav-icon{transform:scale(1.1);}
-.badge-count{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;border:2px solid #fff;}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);z-index:60;display:none;align-items:center;justify-content:center;padding:20px;}
-.modal-overlay.active{display:flex;}
-.modal-content{background:#fff;border-radius:20px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;animation:slideUp 0.35s cubic-bezier(0.16,1,0.3,1);}
-.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-120px);background:#1a1a2e;color:#fff;padding:14px 28px;border-radius:14px;z-index:100;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);box-shadow:0 12px 40px rgba(0,0,0,0.25);font-weight:600;font-size:14px;pointer-events:none;white-space:nowrap;}
-.toast.show{transform:translateX(-50%) translateY(0);}
-.toast i{margin-left:10px;}
-input,select,textarea{background:#f8f9fc;border:2px solid #eef0f4;transition:all 0.2s;border-radius:12px;font-size:15px;}
-input:focus,select:focus,textarea:focus{border-color:#0a0a0a;background:#fff;outline:none;box-shadow:0 0 0 4px rgba(10,10,10,0.06);}
-input::placeholder,textarea::placeholder{color:#b0b8c4;font-weight:300;}
-.section-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.04);}
-.section-title{font-size:13px;font-weight:700;color:#6b7280;letter-spacing:0.3px;display:flex;align-items:center;gap:8px;margin-bottom:12px;}
-.section-title i{color:#9ca3af;font-size:14px;}
-.invoice-paper{background:#fff;max-width:400px;margin:0 auto;padding:20px;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.06);font-size:13px;}
-.invoice-paper table{font-size:12px;}
-.invoice-paper .qr-container{width:64px;height:64px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-#installBanner{display:none;background:#0a0a0a;color:#fff;padding:12px 16px;border-radius:16px;margin:10px 16px;box-shadow:0 4px 20px rgba(0,0,0,0.15);align-items:center;justify-content:space-between;gap:10px;}
-#installBanner.show{display:flex;}
-#installBanner button{background:#fff;color:#0a0a0a;border:none;padding:8px 20px;border-radius:12px;font-weight:700;font-size:13px;}
-@media print{
-body *{visibility:hidden;}
-#invoicePrintArea,#invoicePrintArea *{visibility:visible;}
-#invoicePrintArea{position:absolute;left:0;top:0;width:80mm;margin:0;padding:10px;border-radius:0;box-shadow:none;}
-}
-.invoice-editable-input{width:70px;padding:4px 6px;border:1px solid #ccc;border-radius:6px;text-align:center;font-size:13px;background:#fff;}
-.invoice-editable-input:focus{border-color:#000;outline:none;box-shadow:0 0 0 2px rgba(0,0,0,0.1);}
-</style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <link
+      rel="manifest"
+      href="data:application/json;base64,ewogICJuYW1lIjogIuGZqNmK2YUg2YXYsdmK2YUiLAogICJzaG9ydF9uYW1lIjogIuGZqNmK2YUiLAogICJkZXNjcmlwdGlvbiI6ICLZhNmF2YUg2KfZhNiq2KfbjCDYp9mE2YjYp9mE2YrYsSDYp9mE2KfZg9in2Kwg2KfZhNmF2KfZhiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGYxNzJhIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDUxMiA1MTInPjxyZWN0IHdpZHRoPSc1MTInIGhlaWdodD0nNTEyJyBmaWxsPScjMGYxNzJhJy8+PHRleHQgeD0nMjU2JyB5PSczNDAnIGZvbnQtc2l6ZT0nMjUwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmaWxsPSd3aGl0ZScgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPteq2KfYryA8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0sCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAicHJlZmVyX3JlbGF0ZWRfYXBwbGljYXRpb25zIjogW10KfQ=="
+    />
+    <title>شواطئ عدن - إدارة الولائم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+      /* ========== متغيرات الألوان العالمية ========== */
+      :root {
+        --color-primary: #0f172a;
+        --color-primary-light: #1e293b;
+        --color-bg: #f1f5f9;
+        --color-card: #ffffff;
+        --color-text: #0f172a;
+        --color-text-muted: #64748b;
+        --color-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        --color-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.1);
+        --radius-lg: 24px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+        --color-accent-blue: #3b82f6;
+        --color-accent-green: #10b981;
+        --color-accent-purple: #8b5cf6;
+        --color-accent-red: #ef4444;
+        --color-accent-yellow: #f59e0b;
+      }
 
-<div id="toast" class="toast"><i class="fas fa-check-circle"></i><span id="toastText"></span></div>
+      /* ========== الأنماط الأساسية ========== */
+      * {
+        font-family: "Cairo", sans-serif;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
 
-<!-- ======== INSTALL BANNER ======== -->
-<div id="installBanner" class="show">
-<div style="display:flex;align-items:center;gap:10px;">
-<i class="fas fa-mobile-alt text-xl"></i>
-<span style="font-weight:600;font-size:14px;">ثبّت التطبيق</span>
-</div>
-<button id="installBtn">تثبيت</button>
-<button onclick="document.getElementById('installBanner').classList.remove('show')" style="background:transparent;color:#aaa;padding:4px 8px;font-size:18px;">✕</button>
-</div>
+      body {
+        background: var(--color-bg);
+        overflow-x: hidden;
+        min-height: 100vh;
+        padding-bottom: 80px;
+      }
 
-<!-- ===================== SPLASH ===================== -->
-<div id="screenSplash" class="screen active">
-<div class="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a] text-white">
-<div class="w-28 h-28 rounded-3xl bg-white flex items-center justify-center mb-5 shadow-2xl" style="animation:pulse 2s infinite;">
-<i class="fas fa-utensils text-5xl text-black"></i>
-</div>
-<h1 class="text-3xl font-black tracking-tight">شواطئ عدن</h1>
-<p class="text-gray-500 text-sm font-medium mt-1">مطابخ ومطاعم</p>
-<div class="mt-6 flex gap-1">
-<span class="w-2 h-2 rounded-full bg-white/20 animate-pulse" style="animation-delay:0s;"></span>
-<span class="w-2 h-2 rounded-full bg-white/20 animate-pulse" style="animation-delay:0.2s;"></span>
-<span class="w-2 h-2 rounded-full bg-white/20 animate-pulse" style="animation-delay:0.4s;"></span>
-</div>
-</div>
-</div>
+      .screen {
+        display: none;
+        min-height: 100vh;
+        animation: fadeIn 0.3s ease-out;
+      }
+      .screen.active {
+        display: block;
+      }
+      #screenSplash.active {
+        display: flex;
+      }
 
-<!-- ===================== HOME ===================== -->
-<div id="screenHome" class="screen">
-<div class="min-h-screen bg-[#f0f2f5] pb-20">
-<div class="bg-[#0a0a0a] text-white px-5 pt-8 pb-6 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-3">
-<div class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/5">
-<i class="fas fa-utensils text-lg text-white/80"></i>
-</div>
-<div>
-<h1 class="font-black text-lg leading-tight">شواطئ عدن</h1>
-<p class="text-[11px] text-gray-400 font-medium">إدارة الولائم</p>
-</div>
-</div>
-<button onclick="showScreen('screenSettings')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
-<i class="fas fa-sliders-h text-sm text-white/70"></i>
-</button>
-</div>
-<div class="grid grid-cols-3 gap-2.5 mt-5">
-<div class="bg-white/5 rounded-2xl p-3 text-center backdrop-blur-sm border border-white/5">
-<p class="text-2xl font-black" id="statToday">0</p>
-<p class="text-[10px] text-gray-400 font-medium mt-0.5">اليوم</p>
-</div>
-<div class="bg-white/5 rounded-2xl p-3 text-center backdrop-blur-sm border border-white/5">
-<p class="text-2xl font-black text-yellow-400" id="statPending">0</p>
-<p class="text-[10px] text-gray-400 font-medium mt-0.5">معلق</p>
-</div>
-<div class="bg-white/5 rounded-2xl p-3 text-center backdrop-blur-sm border border-white/5">
-<p class="text-2xl font-black" id="statTotal">0</p>
-<p class="text-[10px] text-gray-400 font-medium mt-0.5">إجمالي</p>
-</div>
-</div>
-</div>
-<div class="px-4 -mt-4 relative z-10">
-<div class="grid grid-cols-2 gap-3">
-<button onclick="showScreen('screenNewBooking')" class="bg-white rounded-2xl p-5 text-center btn-press shadow-lg border border-white/50 animate-slideUp">
-<div class="w-14 h-14 bg-[#0a0a0a] rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-inner">
-<i class="fas fa-plus text-white text-2xl"></i>
-</div>
-<p class="text-sm font-bold text-gray-800">حجز جديد</p>
-</button>
-<button onclick="showScreen('screenBookings')" class="bg-white rounded-2xl p-5 text-center btn-press shadow-lg border border-white/50 animate-slideUp" style="animation-delay:0.08s;">
-<div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-2">
-<i class="fas fa-calendar-check text-2xl text-gray-700"></i>
-</div>
-<p class="text-sm font-bold text-gray-800">كل الحجوزات</p>
-</button>
-</div>
-</div>
-<div class="px-4 mt-6">
-<div class="flex items-center justify-between mb-3">
-<h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
-<i class="fas fa-calendar-day text-blue-500 text-sm"></i> حجوزات اليوم
-</h2>
-<button onclick="showScreen('screenBookings')" class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full btn-press">عرض الكل</button>
-</div>
-<div id="todayBookingsList" class="space-y-2.5"></div>
-</div>
-<div class="px-4 mt-6 pb-6">
-<h2 class="font-bold text-base text-gray-800 flex items-center gap-2 mb-3">
-<i class="fas fa-calendar-alt text-purple-500 text-sm"></i> الحجوزات القادمة
-</h2>
-<div id="upcomingBookingsList" class="space-y-2.5"></div>
-</div>
-</div>
-</div>
+      ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+      }
 
-<!-- ===================== BOOKINGS ===================== -->
-<div id="screenBookings" class="screen">
-<div class="min-h-screen bg-[#f0f2f5] pb-20">
-<div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
-<div class="flex items-center gap-3 mb-5">
-<button onclick="showScreen('screenHome')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
-<i class="fas fa-arrow-right text-sm"></i>
-</button>
-<h1 class="font-bold text-lg">الحجوزات</h1>
-</div>
-<div class="relative">
-<i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-<input type="text" id="searchBookings" placeholder="ابحث بالاسم أو الجوال أو التاريخ..." 
-class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-none focus:bg-white/20 placeholder:text-gray-500" oninput="filterBookings()">
-</div>
-<div class="flex gap-2 mt-4 overflow-x-auto pb-1 no-scrollbar" id="statusFilters">
-<button onclick="filterByStatus('all', this)" class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white text-black whitespace-nowrap">الكل</button>
-<button onclick="filterByStatus('new', this)" class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap">جديد</button>
-<button onclick="filterByStatus('confirmed', this)" class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap">مؤكد</button>
-<button onclick="filterByStatus('completed', this)" class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap">مكتمل</button>
-<button onclick="filterByStatus('cancelled', this)" class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap">ملغي</button>
-</div>
-</div>
-<div class="px-4 pt-4" id="allBookingsList"></div>
-</div>
-</div>
+      .btn-press {
+        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .btn-press:active {
+        transform: scale(0.94);
+      }
 
-<!-- ===================== NEW BOOKING ===================== -->
-<div id="screenNewBooking" class="screen">
-<div class="min-h-screen bg-[#f0f2f5] pb-24">
-<div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
-<div class="flex items-center gap-3">
-<button onclick="showScreen('screenHome')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
-<i class="fas fa-arrow-right text-sm"></i>
-</button>
-<h1 class="font-bold text-lg" id="bookingFormTitle">حجز جديد</h1>
-</div>
-</div>
-<div class="px-4 pt-4 space-y-3.5">
-<div class="section-card">
-<div class="section-title"><i class="fas fa-user"></i> بيانات العميل</div>
-<input type="text" id="custName" placeholder="اسم العميل" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="tel" id="custPhone" placeholder="رقم الجوال" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="custLocation" placeholder="الموقع" class="w-full px-4 py-3.5 text-sm">
-</div>
-<div class="section-card">
-<div class="section-title"><i class="fas fa-calendar-alt"></i> تفاصيل الحجز</div>
-<input type="date" id="bookingDate" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="time" id="bookingTime" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="bookingMark" placeholder="العلامة / رقم القاعة" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<select id="deliveryTime" class="w-full px-4 py-3.5 text-sm">
-<option value="صباحاً">صباحاً</option>
-<option value="ظهراً" selected>ظهراً</option>
-<option value="مساءً">مساءً</option>
-</select>
-</div>
-<div class="section-card">
-<div class="section-title"><i class="fas fa-shopping-basket"></i> الطلبات الجانبية (السعر قابل للتعديل)</div>
-<div id="sideOrdersContainer" class="space-y-2 mb-3"></div>
-<button onclick="addSideOrderRow()" class="w-full border-2 border-dashed border-gray-200 rounded-2xl py-3 text-sm text-gray-400 font-semibold btn-press hover:border-gray-300 transition-colors">
-<i class="fas fa-plus ml-1.5"></i> إضافة صنف جانبي
-</button>
-</div>
-<div class="section-card">
-<div class="section-title"><i class="fas fa-sticky-note"></i> ملاحظات (تفاصيل الوليمة)</div>
-<textarea id="bookingNotes" placeholder="اكتب هنا تفاصيل الوليمة بالكامل (الذبائح، نوع الطبخ، التفصيل، الصحون، إلخ)" rows="4" class="w-full px-4 py-3.5 text-sm resize-none"></textarea>
-</div>
-<div class="section-card">
-<div class="section-title"><i class="fas fa-money-bill-wave"></i> المالية</div>
-<div class="flex items-center justify-between bg-gray-50 rounded-2xl p-3.5 mb-3">
-<span class="text-sm text-gray-500 font-semibold">إجمالي الطلبات</span>
-<span class="font-black text-lg" id="bookingTotalDisplay">0.00 ر.س</span>
-</div>
-<input type="number" id="platesDeposit" placeholder="رهن الصحون (مبلغ ثابت)" class="w-full px-4 py-3.5 mb-3 text-sm" oninput="calcBookingTotal()">
-<input type="number" id="depositAmount" placeholder="مبلغ العربون المدفوع" class="w-full px-4 py-3.5 mb-3 text-sm" oninput="calcBookingTotal()">
-<div class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5">
-<span class="text-sm text-red-400 font-semibold">المتبقي</span>
-<span class="font-black text-lg text-red-600" id="remainingDisplay">0.00 ر.س</span>
-</div>
-</div>
-<button onclick="saveBooking()" class="w-full bg-[#0a0a0a] text-white rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2">
-<i class="fas fa-save"></i> حفظ الحجز
-</button>
-</div>
-</div>
-</div>
+      @keyframes slideUp {
+        from {
+          transform: translateY(24px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.04);
+        }
+      }
 
-<!-- ===================== INVOICE (مع إمكانية التعديل) ===================== -->
-<div id="screenInvoice" class="screen">
-<div class="min-h-screen bg-[#f0f2f5] pb-24">
-<div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
-<div class="flex items-center gap-3">
-<button onclick="showScreen('screenBookings')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
-<i class="fas fa-arrow-right text-sm"></i>
-</button>
-<h1 class="font-bold text-lg">الفاتورة - تعديل</h1>
-</div>
-</div>
-<div class="px-4 pt-4">
-<div id="invoiceContainer"></div>
-<div class="grid grid-cols-2 gap-3 mt-4">
-<button onclick="saveInvoiceChanges()" class="bg-blue-600 text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
-<i class="fas fa-save"></i> حفظ التعديلات
-</button>
-<button onclick="printInvoice()" class="bg-[#0a0a0a] text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
-<i class="fas fa-print"></i> طباعة
-</button>
-</div>
-<div class="grid grid-cols-2 gap-3 mt-3">
-<button onclick="shareInvoiceWhatsApp()" class="bg-[#25D366] text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
-<i class="fab fa-whatsapp text-xl"></i> واتساب
-</button>
-<button onclick="downloadPDF()" class="bg-gray-800 text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
-<i class="fas fa-file-pdf"></i> تحميل PDF
-</button>
-</div>
-</div>
-</div>
-</div>
+      .animate-slideUp {
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
 
-<!-- ===================== ITEMS (بدون حقل رهن) ===================== -->
-<div id="screenItems" class="screen">
-<div class="min-h-screen bg-[#f0f2f5] pb-24">
-<div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
-<div class="flex items-center gap-3 mb-5">
-<button onclick="showScreen('screenHome')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
-<i class="fas fa-arrow-right text-sm"></i>
-</button>
-<h1 class="font-bold text-lg">الأصناف</h1>
-</div>
-<div class="relative">
-<i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-<input type="text" id="searchItems" placeholder="ابحث عن صنف..." 
-class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-none focus:bg-white/20 placeholder:text-gray-500" oninput="filterItems()">
-</div>
-</div>
-<div class="px-4 pt-4">
-<div class="section-card mb-4">
-<h3 class="font-bold text-sm mb-3 text-gray-700 flex items-center gap-2"><i class="fas fa-plus-circle text-gray-400"></i> إضافة صنف جديد</h3>
-<input type="text" id="newItemName" placeholder="اسم الصنف" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="number" id="newItemPrice" placeholder="السعر" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<select id="newItemCategory" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<option value="side">طلب جانبي</option>
-<option value="sacrifice">ذبيحة</option>
-<option value="cooking">طبخ</option>
-<option value="other">أخرى</option>
-</select>
-<button onclick="addItem()" class="w-full bg-[#0a0a0a] text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2">
-<i class="fas fa-plus"></i> إضافة
-</button>
-</div>
-<div id="itemsList" class="space-y-2"></div>
-</div>
-</div>
-</div>
+      /* ========== حالة الحجوزات ========== */
+      .status-new {
+        background: var(--color-accent-blue);
+        color: #fff;
+      }
+      .status-confirmed {
+        background: var(--color-accent-green);
+        color: #fff;
+      }
+      .status-completed {
+        background: var(--color-accent-purple);
+        color: #fff;
+      }
+      .status-cancelled {
+        background: var(--color-accent-red);
+        color: #fff;
+      }
 
-<!-- ===================== SETTINGS ===================== -->
-<div id="screenSettings" class="screen">
-<div class="min-h-screen bg-[#f0f2f5] pb-24">
-<div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
-<div class="flex items-center gap-3">
-<button onclick="showScreen('screenHome')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
-<i class="fas fa-arrow-right text-sm"></i>
-</button>
-<h1 class="font-bold text-lg">الإعدادات</h1>
-</div>
-</div>
-<div class="px-4 pt-4 space-y-3.5">
-<div class="section-card">
-<div class="section-title"><i class="fas fa-store"></i> بيانات المطعم</div>
-<input type="text" id="restName" placeholder="اسم المطعم" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="restSubtitle" placeholder="الوصف" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="tel" id="restPhone" placeholder="رقم الهاتف" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="tel" id="restDelivery" placeholder="رقم التوصيل" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="restAddress" placeholder="العنوان" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="restSocial" placeholder="حساب التواصل" class="w-full px-4 py-3.5 text-sm">
-</div>
-<div class="section-card">
-<div class="section-title"><i class="fas fa-database"></i> النسخ الاحتياطي</div>
-<button onclick="exportData()" class="w-full bg-gray-100 text-black rounded-2xl py-3.5 font-bold mb-2.5 btn-press flex items-center justify-center gap-2">
-<i class="fas fa-download"></i> تصدير البيانات
-</button>
-<label class="w-full bg-gray-100 text-black rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 cursor-pointer">
-<i class="fas fa-upload"></i> استيراد البيانات
-<input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(this)">
-</label>
-</div>
-<button onclick="saveSettings()" class="w-full bg-[#0a0a0a] text-white rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2">
-<i class="fas fa-save"></i> حفظ الإعدادات
-</button>
-</div>
-</div>
-</div>
+      /* ========== القائمة السفلية ========== */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--color-card);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        z-index: 50;
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+      }
+      .bottom-nav .nav-btn {
+        color: #9ca3af;
+        transition: color 0.2s;
+      }
+      .bottom-nav .nav-btn.active {
+        color: var(--color-primary);
+      }
+      .bottom-nav .nav-btn .nav-icon {
+        transition: transform 0.2s;
+      }
+      .bottom-nav .nav-btn.active .nav-icon {
+        transform: scale(1.1);
+      }
 
-<!-- ===================== MODAL لتعديل الصنف ===================== -->
-<div id="editItemModal" class="modal-overlay">
-<div class="modal-content p-5">
-<h3 class="font-bold text-lg mb-4 text-center">تعديل الصنف</h3>
-<input type="hidden" id="editItemId">
-<input type="text" id="editItemName" placeholder="اسم الصنف" class="w-full px-4 py-3.5 mb-2.5 text-sm border-2 border-gray-200 rounded-xl">
-<input type="number" id="editItemPrice" placeholder="السعر" class="w-full px-4 py-3.5 mb-2.5 text-sm border-2 border-gray-200 rounded-xl">
-<select id="editItemCategory" class="w-full px-4 py-3.5 mb-3 text-sm border-2 border-gray-200 rounded-xl">
-<option value="side">طلب جانبي</option>
-<option value="sacrifice">ذبيحة</option>
-<option value="cooking">طبخ</option>
-<option value="other">أخرى</option>
-</select>
-<div class="flex gap-3">
-<button onclick="closeModal()" class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press">إلغاء</button>
-<button onclick="updateItem()" class="flex-1 bg-[#0a0a0a] text-white rounded-2xl py-3.5 font-bold btn-press">حفظ التعديل</button>
-</div>
-</div>
-</div>
+      .badge-count {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: var(--color-accent-red);
+        color: #fff;
+        font-size: 9px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        border: 2px solid #fff;
+      }
 
-<!-- ===================== BOTTOM NAV ===================== -->
-<div class="bottom-nav">
-<div class="flex items-center justify-around py-2.5 px-2 max-w-md mx-auto">
-<button onclick="showScreen('screenHome')" class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1 active" data-screen="screenHome">
-<i class="fas fa-home nav-icon text-lg"></i>
-<span class="text-[10px] font-bold">الرئيسية</span>
-</button>
-<button onclick="showScreen('screenBookings')" class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1 relative" data-screen="screenBookings">
-<i class="fas fa-calendar-check nav-icon text-lg"></i>
-<span class="text-[10px] font-bold">الحجوزات</span>
-<span class="badge-count" id="navBadge" style="display:none;">0</span>
-</button>
-<button onclick="showScreen('screenNewBooking')" class="nav-btn flex flex-col items-center -mt-6 px-2" data-screen="screenNewBooking">
-<div class="w-14 h-14 bg-[#0a0a0a] rounded-2xl flex items-center justify-center shadow-xl border-4 border-white">
-<i class="fas fa-plus text-white text-2xl"></i>
-</div>
-</button>
-<button onclick="showScreen('screenItems')" class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1" data-screen="screenItems">
-<i class="fas fa-utensils nav-icon text-lg"></i>
-<span class="text-[10px] font-bold">الأصناف</span>
-</button>
-<button onclick="showScreen('screenSettings')" class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1" data-screen="screenSettings">
-<i class="fas fa-sliders-h nav-icon text-lg"></i>
-<span class="text-[10px] font-bold">الإعدادات</span>
-</button>
-</div>
-</div>
+      /* ========== المودالات ========== */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(6px);
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .modal-overlay.active {
+        display: flex;
+      }
+      .modal-content {
+        background: var(--color-card);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 400px;
+        max-height: 85vh;
+        overflow-y: auto;
+        animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
 
-<!-- ===================== MODALS (تأكيد) ===================== -->
-<div id="confirmModal" class="modal-overlay">
-<div class="modal-content p-6 text-center">
-<div class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3">
-<i class="fas fa-exclamation-triangle text-2xl text-yellow-500"></i>
-</div>
-<h3 class="font-bold text-lg mb-1">تأكيد</h3>
-<p class="text-gray-500 text-sm mb-5" id="confirmText"></p>
-<div class="flex gap-3">
-<button onclick="closeModal()" class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press">إلغاء</button>
-<button id="confirmBtn" class="flex-1 bg-red-500 text-white rounded-2xl py-3.5 font-bold btn-press">تأكيد</button>
-</div>
-</div>
-</div>
+      /* ========== التوست ========== */
+      .toast {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-120px);
+        background: var(--color-primary);
+        color: #fff;
+        padding: 14px 28px;
+        border-radius: 14px;
+        z-index: 100;
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        font-weight: 600;
+        font-size: 14px;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+      .toast i {
+        margin-left: 10px;
+      }
 
-<div id="statusModal" class="modal-overlay">
-<div class="modal-content p-5">
-<h3 class="font-bold text-lg mb-4 text-center">تغيير الحالة</h3>
-<div class="grid grid-cols-2 gap-3">
-<button onclick="changeStatus('new')" class="bg-blue-500 text-white rounded-2xl py-3.5 font-bold btn-press">جديد</button>
-<button onclick="changeStatus('confirmed')" class="bg-green-500 text-white rounded-2xl py-3.5 font-bold btn-press">مؤكد</button>
-<button onclick="changeStatus('completed')" class="bg-purple-500 text-white rounded-2xl py-3.5 font-bold btn-press">مكتمل</button>
-<button onclick="changeStatus('cancelled')" class="bg-red-500 text-white rounded-2xl py-3.5 font-bold btn-press">ملغي</button>
-</div>
-<button onclick="closeModal()" class="w-full mt-3 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press">إلغاء</button>
-</div>
-</div>
+      /* ========== المدخلات والعناصر ========== */
+      input,
+      select,
+      textarea {
+        background: #f8f9fc;
+        border: 2px solid #eef0f4;
+        transition: all 0.2s;
+        border-radius: var(--radius-sm);
+        font-size: 15px;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--color-primary);
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
+      }
+      input::placeholder,
+      textarea::placeholder {
+        color: #b0b8c4;
+        font-weight: 300;
+      }
 
-<script>
-// ============================================================
-// PWA INSTALL
-// ============================================================
-let deferredPrompt;
-const installBanner = document.getElementById('installBanner');
+      .section-card {
+        background: var(--color-card);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        box-shadow: var(--color-shadow);
+      }
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--color-text-muted);
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .section-title i {
+        color: #9ca3af;
+        font-size: 14px;
+      }
 
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  installBanner.classList.add('show');
-});
+      /* ========== الفاتورة ========== */
+      .invoice-paper {
+        background: #fff;
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 20px;
+        border-radius: var(--radius-md);
+        box-shadow: var(--color-shadow);
+        font-size: 13px;
+      }
+      .invoice-paper table {
+        font-size: 12px;
+      }
+      .invoice-paper .qr-container {
+        width: 80px;
+        height: 80px;
+        background: #fff;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 4px;
+        border: 1px solid #e5e7eb;
+      }
+      .invoice-editable-input {
+        width: 70px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        text-align: center;
+        font-size: 13px;
+        background: #fff;
+      }
+      .invoice-editable-input:focus {
+        border-color: var(--color-primary);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+      }
 
-document.getElementById('installBtn').addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      showToast('تم تثبيت التطبيق 🎉');
-    } else {
-      showToast('تم إلغاء التثبيت');
-    }
-    deferredPrompt = null;
-    installBanner.classList.remove('show');
-  } else {
-    showToast('المتصفح لا يدعم التثبيت التلقائي، يمكنك الإضافة يدوياً من قائمة المتصفح');
-  }
-});
+      /* ========== شاشة البداية ========== */
+      #installBanner {
+        display: none;
+        background: var(--color-primary);
+        color: #fff;
+        padding: 12px 16px;
+        border-radius: var(--radius-md);
+        margin: 10px 16px;
+        box-shadow: var(--color-shadow);
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      #installBanner.show {
+        display: flex;
+      }
+      #installBanner button {
+        background: #fff;
+        color: var(--color-primary);
+        border: none;
+        padding: 8px 20px;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+        font-size: 13px;
+      }
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('data:application/javascript;base64,Ci8vIFNpbXBsZSBTZXJ2aWNlIFdvcmtlciBmb3IgY2FjaGluZwppY29ucyA9IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJz48cmVjdCB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgZmlsbD0nIzBhMGEwYScvPjx0ZXh0IHg9JzI1NicgeT0nMzQwJyBmb250LXNpemU9JzI1MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZmlsbD0nd2hpdGUnIGZvbnQtZmFtaWx5PSdzYW5zLXNlcmlmJz7gn52EPC90ZXh0Pjwvc3ZnPiIsICJzaXplcyI6ICI1MTJ4NTEyIiwgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSJ9XTsKY29uc3QgQ1MgPSAnQ29uZmlnIHNpdGU6JzsKY29uc3QgdXJscyA9IFsnLyddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBldmVudCA9PiB7CiAgZXZlbnQud2FpdFVudGlsKHNlbGYuYWN0aXZhdGUoKSk7Cn0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZXZlbnQgPT4gewogIGV2ZW50LndhaXRVbnRpbChzZWxmLmNsaWVudHMuY2xhaW0oKSk7Cn0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2ZldGNoJywgZXZlbnQgPT4gewogIGV2ZW50LnJlc3BvbmRXaXRoKG5ldyBSZXNwb25zZSgnT2ZmbGluZSBzdXBwb3J0Jywge3N0YXR1czogMjAwfSkpOwp9KTs=')
-  .then(() => console.log('Service Worker registered'))
-  .catch(err => console.warn('SW registration failed', err));
-}
+      /* ========== الطباعة ========== */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #invoicePrintArea,
+        #invoicePrintArea * {
+          visibility: visible;
+        }
+        #invoicePrintArea {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 80mm;
+          margin: 0;
+          padding: 10px;
+          border-radius: 0;
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toast" class="toast">
+      <i class="fas fa-check-circle"></i><span id="toastText"></span>
+    </div>
 
-// ============================================================
-// DATA
-// ============================================================
-const defaultSettings = {
-  restaurant: {
-    name: "شواطئ عدن",
-    subtitle: "مطابخ ومطاعم",
-    specialty: "للحجوزات والولائم والمناسبات",
-    phone: "0550724459",
-    delivery: "0547504445",
-    address: "جده شارع جاك - جوار كودو",
-    social: "@SHAWATI_ADEN"
-  }
-};
-
-// الأصناف بدون حقل رهن
-const defaultItems = [
-  {id:1, name:"أرز بسمتي", price:25, category:"side"},
-  {id:2, name:"سلطة خضراء", price:15, category:"side"},
-  {id:3, name:"تبولة", price:12, category:"side"},
-  {id:4, name:"حمص", price:10, category:"side"},
-  {id:5, name:"مشاوي مشكلة", price:80, category:"side"},
-  {id:6, name:"دجاج مشوي", price:45, category:"side"},
-  {id:7, name:"خبز", price:2, category:"side"},
-  {id:8, name:"ماء", price:1, category:"side"},
-  {id:9, name:"عصير برتقال", price:8, category:"side"},
-  {id:10, name:"فحم", price:15, category:"other"}
-];
-
-let appData = {
-  settings: JSON.parse(JSON.stringify(defaultSettings)),
-  items: JSON.parse(JSON.stringify(defaultItems)),
-  bookings: [],
-  currentFilter: 'all',
-  editingId: null,
-  tempBookingId: null,
-  currentInvoiceId: null
-};
-
-// ============================================================
-// INIT
-// ============================================================
-function init() {
-  loadData();
-  setTimeout(() => {
-    showScreen('screenHome');
-    updateStats();
-    renderTodayBookings();
-    renderUpcomingBookings();
-    renderAllBookings();
-    renderItems();
-    fillSettings();
-  }, 1500);
-}
-
-function loadData() {
-  const saved = localStorage.getItem('shawatiApp');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      appData.settings = parsed.settings || appData.settings;
-      appData.items = parsed.items || appData.items;
-      appData.bookings = parsed.bookings || [];
-    } catch(e) { console.warn('Load error', e); }
-  }
-}
-
-function saveData() {
-  localStorage.setItem('shawatiApp', JSON.stringify({
-    settings: appData.settings,
-    items: appData.items,
-    bookings: appData.bookings
-  }));
-}
-
-// ============================================================
-// NAVIGATION
-// ============================================================
-function showScreen(screenId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const target = document.getElementById(screenId);
-  if (target) target.classList.add('active');
-
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  const activeBtn = document.querySelector('.nav-btn[data-screen="' + screenId + '"]');
-  if (activeBtn) activeBtn.classList.add('active');
-
-  if (screenId === 'screenNewBooking' && !appData.editingId) {
-    resetBookingForm();
-    addSideOrderRow();
-  }
-  if (screenId === 'screenBookings') renderAllBookings();
-  if (screenId === 'screenHome') { updateStats(); renderTodayBookings(); renderUpcomingBookings(); }
-  if (screenId === 'screenItems') renderItems();
-  if (screenId === 'screenSettings') fillSettings();
-  window.scrollTo(0, 0);
-}
-
-// ============================================================
-// STATS
-// ============================================================
-function updateStats() {
-  const today = new Date().toISOString().split('T')[0];
-  const todayCount = appData.bookings.filter(b => b.booking.date === today && b.status !== 'cancelled').length;
-  const pendingCount = appData.bookings.filter(b => b.status === 'new').length;
-  document.getElementById('statToday').textContent = todayCount;
-  document.getElementById('statPending').textContent = pendingCount;
-  document.getElementById('statTotal').textContent = appData.bookings.length;
-  const badge = document.getElementById('navBadge');
-  badge.textContent = pendingCount;
-  badge.style.display = pendingCount > 0 ? 'flex' : 'none';
-}
-
-// ============================================================
-// BOOKING FORM
-// ============================================================
-function resetBookingForm() {
-  ['custName','custPhone','custLocation','bookingMark','bookingNotes','depositAmount','platesDeposit']
-    .forEach(id => document.getElementById(id).value = '');
-  document.getElementById('bookingDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('bookingTime').value = '12:00';
-  document.getElementById('deliveryTime').value = 'ظهراً';
-  document.getElementById('sideOrdersContainer').innerHTML = '';
-  document.getElementById('bookingFormTitle').textContent = 'حجز جديد';
-  calcBookingTotal();
-}
-
-function addSideOrderRow() {
-  const container = document.getElementById('sideOrdersContainer');
-  const opts = appData.items.map(i =>
-    `<option value="${i.id}" data-price="${i.price}">${i.name} - سعر: ${i.price} ر.س</option>`
-  ).join('');
-  const row = document.createElement('div');
-  row.className = 'flex flex-wrap gap-2 items-center bg-gray-50 p-2 rounded-xl animate-slideUp';
-  row.innerHTML = `
-    <select class="side-item-select flex-1 min-w-[120px] border-2 border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:border-black" onchange="updateSidePrice(this)">
-      <option value="">اختر الصنف</option>${opts}
-    </select>
-    <input type="number" class="side-item-price w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" placeholder="سعر" value="0" min="0" step="0.5" oninput="calcBookingTotal()">
-    <input type="number" class="side-item-qty w-16 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" value="1" min="1" oninput="calcBookingTotal()">
-    <button onclick="this.parentElement.remove();calcBookingTotal();" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
-      <i class="fas fa-times text-xs"></i>
-    </button>
-  `;
-  container.appendChild(row);
-  const sel = row.querySelector('.side-item-select');
-  const priceInput = row.querySelector('.side-item-price');
-  if (sel.value) {
-    const price = parseFloat(sel.options[sel.selectedIndex]?.dataset?.price) || 0;
-    priceInput.value = price;
-  }
-  calcBookingTotal();
-}
-
-function updateSidePrice(sel) {
-  const row = sel.closest('.flex');
-  const priceInput = row.querySelector('.side-item-price');
-  const price = parseFloat(sel.options[sel.selectedIndex]?.dataset?.price) || 0;
-  priceInput.value = price;
-  calcBookingTotal();
-}
-
-function calcBookingTotal() {
-  let total = 0;
-  document.querySelectorAll('#sideOrdersContainer > div').forEach(row => {
-    const sel = row.querySelector('.side-item-select');
-    const qty = parseInt(row.querySelector('.side-item-qty').value) || 0;
-    const price = parseFloat(row.querySelector('.side-item-price').value) || 0;
-    total += price * qty;
-  });
-  const depositPaid = parseFloat(document.getElementById('depositAmount').value) || 0;
-  const platesDeposit = parseFloat(document.getElementById('platesDeposit').value) || 0;
-  // الإجمالي = الطلبات + رهن الصحون (رهن يضاف للإجمالي)
-  const grandTotal = total + platesDeposit;
-  document.getElementById('bookingTotalDisplay').textContent = grandTotal.toFixed(2) + ' ر.س';
-  document.getElementById('remainingDisplay').textContent = Math.max(0, grandTotal - depositPaid).toFixed(2) + ' ر.س';
-  return grandTotal;
-}
-
-function saveBooking() {
-  const name = document.getElementById('custName').value.trim();
-  if (!name) { showToast('يرجى إدخال اسم العميل'); return; }
-
-  const sideOrders = [];
-  document.querySelectorAll('#sideOrdersContainer > div').forEach(row => {
-    const sel = row.querySelector('.side-item-select');
-    const qty = parseInt(row.querySelector('.side-item-qty').value) || 0;
-    const price = parseFloat(row.querySelector('.side-item-price').value) || 0;
-    const itemId = parseInt(sel.value);
-    if (itemId && qty > 0 && price > 0) {
-      const item = appData.items.find(i => i.id === itemId);
-      sideOrders.push({
-        id: itemId,
-        name: item ? item.name : sel.options[sel.selectedIndex]?.text || 'صنف',
-        price: price,
-        quantity: qty,
-        total: price * qty
-      });
-    }
-  });
-
-  const platesDeposit = parseFloat(document.getElementById('platesDeposit').value) || 0;
-  const totalOrders = sideOrders.reduce((sum, s) => sum + s.total, 0);
-  const grandTotal = totalOrders + platesDeposit;
-  const depositPaid = parseFloat(document.getElementById('depositAmount').value) || 0;
-  const existing = appData.editingId ? appData.bookings.find(b => b.id == appData.editingId) : null;
-
-  const booking = {
-    id: appData.editingId || Date.now(),
-    customer: {
-      name: name,
-      phone: document.getElementById('custPhone').value,
-      location: document.getElementById('custLocation').value
-    },
-    booking: {
-      date: document.getElementById('bookingDate').value,
-      time: document.getElementById('bookingTime').value,
-      mark: document.getElementById('bookingMark').value,
-      day: getDayName(document.getElementById('bookingDate').value),
-      deliveryTime: document.getElementById('deliveryTime').value
-    },
-    notes: document.getElementById('bookingNotes').value,
-    sideOrders: sideOrders,
-    platesDeposit: platesDeposit,   // رهن الصحون (مبلغ ثابت للفاتورة)
-    finance: {
-      totalOrders: totalOrders,
-      total: grandTotal,
-      deposit: depositPaid,
-      remaining: Math.max(0, grandTotal - depositPaid)
-    },
-    status: existing ? existing.status : 'new',
-    createdAt: existing ? existing.createdAt : new Date().toISOString()
-  };
-
-  if (appData.editingId) {
-    const idx = appData.bookings.findIndex(b => b.id == appData.editingId);
-    if (idx !== -1) appData.bookings[idx] = booking;
-    appData.editingId = null;
-    showToast('تم تحديث الحجز');
-  } else {
-    appData.bookings.push(booking);
-    showToast('تم حفظ الحجز');
-  }
-  saveData();
-  showScreen('screenBookings');
-}
-
-function getDayName(dateStr) {
-  if (!dateStr) return '';
-  const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-  return days[new Date(dateStr).getDay()];
-}
-
-// ============================================================
-// RENDER HELPERS
-// ============================================================
-function getStatusLabel(s) {
-  const map = {new:'جديد', confirmed:'مؤكد', completed:'مكتمل', cancelled:'ملغي'};
-  return map[s] || s;
-}
-function getStatusClass(s) {
-  const map = {new:'status-new', confirmed:'status-confirmed', completed:'status-completed', cancelled:'status-cancelled'};
-  return map[s] || 'bg-gray-500 text-white';
-}
-
-function renderBookingCard(b, showActions) {
-  let html = `<div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-50/80" data-id="${b.id}">`;
-  html += `<div class="flex items-start justify-between"><div><h3 class="font-bold text-base">${b.customer.name}</h3><p class="text-xs text-gray-400">${b.customer.phone || 'لا يوجد رقم'}</p></div>`;
-  html += `<span class="${getStatusClass(b.status)} px-3 py-1 rounded-full text-[10px] font-bold">${getStatusLabel(b.status)}</span></div>`;
-  html += `<div class="flex items-center gap-4 text-xs text-gray-500 mt-2.5 bg-gray-50 rounded-xl px-3 py-2">`;
-  html += `<span><i class="far fa-calendar ml-1 text-blue-500"></i>${b.booking.date}</span>`;
-  html += `<span><i class="far fa-clock ml-1 text-purple-500"></i>${b.booking.time}</span>`;
-  html += `<span class="font-bold text-green-600"><i class="fas fa-money-bill ml-1"></i>${b.finance.total.toFixed(0)} ر.س</span></div>`;
-  if (showActions) {
-    html += `<div class="flex gap-2 mt-3 pt-3 border-t border-gray-100">`;
-    html += `<button onclick="viewInvoice(${b.id})" class="flex-1 bg-gray-800 text-white rounded-xl py-2 text-xs font-bold btn-press"><i class="fas fa-receipt ml-1"></i> الفاتورة</button>`;
-    html += `<button onclick="editBooking(${b.id})" class="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2 text-xs font-bold btn-press"><i class="fas fa-edit ml-1"></i> تعديل</button>`;
-    html += `<button onclick="openStatusModal(${b.id})" class="flex-1 bg-gray-100 text-gray-700 rounded-xl py-2 text-xs font-bold btn-press"><i class="fas fa-exchange-alt ml-1"></i> الحالة</button>`;
-    html += `<button onclick="confirmDelete(${b.id})" class="w-10 bg-red-50 text-red-500 rounded-xl py-2 btn-press"><i class="fas fa-trash text-xs"></i></button>`;
-    html += `</div>`;
-  }
-  html += `</div>`;
-  return html;
-}
-
-// ============================================================
-// RENDER LISTS
-// ============================================================
-function renderTodayBookings() {
-  const today = new Date().toISOString().split('T')[0];
-  const list = appData.bookings
-    .filter(b => b.booking.date === today && b.status !== 'cancelled')
-    .sort((a,b) => a.booking.time.localeCompare(b.booking.time));
-  const el = document.getElementById('todayBookingsList');
-  if (!list.length) {
-    el.innerHTML = `<div class="text-center py-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200"><i class="fas fa-calendar-day text-3xl mb-2 opacity-40"></i><p class="text-sm font-medium">لا توجد حجوزات اليوم</p></div>`;
-  } else {
-    el.innerHTML = list.map(b => renderBookingCard(b, false)).join('');
-  }
-}
-
-function renderUpcomingBookings() {
-  const today = new Date().toISOString().split('T')[0];
-  const list = appData.bookings
-    .filter(b => b.booking.date > today && b.status !== 'cancelled')
-    .sort((a,b) => a.booking.date.localeCompare(b.booking.date))
-    .slice(0, 5);
-  const el = document.getElementById('upcomingBookingsList');
-  if (!list.length) {
-    el.innerHTML = `<div class="text-center py-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200"><i class="fas fa-calendar-alt text-3xl mb-2 opacity-40"></i><p class="text-sm font-medium">لا توجد حجوزات قادمة</p></div>`;
-  } else {
-    el.innerHTML = list.map(b => renderBookingCard(b, false)).join('');
-  }
-}
-
-function renderAllBookings() {
-  let list = [...appData.bookings].sort((a,b) => b.id - a.id);
-  if (appData.currentFilter !== 'all') list = list.filter(b => b.status === appData.currentFilter);
-  const search = (document.getElementById('searchBookings')?.value || '').toLowerCase();
-  if (search) list = list.filter(b =>
-    b.customer.name.toLowerCase().includes(search) ||
-    b.customer.phone.includes(search) ||
-    b.booking.date.includes(search)
-  );
-  const el = document.getElementById('allBookingsList');
-  if (!list.length) {
-    el.innerHTML = `<div class="text-center py-16 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200"><i class="fas fa-inbox text-4xl mb-2 opacity-40"></i><p class="text-sm font-medium">لا توجد حجوزات</p></div>`;
-  } else {
-    el.innerHTML = list.map(b => renderBookingCard(b, true)).join('');
-  }
-}
-
-function filterBookings() { renderAllBookings(); }
-
-function filterByStatus(status, btn) {
-  appData.currentFilter = status;
-  document.querySelectorAll('.status-filter').forEach(b => {
-    b.classList.remove('bg-white', 'text-black');
-    b.classList.add('bg-white/10', 'text-white/70');
-  });
-  if (btn) {
-    btn.classList.remove('bg-white/10', 'text-white/70');
-    btn.classList.add('bg-white', 'text-black');
-  }
-  renderAllBookings();
-}
-
-// ============================================================
-// EDIT / DELETE / STATUS
-// ============================================================
-function editBooking(id) {
-  const b = appData.bookings.find(x => x.id == id);
-  if (!b) return;
-  appData.editingId = id;
-  showScreen('screenNewBooking');
-  document.getElementById('bookingFormTitle').textContent = 'تعديل حجز';
-  document.getElementById('custName').value = b.customer.name;
-  document.getElementById('custPhone').value = b.customer.phone;
-  document.getElementById('custLocation').value = b.customer.location;
-  document.getElementById('bookingDate').value = b.booking.date;
-  document.getElementById('bookingTime').value = b.booking.time;
-  document.getElementById('bookingMark').value = b.booking.mark;
-  document.getElementById('deliveryTime').value = b.booking.deliveryTime || 'ظهراً';
-  document.getElementById('bookingNotes').value = b.notes;
-  document.getElementById('platesDeposit').value = b.platesDeposit || 0;
-  document.getElementById('depositAmount').value = b.finance.deposit;
-  document.getElementById('sideOrdersContainer').innerHTML = '';
-  b.sideOrders.forEach(so => {
-    const container = document.getElementById('sideOrdersContainer');
-    const opts = appData.items.map(i =>
-      `<option value="${i.id}" data-price="${i.price}" ${i.id==so.id?'selected':''}>${i.name} - سعر: ${i.price} ر.س</option>`
-    ).join('');
-    const row = document.createElement('div');
-    row.className = 'flex flex-wrap gap-2 items-center bg-gray-50 p-2 rounded-xl';
-    row.innerHTML = `
-      <select class="side-item-select flex-1 min-w-[120px] border-2 border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:border-black" onchange="updateSidePrice(this)">
-        <option value="">اختر الصنف</option>${opts}
-      </select>
-      <input type="number" class="side-item-price w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" placeholder="سعر" value="${so.price}" min="0" step="0.5" oninput="calcBookingTotal()">
-      <input type="number" class="side-item-qty w-16 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" value="${so.quantity}" min="1" oninput="calcBookingTotal()">
-      <button onclick="this.parentElement.remove();calcBookingTotal();" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
-        <i class="fas fa-times text-xs"></i>
+    <!-- ======== شريط التثبيت ======== -->
+    <div id="installBanner" class="show">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <i class="fas fa-mobile-alt text-xl"></i>
+        <span style="font-weight: 600; font-size: 14px">ثبّت التطبيق</span>
+      </div>
+      <button id="installBtn">تثبيت</button>
+      <button
+        onclick="
+          document.getElementById('installBanner').classList.remove('show')
+        "
+        style="
+          background: transparent;
+          color: #aaa;
+          padding: 4px 8px;
+          font-size: 18px;
+        "
+      >
+        ✕
       </button>
-    `;
-    container.appendChild(row);
-  });
-  calcBookingTotal();
-}
+    </div>
 
-function confirmDelete(id) {
-  appData.tempBookingId = id;
-  document.getElementById('confirmText').textContent = 'هل أنت متأكد من حذف هذا الحجز؟';
-  document.getElementById('confirmBtn').onclick = function() {
-    appData.bookings = appData.bookings.filter(b => b.id != appData.tempBookingId);
-    saveData(); renderAllBookings(); updateStats(); closeModal(); showToast('تم حذف الحجز');
-  };
-  document.getElementById('confirmModal').classList.add('active');
-}
-
-function openStatusModal(id) { appData.tempBookingId = id; document.getElementById('statusModal').classList.add('active'); }
-
-function changeStatus(status) {
-  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
-  if (b) { b.status = status; saveData(); renderAllBookings(); updateStats(); showToast('تم تغيير الحالة'); }
-  closeModal();
-}
-
-function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
-
-// ============================================================
-// INVOICE (مع إمكانية التعديل المباشر)
-// ============================================================
-function viewInvoice(id) {
-  const b = appData.bookings.find(x => x.id == id);
-  if (!b) return;
-  appData.tempBookingId = id;
-  appData.currentInvoiceId = id;
-  renderEditableInvoice(b);
-  showScreen('screenInvoice');
-}
-
-function renderEditableInvoice(b) {
-  const r = appData.settings.restaurant;
-
-  let sideRows = '';
-  b.sideOrders.forEach((s, index) => {
-    sideRows += `
-      <tr>
-        <td class="border border-gray-200 px-2 py-1 text-center text-sm">${s.name}</td>
-        <td class="border border-gray-200 px-2 py-1 text-center">
-          <input type="number" class="invoice-editable-input inv-qty" data-index="${index}" value="${s.quantity}" min="1" onchange="updateInvoiceRow(${index})">
-        </td>
-        <td class="border border-gray-200 px-2 py-1 text-center">
-          <input type="number" class="invoice-editable-input inv-price" data-index="${index}" value="${s.price}" min="0" step="0.5" onchange="updateInvoiceRow(${index})">
-        </td>
-        <td class="border border-gray-200 px-2 py-1 text-center font-bold inv-total" id="inv-total-${index}">${(s.price * s.quantity).toFixed(2)}</td>
-      </tr>
-    `;
-  });
-
-  const totalOrders = b.sideOrders.reduce((sum, s) => sum + s.price * s.quantity, 0);
-  const platesDeposit = b.platesDeposit || 0;
-  const grandTotal = totalOrders + platesDeposit;
-  const remaining = grandTotal - b.finance.deposit;
-
-  let html = `<div id="invoicePrintArea" class="invoice-paper" style="font-family:Cairo,sans-serif;">`;
-  html += `<div class="flex items-center justify-between mb-4 border-b-2 border-black pb-3"><div class="text-right"><p class="text-[10px] text-gray-500">${r.subtitle}</p><h2 class="text-xl font-black">${r.name}</h2><p class="text-[10px] text-gray-500">${r.specialty}</p></div><div class="w-14 h-14 rounded-2xl bg-black flex items-center justify-center"><i class="fas fa-utensils text-white text-xl"></i></div></div>`;
-  html += `<div class="flex items-center justify-between mb-3 text-[11px] text-gray-500"><div>${r.social}</div><div class="bg-black text-white px-3 py-0.5 rounded-full text-[10px] font-bold">حجز وليمة</div><div><i class="fas fa-phone"></i> ${r.phone}</div></div>`;
-  html += `<div class="flex items-center justify-between mb-3 text-sm font-bold"><span>التاريخ: ${b.booking.date}</span><span>اليوم: ${b.booking.day}</span><span>الساعة: ${b.booking.time}</span></div>`;
-  html += `<div class="flex items-center justify-between mb-3 text-sm"><span class="font-bold">موعد التسليم: ${b.booking.deliveryTime || 'ظهراً'}</span></div>`;
-  html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="grid grid-cols-2 gap-1.5 text-sm"><div><span class="font-bold">العميل:</span> ${b.customer.name}</div><div><span class="font-bold">الجوال:</span> ${b.customer.phone || '-'}</div><div><span class="font-bold">الموقع:</span> ${b.customer.location || '-'}</div><div><span class="font-bold">العلامة:</span> ${b.booking.mark || '-'}</div></div></div>`;
-  
-  html += `<div class="mb-3"><div class="bg-black text-white text-center rounded-lg py-0.5 text-[10px] font-bold mb-1.5">الطلبات الجانبية (قابل للتعديل)</div><table class="w-full text-xs" style="border-collapse:collapse;"><thead><tr class="bg-black text-white"><th class="border border-gray-300 px-2 py-1">الصنف</th><th class="border border-gray-300 px-2 py-1">العدد</th><th class="border border-gray-300 px-2 py-1">السعر</th><th class="border border-gray-300 px-2 py-1">الإجمالي</th></tr></thead><tbody>${sideRows || '<tr><td colspan="4" class="border border-gray-200 px-2.5 py-1.5 text-center text-gray-400">لا توجد طلبات جانبية</td></tr>'}</tbody></table></div>`;
-  html += `<div class="flex items-center justify-between mb-2 text-sm border-b border-gray-200 pb-1"><span class="font-bold">رهن الصحون</span><span class="font-bold" id="invPlatesDeposit">${platesDeposit.toFixed(2)} ر.س</span></div>`;
-  html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="grid grid-cols-2 gap-1.5 text-sm"><div><span class="font-bold">إجمالي الطلبات:</span> <span id="invTotalOrders">${totalOrders.toFixed(2)}</span> ر.س</div><div><span class="font-bold">الإجمالي (مع الرهن):</span> <span id="invGrandTotal">${grandTotal.toFixed(2)}</span> ر.س</div><div><span class="font-bold">العربون:</span> ${b.finance.deposit.toFixed(2)} ر.س</div><div class="text-red-600 font-bold"><span>المتبقي:</span> <span id="invRemainingDisplay">${Math.max(0, remaining).toFixed(2)}</span> ر.س</div></div></div>`;
-if (b.notes) {
-    html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="bg-black text-white text-center rounded-lg py-0.5 text-[10px] font-bold mb-1.5">تفاصيل الوليمة</div><p class="text-sm whitespace-pre-wrap">${b.notes}</p></div>`;
-  }
-  html += `<div class="border-t-2 border-black pt-3 flex items-center justify-between text-[10px] text-gray-500"><div class="text-center"><i class="fas fa-map-marker-alt"></i><p>${r.address}</p></div><div class="text-center"><p>للحجز: ${r.phone}</p><p>للتوصيل: ${r.delivery}</p></div><div id="invoiceQR" class="qr-container"></div></div>`;
-  html += `</div>`;
-
-  document.getElementById('invoiceContainer').innerHTML = html;
-  setTimeout(() => {
-    try {
-      new QRCode(document.getElementById('invoiceQR'), {
-        text: `حجز: ${b.customer.name} - ${b.booking.date} - ${r.phone}`,
-        width: 60, height: 60
-      });
-    } catch(e) {}
-  }, 150);
-}
-
-// دالة لتحديث صف الفاتورة عند تغيير الكمية أو السعر
-function updateInvoiceRow(index) {
-  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
-  if (!b) return;
-  const qtyInput = document.querySelector(`.inv-qty[data-index="${index}"]`);
-  const priceInput = document.querySelector(`.inv-price[data-index="${index}"]`);
-  if (!qtyInput || !priceInput) return;
-  const newQty = parseInt(qtyInput.value) || 1;
-  const newPrice = parseFloat(priceInput.value) || 0;
-  b.sideOrders[index].quantity = newQty;
-  b.sideOrders[index].price = newPrice;
-  b.sideOrders[index].total = newPrice * newQty;
-  document.getElementById(`inv-total-${index}`).textContent = (newPrice * newQty).toFixed(2);
-  recalcInvoiceTotals(b);
-}
-
-function recalcInvoiceTotals(b) {
-  const totalOrders = b.sideOrders.reduce((sum, s) => sum + s.price * s.quantity, 0);
-  const platesDeposit = b.platesDeposit || 0;
-  const grandTotal = totalOrders + platesDeposit;
-  const remaining = grandTotal - b.finance.deposit;
-  b.finance.total = grandTotal;
-  b.finance.remaining = Math.max(0, remaining);
-  b.finance.totalOrders = totalOrders;
-  document.getElementById('invTotalOrders').textContent = totalOrders.toFixed(2);
-  document.getElementById('invGrandTotal').textContent = grandTotal.toFixed(2);
-  document.getElementById('invRemainingDisplay').textContent = Math.max(0, remaining).toFixed(2);
-  document.getElementById('invPlatesDeposit').textContent = platesDeposit.toFixed(2) + ' ر.س';
-}
-
-// حفظ التعديلات في localStorage
-function saveInvoiceChanges() {
-  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
-  if (!b) return;
-  const idx = appData.bookings.findIndex(x => x.id == appData.tempBookingId);
-  if (idx !== -1) {
-    appData.bookings[idx] = b;
-    saveData();
-    showToast('تم حفظ التعديلات بنجاح');
-    renderEditableInvoice(b);
-  } else {
-    showToast('خطأ في حفظ التعديلات');
-  }
-}
-
-// ============================================================
-// PRINT & SHARE & PDF
-// ============================================================
-function printInvoice() { window.print(); }
-
-async function shareInvoiceWhatsApp() {
-  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
-  if (!b) { showToast('لا توجد فاتورة'); return; }
-
-  try {
-    showToast('جاري تجهيز الملف...');
-    saveInvoiceChanges();
-    const b2 = appData.bookings.find(x => x.id == appData.tempBookingId);
-    if (!b2) return;
-    renderEditableInvoice(b2);
-    const blob = await generatePdfBlob();
-    if (!blob) return;
-
-    const file = new File([blob], `فاتورة_${b2.customer.name}_${b2.booking.date}.pdf`, { type: 'application/pdf' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: 'فاتورة حجز - شواطئ عدن',
-        text: `فاتورة حجز ${b2.customer.name}`,
-        files: [file]
-      });
-      showToast('تمت المشاركة بنجاح');
-      return;
-    }
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `فاتورة_${b2.customer.name}_${b2.booking.date}.pdf`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 5000);
-
-    const r = appData.settings.restaurant;
-    const totalOrders = b2.sideOrders.reduce((sum, s) => sum + s.price * s.quantity, 0);
-    const platesDeposit = b2.platesDeposit || 0;
-    const grandTotal = totalOrders + platesDeposit;
-    const text = `*فاتورة حجز - ${r.name}*%0A%0A` +
-      `*العميل:* ${b2.customer.name}%0A` +
-      `*التاريخ:* ${b2.booking.date} ${b2.booking.time}%0A` +
-      `*موعد التسليم:* ${b2.booking.deliveryTime || 'ظهراً'}%0A` +
-      `*إجمالي الطلبات:* ${totalOrders.toFixed(2)} ر.س%0A` +
-      `*رهن الصحون:* ${platesDeposit.toFixed(2)} ر.س%0A` +
-      `*الإجمالي الكلي:* ${grandTotal.toFixed(2)} ر.س%0A` +
-      `*العربون:* ${b2.finance.deposit.toFixed(2)} ر.س%0A` +
-      `*المتبقي:* ${Math.max(0, grandTotal - b2.finance.deposit).toFixed(2)} ر.س%0A%0A` +
-      `*${r.name}* - ${r.phone}`;
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-    showToast('تم تحميل الملف للمشاركة');
-  } catch (err) {
-    console.error(err);
-    showToast('حدث خطأ، حاول مرة أخرى');
-  }
-}
-
-async function generatePdfBlob() {
-  const element = document.getElementById('invoicePrintArea');
-  if (!element) { showToast('لا توجد فاتورة'); return null; }
-
-  try {
-    const canvas = await html2canvas(element, {
-      scale: 2.5,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      logging: false,
-      width: 400,
-      height: element.scrollHeight
-    });
-    const imgData = canvas.toDataURL('image/png');
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 190;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    const xOffset = (210 - imgWidth) / 2;
-    const yOffset = (297 - imgHeight) / 2;
-
-    pdf.addImage(imgData, 'PNG', xOffset, Math.max(0, yOffset), imgWidth, imgHeight);
-    return pdf.output('blob');
-  } catch (e) {
-    console.error('PDF error:', e);
-    showToast('خطأ في إنشاء PDF');
-    return null;
-  }
-}
-
-async function downloadPDF() {
-  saveInvoiceChanges();
-  const blob = await generatePdfBlob();
-  if (!blob) return;
-  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `فاتورة_${b?.customer?.name || 'حجز'}_${b?.booking?.date || ''}.pdf`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
-  showToast('تم تحميل PDF');
-}
-
-// ============================================================
-// ITEMS (بدون رهن)
-// ============================================================
-function renderItems() {
-  const search = (document.getElementById('searchItems')?.value || '').toLowerCase();
-  let list = appData.items;
-  if (search) list = list.filter(i => i.name.toLowerCase().includes(search));
-  const el = document.getElementById('itemsList');
-  const cats = {side:'طلب جانبي', sacrifice:'ذبيحة', cooking:'طبخ', other:'أخرى'};
-  el.innerHTML = list.map(i =>
-    `<div class="bg-white rounded-2xl p-3.5 flex items-center justify-between shadow-sm border border-gray-50/80">
-      <div>
-        <p class="font-bold text-sm">${i.name}</p>
-        <div class="flex gap-3 text-xs text-gray-500 mt-0.5">
-          <span>السعر: ${i.price.toFixed(2)} ر.س</span>
-          <span class="text-gray-400">${cats[i.category] || i.category}</span>
+    <!-- ===================== شاشة البداية ===================== -->
+    <div id="screenSplash" class="screen active">
+      <div
+        class="flex flex-col items-center justify-center min-h-screen"
+        style="background: var(--color-primary); color: #fff"
+      >
+        <div
+          class="w-28 h-28 rounded-3xl bg-white flex items-center justify-center mb-5 shadow-2xl"
+          style="animation: pulse 2s infinite"
+        >
+          <i class="fas fa-utensils text-5xl text-black"></i>
+        </div>
+        <h1 class="text-3xl font-black tracking-tight">شواطئ عدن</h1>
+        <p class="text-gray-400 text-sm font-medium mt-1">مطابخ ومطاعم</p>
+        <div class="mt-6 flex gap-1">
+          <span
+            class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
+            style="animation-delay: 0s"
+          ></span>
+          <span
+            class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
+            style="animation-delay: 0.2s"
+          ></span>
+          <span
+            class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
+            style="animation-delay: 0.4s"
+          ></span>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button onclick="openEditItem(${i.id})" class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center btn-press">
-          <i class="fas fa-edit text-xs"></i>
+    </div>
+
+    <!-- ===================== الصفحة الرئيسية ===================== -->
+    <div id="screenHome" class="screen">
+      <div class="min-h-screen pb-20" style="background: var(--color-bg)">
+        <!-- الرأس -->
+        <header
+          class="px-5 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
+          style="background: var(--color-primary); color: #fff"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/5"
+              >
+                <i class="fas fa-utensils text-lg text-white/80"></i>
+              </div>
+              <div>
+                <h1 class="font-black text-lg leading-tight">شواطئ عدن</h1>
+                <p class="text-[11px] text-gray-400 font-medium">
+                  إدارة الولائم
+                </p>
+              </div>
+            </div>
+            <button
+              onclick="showScreen('screenSettings')"
+              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+            >
+              <i class="fas fa-sliders-h text-sm text-white/70"></i>
+            </button>
+          </div>
+        </header>
+
+        <!-- المحتوى الرئيسي -->
+        <div class="px-4 mt-6 relative z-10">
+          <!-- 1. بطاقات الإحصائيات الأساسية -->
+          <div class="grid grid-cols-3 gap-3">
+            <div
+              class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
+              style="background: var(--color-primary-light); color: #fff"
+            >
+              <p class="text-2xl font-black" id="statToday">0</p>
+              <p class="text-[10px] text-gray-400 font-medium mt-0.5">اليوم</p>
+            </div>
+            <div
+              class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
+              style="background: var(--color-primary-light); color: #fff"
+            >
+              <p class="text-2xl font-black text-yellow-400" id="statPending">
+                0
+              </p>
+              <p class="text-[10px] text-gray-400 font-medium mt-0.5">معلق</p>
+            </div>
+            <div
+              class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
+              style="background: var(--color-primary-light); color: #fff"
+            >
+              <p class="text-2xl font-black" id="statTotal">0</p>
+              <p class="text-[10px] text-gray-400 font-medium mt-0.5">إجمالي</p>
+            </div>
+          </div>
+
+          <!-- 2. بطاقات المبالغ المحصلة -->
+          <div
+            class="mt-4 p-4 rounded-2xl shadow-md"
+            style="background: var(--color-card)"
+          >
+            <h3
+              class="text-sm font-bold flex items-center gap-2 mb-3"
+              style="color: var(--color-text-muted)"
+            >
+              <i
+                class="fas fa-chart-pie"
+                style="color: var(--color-text-muted)"
+              ></i>
+              المبالغ المحصلة
+            </h3>
+            <div class="grid grid-cols-3 gap-2">
+              <div
+                class="text-center p-2 rounded-xl"
+                style="background: var(--color-bg)"
+              >
+                <p
+                  class="text-[10px] font-semibold"
+                  style="color: var(--color-text-muted)"
+                >
+                  الإيرادات
+                </p>
+                <p
+                  class="text-sm font-black"
+                  style="color: var(--color-accent-green)"
+                  id="statTotalRevenue"
+                >
+                  0.00 ر.س
+                </p>
+              </div>
+              <div
+                class="text-center p-2 rounded-xl"
+                style="background: var(--color-bg)"
+              >
+                <p
+                  class="text-[10px] font-semibold"
+                  style="color: var(--color-text-muted)"
+                >
+                  العربونات
+                </p>
+                <p
+                  class="text-sm font-black"
+                  style="color: var(--color-accent-blue)"
+                  id="statTotalDeposits"
+                >
+                  0.00 ر.س
+                </p>
+              </div>
+              <div
+                class="text-center p-2 rounded-xl"
+                style="background: var(--color-bg)"
+              >
+                <p
+                  class="text-[10px] font-semibold"
+                  style="color: var(--color-text-muted)"
+                >
+                  المتبقي
+                </p>
+                <p
+                  class="text-sm font-black"
+                  style="color: var(--color-accent-red)"
+                  id="statTotalRemaining"
+                >
+                  0.00 ر.س
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. أزرار الإجراءات السريعة -->
+          <div class="grid grid-cols-2 gap-3 mt-8">
+            <button
+              onclick="showScreen('screenNewBooking')"
+              class="rounded-2xl p-5 text-center btn-press shadow-md border border-white/50 animate-slideUp"
+              style="background: var(--color-primary); color: #fff"
+            >
+              <div
+                class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-inner"
+                style="background: rgba(255, 255, 255, 0.1)"
+              >
+                <i class="fas fa-plus text-white text-2xl"></i>
+              </div>
+              <p class="text-sm font-bold">حجز جديد</p>
+            </button>
+            <button
+              onclick="showScreen('screenBookings')"
+              class="rounded-2xl p-5 text-center btn-press shadow-md border border-white/50 animate-slideUp"
+              style="
+                animation-delay: 0.08s;
+                background: var(--color-card);
+                color: var(--color-text);
+              "
+            >
+              <div
+                class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-2"
+                style="background: var(--color-bg)"
+              >
+                <i
+                  class="fas fa-calendar-check text-2xl"
+                  style="color: var(--color-text-muted)"
+                ></i>
+              </div>
+              <p class="text-sm font-bold" style="color: var(--color-text)">
+                كل الحجوزات
+              </p>
+            </button>
+          </div>
+
+          <!-- 4. حجوزات اليوم -->
+          <div class="mt-6">
+            <div class="flex items-center justify-between mb-3">
+              <h2
+                class="font-bold text-base flex items-center gap-2"
+                style="color: var(--color-text)"
+              >
+                <i
+                  class="fas fa-calendar-day text-sm"
+                  style="color: var(--color-accent-blue)"
+                ></i>
+                حجوزات اليوم
+              </h2>
+              <button
+                onclick="showScreen('screenBookings')"
+                class="text-xs font-bold px-3 py-1.5 rounded-full btn-press"
+                style="background: var(--color-accent-blue); color: #fff"
+              >
+                عرض الكل
+              </button>
+            </div>
+            <div id="todayBookingsList" class="space-y-2.5"></div>
+          </div>
+
+          <!-- 5. الحجوزات القادمة -->
+          <div class="mt-6 pb-6">
+            <h2
+              class="font-bold text-base flex items-center gap-2 mb-3"
+              style="color: var(--color-text)"
+            >
+              <i
+                class="fas fa-calendar-alt text-sm"
+                style="color: var(--color-accent-purple)"
+              ></i>
+              الحجوزات القادمة
+            </h2>
+            <div id="upcomingBookingsList" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== الحجوزات ===================== -->
+    <div id="screenBookings" class="screen">
+      <div class="min-h-screen pb-20" style="background: var(--color-bg)">
+        <div
+          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
+          style="background: var(--color-primary); color: #fff"
+        >
+          <div class="flex items-center gap-3 mb-5">
+            <button
+              onclick="showScreen('screenHome')"
+              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+            >
+              <i class="fas fa-arrow-right text-sm"></i>
+            </button>
+            <h1 class="font-bold text-lg">الحجوزات</h1>
+          </div>
+          <div class="relative">
+            <i
+              class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+            ></i>
+            <input
+              type="text"
+              id="searchBookings"
+              placeholder="ابحث بالاسم أو الجوال أو التاريخ..."
+              class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-none focus:bg-white/20 placeholder:text-gray-500"
+              oninput="filterBookings()"
+            />
+          </div>
+          <div
+            class="flex gap-2 mt-4 overflow-x-auto pb-1 no-scrollbar"
+            id="statusFilters"
+          >
+            <button
+              onclick="filterByStatus('all', this)"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white text-black whitespace-nowrap"
+            >
+              الكل
+            </button>
+            <button
+              onclick="filterByStatus('new', this)"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+            >
+              جديد
+            </button>
+            <button
+              onclick="filterByStatus('confirmed', this)"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+            >
+              مؤكد
+            </button>
+            <button
+              onclick="filterByStatus('completed', this)"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+            >
+              مكتمل
+            </button>
+            <button
+              onclick="filterByStatus('cancelled', this)"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+            >
+              ملغي
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pt-6" id="allBookingsList"></div>
+      </div>
+    </div>
+
+    <!-- ===================== حجز جديد ===================== -->
+    <div id="screenNewBooking" class="screen">
+      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
+        <div
+          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
+          style="background: var(--color-primary); color: #fff"
+        >
+          <div class="flex items-center gap-3">
+            <button
+              onclick="showScreen('screenHome')"
+              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+            >
+              <i class="fas fa-arrow-right text-sm"></i>
+            </button>
+            <h1 class="font-bold text-lg" id="bookingFormTitle">حجز جديد</h1>
+          </div>
+        </div>
+        <div class="px-4 pt-6 space-y-3.5">
+          <!-- بيانات العميل -->
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-user"></i> بيانات العميل
+            </div>
+            <input
+              type="text"
+              id="custName"
+              placeholder="اسم العميل"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="tel"
+              id="custPhone"
+              placeholder="رقم الجوال"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="text"
+              id="custLocation"
+              placeholder="الموقع"
+              class="w-full px-4 py-3.5 text-sm"
+            />
+          </div>
+          <!-- تفاصيل الحجز -->
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-calendar-alt"></i> تفاصيل الحجز
+            </div>
+            <input
+              type="date"
+              id="bookingDate"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="time"
+              id="bookingTime"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="text"
+              id="bookingMark"
+              placeholder="العلامة / رقم القاعة"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <select id="deliveryTime" class="w-full px-4 py-3.5 text-sm">
+              <option value="صباحاً">صباحاً</option>
+              <option value="ظهراً" selected>ظهراً</option>
+              <option value="مساءً">مساءً</option>
+            </select>
+          </div>
+          <!-- الطلبات الجانبية -->
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-shopping-basket"></i> الطلبات الجانبية (السعر
+              قابل للتعديل)
+            </div>
+            <div id="sideOrdersContainer" class="space-y-2 mb-3"></div>
+            <button
+              onclick="addSideOrderRow()"
+              class="w-full border-2 border-dashed border-gray-300 rounded-2xl py-3 text-sm text-gray-400 font-semibold btn-press hover:border-gray-400 transition-colors"
+            >
+              <i class="fas fa-plus ml-1.5"></i> إضافة صنف جانبي
+            </button>
+          </div>
+          <!-- ملاحظات -->
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-sticky-note"></i> ملاحظات (تفاصيل الوليمة)
+            </div>
+            <textarea
+              id="bookingNotes"
+              placeholder="اكتب هنا تفاصيل الوليمة بالكامل (الذبائح، نوع الطبخ، التفصيل، الصحون، إلخ)"
+              rows="4"
+              class="w-full px-4 py-3.5 text-sm resize-none"
+            ></textarea>
+          </div>
+          <!-- المالية -->
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-money-bill-wave"></i> المالية
+            </div>
+            <div
+              class="flex items-center justify-between bg-gray-50 rounded-2xl p-3.5 mb-3"
+            >
+              <span class="text-sm text-gray-500 font-semibold"
+                >إجمالي الطلبات</span
+              >
+              <span class="font-black text-lg" id="bookingTotalDisplay"
+                >0.00 ر.س</span
+              >
+            </div>
+            <input
+              type="number"
+              id="platesDeposit"
+              placeholder="تأمين الصحون (مبلغ ثابت)"
+              class="w-full px-4 py-3.5 mb-3 text-sm"
+              oninput="calcBookingTotal()"
+            />
+            <input
+              type="number"
+              id="depositAmount"
+              placeholder="مبلغ العربون المدفوع"
+              class="w-full px-4 py-3.5 mb-3 text-sm"
+              oninput="calcBookingTotal()"
+            />
+            <div
+              class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5"
+            >
+              <span class="text-sm text-red-400 font-semibold">المتبقي</span>
+              <span
+                class="font-black text-lg text-red-600"
+                id="remainingDisplay"
+                >0.00 ر.س</span
+              >
+            </div>
+          </div>
+          <button
+            onclick="saveBooking()"
+            class="w-full rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2"
+            style="background: var(--color-primary); color: #fff"
+          >
+            <i class="fas fa-save"></i> حفظ الحجز
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== الفاتورة ===================== -->
+    <div id="screenInvoice" class="screen">
+      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
+        <div
+          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
+          style="background: var(--color-primary); color: #fff"
+        >
+          <div class="flex items-center gap-3">
+            <button
+              onclick="showScreen('screenBookings')"
+              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+            >
+              <i class="fas fa-arrow-right text-sm"></i>
+            </button>
+            <h1 class="font-bold text-lg">الفاتورة - تعديل</h1>
+          </div>
+        </div>
+        <div class="px-4 pt-6">
+          <div id="invoiceContainer"></div>
+          <div class="grid grid-cols-2 gap-3 mt-4">
+            <button
+              onclick="saveInvoiceChanges()"
+              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
+              style="background: var(--color-accent-blue); color: #fff"
+            >
+              <i class="fas fa-save"></i> حفظ التعديلات
+            </button>
+            <button
+              onclick="printInvoice()"
+              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
+              style="background: var(--color-primary); color: #fff"
+            >
+              <i class="fas fa-print"></i> طباعة
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <button
+              onclick="shareInvoiceWhatsApp()"
+              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
+              style="background: #25d366; color: #fff"
+            >
+              <i class="fab fa-whatsapp text-xl"></i> واتساب
+            </button>
+            <button
+              onclick="downloadPDF()"
+              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
+              style="background: var(--color-text-muted); color: #fff"
+            >
+              <i class="fas fa-file-pdf"></i> تحميل PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== الأصناف ===================== -->
+    <div id="screenItems" class="screen">
+      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
+        <div
+          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
+          style="background: var(--color-primary); color: #fff"
+        >
+          <div class="flex items-center gap-3 mb-5">
+            <button
+              onclick="showScreen('screenHome')"
+              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+            >
+              <i class="fas fa-arrow-right text-sm"></i>
+            </button>
+            <h1 class="font-bold text-lg">الأصناف</h1>
+          </div>
+          <div class="relative">
+            <i
+              class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
+            ></i>
+            <input
+              type="text"
+              id="searchItems"
+              placeholder="ابحث عن صنف..."
+              class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-none focus:bg-white/20 placeholder:text-gray-500"
+              oninput="filterItems()"
+            />
+          </div>
+        </div>
+        <div class="px-4 pt-6">
+          <div class="section-card mb-4">
+            <h3
+              class="font-bold text-sm mb-3 flex items-center gap-2"
+              style="color: var(--color-text-muted)"
+            >
+              <i class="fas fa-plus-circle text-gray-400"></i> إضافة صنف جديد
+            </h3>
+            <input
+              type="text"
+              id="newItemName"
+              placeholder="اسم الصنف"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="number"
+              id="newItemPrice"
+              placeholder="السعر"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <button
+              onclick="addItem()"
+              class="w-full rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
+              style="background: var(--color-primary); color: #fff"
+            >
+              <i class="fas fa-plus"></i> إضافة
+            </button>
+          </div>
+          <div id="itemsList" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== الإعدادات ===================== -->
+    <div id="screenSettings" class="screen">
+      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
+        <div
+          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
+          style="background: var(--color-primary); color: #fff"
+        >
+          <div class="flex items-center gap-3">
+            <button
+              onclick="showScreen('screenHome')"
+              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+            >
+              <i class="fas fa-arrow-right text-sm"></i>
+            </button>
+            <h1 class="font-bold text-lg">الإعدادات</h1>
+          </div>
+        </div>
+        <div class="px-4 pt-6 space-y-3.5">
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-store"></i> بيانات المطعم
+            </div>
+            
+            <div class="mb-4">
+              <label class="text-sm text-gray-500 font-semibold mb-2 block">شعار المطعم</label>
+              <div class="flex items-center gap-3">
+                <img id="logoPreview" src="" alt="logo" class="w-16 h-16 rounded-xl object-cover bg-gray-100 hidden" />
+                <label class="flex-1 bg-gray-100 text-black rounded-2xl py-3 font-bold flex items-center justify-center gap-2 cursor-pointer">
+                  <i class="fas fa-upload"></i> رفع شعار
+                  <input type="file" id="restLogo" accept="image/*" class="hidden" onchange="uploadLogo(this)" />
+                </label>
+                <button id="removeLogoBtn" onclick="removeLogo()" class="hidden bg-red-50 text-red-500 rounded-2xl px-4 py-3 font-bold">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              id="restName"
+              placeholder="اسم المطعم"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="text"
+              id="restSubtitle"
+              placeholder="الوصف"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="tel"
+              id="restPhone"
+              placeholder="رقم الهاتف"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="tel"
+              id="restDelivery"
+              placeholder="رقم التوصيل"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="text"
+              id="restAddress"
+              placeholder="العنوان"
+              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+            />
+            <input
+              type="text"
+              id="restSocial"
+              placeholder="حساب التواصل"
+              class="w-full px-4 py-3.5 text-sm"
+            />
+          </div>
+          <div class="section-card">
+            <div class="section-title">
+              <i class="fas fa-database"></i> النسخ الاحتياطي
+            </div>
+            <button
+              onclick="exportData()"
+              class="w-full bg-gray-100 text-black rounded-2xl py-3.5 font-bold mb-2.5 btn-press flex items-center justify-center gap-2"
+            >
+              <i class="fas fa-download"></i> تصدير البيانات
+            </button>
+            <label
+              class="w-full bg-gray-100 text-black rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <i class="fas fa-upload"></i> استيراد البيانات
+              <input
+                type="file"
+                id="importFile"
+                accept=".json"
+                class="hidden"
+                onchange="importData(this)"
+              />
+            </label>
+          </div>
+          <button
+            onclick="saveSettings()"
+            class="w-full rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2"
+            style="background: var(--color-primary); color: #fff"
+          >
+            <i class="fas fa-save"></i> حفظ الإعدادات
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== القائمة السفلية ===================== -->
+    <div class="bottom-nav">
+      <div
+        class="flex items-center justify-around py-2.5 px-2 max-w-md mx-auto"
+      >
+        <button
+          onclick="showScreen('screenHome')"
+          class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1 active"
+          data-screen="screenHome"
+        >
+          <i class="fas fa-home nav-icon text-lg"></i>
+          <span class="text-[10px] font-bold">الرئيسية</span>
         </button>
-        <button onclick="deleteItem(${i.id})" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
-          <i class="fas fa-trash text-xs"></i>
+        <button
+          onclick="showScreen('screenBookings')"
+          class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1 relative"
+          data-screen="screenBookings"
+        >
+          <i class="fas fa-calendar-check nav-icon text-lg"></i>
+          <span class="text-[10px] font-bold">الحجوزات</span>
+          <span class="badge-count" id="navBadge" style="display: none">0</span>
+        </button>
+        <button
+          onclick="showScreen('screenNewBooking')"
+          class="nav-btn flex flex-col items-center -mt-6 px-2"
+          data-screen="screenNewBooking"
+        >
+          <div
+            class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl border-4 border-white"
+            style="background: var(--color-primary)"
+          >
+            <i class="fas fa-plus text-white text-2xl"></i>
+          </div>
+        </button>
+        <button
+          onclick="showScreen('screenItems')"
+          class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1"
+          data-screen="screenItems"
+        >
+          <i class="fas fa-utensils nav-icon text-lg"></i>
+          <span class="text-[10px] font-bold">الأصناف</span>
+        </button>
+        <button
+          onclick="showScreen('screenSettings')"
+          class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1"
+          data-screen="screenSettings"
+        >
+          <i class="fas fa-sliders-h nav-icon text-lg"></i>
+          <span class="text-[10px] font-bold">الإعدادات</span>
         </button>
       </div>
-    </div>`
-  ).join('');
-}
+    </div>
 
-function filterItems() { renderItems(); }
+    <!-- ===================== المودالات ===================== -->
+    <div id="confirmModal" class="modal-overlay">
+      <div class="modal-content p-6 text-center">
+        <div
+          class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3"
+        >
+          <i class="fas fa-exclamation-triangle text-2xl text-yellow-500"></i>
+        </div>
+        <h3 class="font-bold text-lg mb-1">تأكيد</h3>
+        <p class="text-gray-500 text-sm mb-5" id="confirmText"></p>
+        <div class="flex gap-3">
+          <button
+            onclick="closeModal()"
+            class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press"
+          >
+            إلغاء
+          </button>
+          <button
+            id="confirmBtn"
+            class="flex-1 bg-red-500 text-white rounded-2xl py-3.5 font-bold btn-press"
+          >
+            تأكيد
+          </button>
+        </div>
+      </div>
+    </div>
 
-function addItem() {
-  const name = document.getElementById('newItemName').value.trim();
-  const price = parseFloat(document.getElementById('newItemPrice').value) || 0;
-  const category = document.getElementById('newItemCategory').value;
-  if (!name || price <= 0) { showToast('يرجى إدخال الاسم والسعر'); return; }
-  appData.items.push({id:Date.now(), name, price, category});
-  saveData();
-  document.getElementById('newItemName').value = '';
-  document.getElementById('newItemPrice').value = '';
-  renderItems();
-  showToast('تم إضافة الصنف');
-}
+    <div id="statusModal" class="modal-overlay">
+      <div class="modal-content p-5">
+        <h3 class="font-bold text-lg mb-4 text-center">تغيير الحالة</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            onclick="changeStatus('new')"
+            class="bg-blue-500 text-white rounded-2xl py-3.5 font-bold btn-press"
+          >
+            جديد
+          </button>
+          <button
+            onclick="changeStatus('confirmed')"
+            class="bg-green-500 text-white rounded-2xl py-3.5 font-bold btn-press"
+          >
+            مؤكد
+          </button>
+          <button
+            onclick="changeStatus('completed')"
+            class="bg-purple-500 text-white rounded-2xl py-3.5 font-bold btn-press"
+          >
+            مكتمل
+          </button>
+          <button
+            onclick="changeStatus('cancelled')"
+            class="bg-red-500 text-white rounded-2xl py-3.5 font-bold btn-press"
+          >
+            ملغي
+          </button>
+        </div>
+        <button
+          onclick="closeModal()"
+          class="w-full mt-3 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press"
+        >
+          إلغاء
+        </button>
+      </div>
+    </div>
 
-function deleteItem(id) {
-  appData.tempDeleteId = id;
-  document.getElementById('confirmText').textContent = 'هل أنت متأكد من حذف هذا الصنف؟';
-  document.getElementById('confirmBtn').onclick = function() {
-    appData.items = appData.items.filter(i => i.id != appData.tempDeleteId);
-    saveData();
-    renderItems();
-    closeModal();
-    showToast('تم حذف الصنف');
-  };
-  document.getElementById('confirmModal').classList.add('active');
-}
+    <!-- ===================== مودال تعديل الصنف ===================== -->
+    <div id="editItemModal" class="modal-overlay">
+      <div class="modal-content p-5">
+        <h3 class="font-bold text-lg mb-4 text-center">تعديل الصنف</h3>
+        <input type="hidden" id="editItemId" />
+        <input
+          type="text"
+          id="editItemName"
+          placeholder="اسم الصنف"
+          class="w-full px-4 py-3.5 mb-2.5 text-sm border-2 border-gray-200 rounded-xl"
+        />
+        <input
+          type="number"
+          id="editItemPrice"
+          placeholder="السعر"
+          class="w-full px-4 py-3.5 mb-3 text-sm border-2 border-gray-200 rounded-xl"
+        />
+        <div class="flex gap-3">
+          <button
+            onclick="closeModal()"
+            class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press"
+          >
+            إلغاء
+          </button>
+          <button
+            onclick="updateItem()"
+            class="flex-1 text-white rounded-2xl py-3.5 font-bold btn-press"
+            style="background: var(--color-primary)"
+          >
+            حفظ التعديل
+          </button>
+        </div>
+      </div>
+    </div>
 
-function openEditItem(id) {
-  const item = appData.items.find(i => i.id == id);
-  if (!item) return;
-  document.getElementById('editItemId').value = id;
-  document.getElementById('editItemName').value = item.name;
-  document.getElementById('editItemPrice').value = item.price;
-  document.getElementById('editItemCategory').value = item.category;
-  document.getElementById('editItemModal').classList.add('active');
-}
-
-function updateItem() {
-  const id = parseInt(document.getElementById('editItemId').value);
-  const item = appData.items.find(i => i.id == id);
-  if (!item) { showToast('خطأ في التعديل'); return; }
-  const name = document.getElementById('editItemName').value.trim();
-  const price = parseFloat(document.getElementById('editItemPrice').value) || 0;
-  const category = document.getElementById('editItemCategory').value;
-  if (!name || price <= 0) { showToast('يرجى إدخال اسم وسعر صحيح'); return; }
-  item.name = name;
-  item.price = price;
-  item.category = category;
-  saveData();
-  renderItems();
-  closeModal();
-  showToast('تم تحديث الصنف');
-}
-
-// ============================================================
-// SETTINGS
-// ============================================================
-function fillSettings() {
-  const r = appData.settings.restaurant;
-  document.getElementById('restName').value = r.name;
-  document.getElementById('restSubtitle').value = r.subtitle;
-  document.getElementById('restPhone').value = r.phone;
-  document.getElementById('restDelivery').value = r.delivery;
-  document.getElementById('restAddress').value = r.address;
-  document.getElementById('restSocial').value = r.social;
-}
-
-function saveSettings() {
-  appData.settings.restaurant = {
-    name: document.getElementById('restName').value || 'شواطئ عدن',
-    subtitle: document.getElementById('restSubtitle').value || 'مطابخ ومطاعم',
-    specialty: appData.settings.restaurant.specialty,
-    phone: document.getElementById('restPhone').value || '',
-    delivery: document.getElementById('restDelivery').value || '',
-    address: document.getElementById('restAddress').value || '',
-    social: document.getElementById('restSocial').value || ''
-  };
-  saveData();
-  showToast('تم حفظ الإعدادات');
-  showScreen('screenHome');
-}
-
-// ============================================================
-// BACKUP
-// ============================================================
-function exportData() {
-  const data = JSON.stringify({settings:appData.settings, items:appData.items, bookings:appData.bookings}, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `shawati_backup_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-  showToast('تم تصدير البيانات');
-}
-
-function importData(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (data.bookings) appData.bookings = data.bookings;
-      if (data.items) appData.items = data.items;
-      if (data.settings) appData.settings = data.settings;
-      saveData();
-      showToast('تم استيراد البيانات');
-      showScreen('screenHome');
-    } catch(err) {
-      showToast('خطأ في ملف البيانات');
-    }
-  };
-  reader.readAsText(file);
-  input.value = '';
-}
-
-// ============================================================
-// TOAST
-// ============================================================
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  document.getElementById('toastText').textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._timeout);
-  t._timeout = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-// ============================================================
-// START
-// ============================================================
-document.addEventListener('DOMContentLoaded', init);
-</script>
-</body>
+<script src="script.js"></script>
+  </body>
 </html>
