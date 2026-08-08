@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -14,7 +14,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-/* (نفس الأنماط السابقة مع إضافة بعض التحسينات) */
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap');
 *{font-family:'Cairo',sans-serif;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 body{background:#f0f2f5;overflow-x:hidden;min-height:100vh;}
@@ -61,6 +60,8 @@ body *{visibility:hidden;}
 #invoicePrintArea,#invoicePrintArea *{visibility:visible;}
 #invoicePrintArea{position:absolute;left:0;top:0;width:80mm;margin:0;padding:10px;border-radius:0;box-shadow:none;}
 }
+.invoice-editable-input{width:70px;padding:4px 6px;border:1px solid #ccc;border-radius:6px;text-align:center;font-size:13px;background:#fff;}
+.invoice-editable-input:focus{border-color:#000;outline:none;box-shadow:0 0 0 2px rgba(0,0,0,0.1);}
 </style>
 </head>
 <body>
@@ -96,7 +97,6 @@ body *{visibility:hidden;}
 <!-- ===================== HOME ===================== -->
 <div id="screenHome" class="screen">
 <div class="min-h-screen bg-[#f0f2f5] pb-20">
-<!-- Header -->
 <div class="bg-[#0a0a0a] text-white px-5 pt-8 pb-6 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-3">
@@ -112,7 +112,6 @@ body *{visibility:hidden;}
 <i class="fas fa-sliders-h text-sm text-white/70"></i>
 </button>
 </div>
-<!-- Stats -->
 <div class="grid grid-cols-3 gap-2.5 mt-5">
 <div class="bg-white/5 rounded-2xl p-3 text-center backdrop-blur-sm border border-white/5">
 <p class="text-2xl font-black" id="statToday">0</p>
@@ -128,8 +127,6 @@ body *{visibility:hidden;}
 </div>
 </div>
 </div>
-
-<!-- Quick Actions -->
 <div class="px-4 -mt-4 relative z-10">
 <div class="grid grid-cols-2 gap-3">
 <button onclick="showScreen('screenNewBooking')" class="bg-white rounded-2xl p-5 text-center btn-press shadow-lg border border-white/50 animate-slideUp">
@@ -146,8 +143,6 @@ body *{visibility:hidden;}
 </button>
 </div>
 </div>
-
-<!-- Today -->
 <div class="px-4 mt-6">
 <div class="flex items-center justify-between mb-3">
 <h2 class="font-bold text-base text-gray-800 flex items-center gap-2">
@@ -157,8 +152,6 @@ body *{visibility:hidden;}
 </div>
 <div id="todayBookingsList" class="space-y-2.5"></div>
 </div>
-
-<!-- Upcoming -->
 <div class="px-4 mt-6 pb-6">
 <h2 class="font-bold text-base text-gray-800 flex items-center gap-2 mb-3">
 <i class="fas fa-calendar-alt text-purple-500 text-sm"></i> الحجوزات القادمة
@@ -207,61 +200,47 @@ class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm borde
 </div>
 </div>
 <div class="px-4 pt-4 space-y-3.5">
-<!-- Customer -->
 <div class="section-card">
 <div class="section-title"><i class="fas fa-user"></i> بيانات العميل</div>
 <input type="text" id="custName" placeholder="اسم العميل" class="w-full px-4 py-3.5 mb-2.5 text-sm">
 <input type="tel" id="custPhone" placeholder="رقم الجوال" class="w-full px-4 py-3.5 mb-2.5 text-sm">
 <input type="text" id="custLocation" placeholder="الموقع" class="w-full px-4 py-3.5 text-sm">
 </div>
-<!-- Booking Details -->
 <div class="section-card">
 <div class="section-title"><i class="fas fa-calendar-alt"></i> تفاصيل الحجز</div>
 <input type="date" id="bookingDate" class="w-full px-4 py-3.5 mb-2.5 text-sm">
 <input type="time" id="bookingTime" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="bookingMark" placeholder="العلامة / رقم القاعة" class="w-full px-4 py-3.5 text-sm">
+<input type="text" id="bookingMark" placeholder="العلامة / رقم القاعة" class="w-full px-4 py-3.5 mb-2.5 text-sm">
+<select id="deliveryTime" class="w-full px-4 py-3.5 text-sm">
+<option value="صباحاً">صباحاً</option>
+<option value="ظهراً" selected>ظهراً</option>
+<option value="مساءً">مساءً</option>
+</select>
 </div>
-<!-- Banquet -->
 <div class="section-card">
-<div class="section-title"><i class="fas fa-drumstick-bite"></i> تفاصيل الوليمة</div>
-<div class="grid grid-cols-2 gap-2.5">
-<input type="number" id="sacrificesCount" placeholder="عدد الذبائح" class="w-full px-4 py-3.5 mb-2.5 text-sm" oninput="calcBookingTotal()">
-<input type="text" id="sacrificeType" placeholder="نوع الذبيحة" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-</div>
-<input type="number" id="sacrificeValue" placeholder="قيمة الذبائح (ر.س)" class="w-full px-4 py-3.5 mb-2.5 text-sm" oninput="calcBookingTotal()">
-<div class="grid grid-cols-2 gap-2.5">
-<input type="text" id="cookingType" placeholder="نوع الطبخ" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-<input type="text" id="cuttingType" placeholder="التفصيل" class="w-full px-4 py-3.5 mb-2.5 text-sm">
-</div>
-<input type="number" id="platesCount" placeholder="عدد الصحون" class="w-full px-4 py-3.5 text-sm">
-</div>
-<!-- Side Orders -->
-<div class="section-card">
-<div class="section-title"><i class="fas fa-shopping-basket"></i> الطلبات الجانبية</div>
+<div class="section-title"><i class="fas fa-shopping-basket"></i> الطلبات الجانبية (السعر قابل للتعديل)</div>
 <div id="sideOrdersContainer" class="space-y-2 mb-3"></div>
 <button onclick="addSideOrderRow()" class="w-full border-2 border-dashed border-gray-200 rounded-2xl py-3 text-sm text-gray-400 font-semibold btn-press hover:border-gray-300 transition-colors">
 <i class="fas fa-plus ml-1.5"></i> إضافة صنف جانبي
 </button>
 </div>
-<!-- Notes -->
 <div class="section-card">
-<div class="section-title"><i class="fas fa-sticky-note"></i> ملاحظات</div>
-<textarea id="bookingNotes" placeholder="ملاحظات خاصة بالطلب..." rows="2" class="w-full px-4 py-3.5 text-sm resize-none"></textarea>
+<div class="section-title"><i class="fas fa-sticky-note"></i> ملاحظات (تفاصيل الوليمة)</div>
+<textarea id="bookingNotes" placeholder="اكتب هنا تفاصيل الوليمة بالكامل (الذبائح، نوع الطبخ، التفصيل، الصحون، إلخ)" rows="4" class="w-full px-4 py-3.5 text-sm resize-none"></textarea>
 </div>
-<!-- Finance -->
 <div class="section-card">
 <div class="section-title"><i class="fas fa-money-bill-wave"></i> المالية</div>
 <div class="flex items-center justify-between bg-gray-50 rounded-2xl p-3.5 mb-3">
-<span class="text-sm text-gray-500 font-semibold">الإجمالي</span>
+<span class="text-sm text-gray-500 font-semibold">إجمالي الطلبات</span>
 <span class="font-black text-lg" id="bookingTotalDisplay">0.00 ر.س</span>
 </div>
-<input type="number" id="depositAmount" placeholder="مبلغ العربون" class="w-full px-4 py-3.5 mb-3 text-sm" oninput="calcBookingTotal()">
+<input type="number" id="platesDeposit" placeholder="رهن الصحون (مبلغ ثابت)" class="w-full px-4 py-3.5 mb-3 text-sm" oninput="calcBookingTotal()">
+<input type="number" id="depositAmount" placeholder="مبلغ العربون المدفوع" class="w-full px-4 py-3.5 mb-3 text-sm" oninput="calcBookingTotal()">
 <div class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5">
 <span class="text-sm text-red-400 font-semibold">المتبقي</span>
 <span class="font-black text-lg text-red-600" id="remainingDisplay">0.00 ر.س</span>
 </div>
 </div>
-<!-- Save -->
 <button onclick="saveBooking()" class="w-full bg-[#0a0a0a] text-white rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2">
 <i class="fas fa-save"></i> حفظ الحجز
 </button>
@@ -269,7 +248,7 @@ class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm borde
 </div>
 </div>
 
-<!-- ===================== INVOICE ===================== -->
+<!-- ===================== INVOICE (مع إمكانية التعديل) ===================== -->
 <div id="screenInvoice" class="screen">
 <div class="min-h-screen bg-[#f0f2f5] pb-24">
 <div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
@@ -277,27 +256,32 @@ class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm borde
 <button onclick="showScreen('screenBookings')" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5">
 <i class="fas fa-arrow-right text-sm"></i>
 </button>
-<h1 class="font-bold text-lg">الفاتورة</h1>
+<h1 class="font-bold text-lg">الفاتورة - تعديل</h1>
 </div>
 </div>
 <div class="px-4 pt-4">
 <div id="invoiceContainer"></div>
 <div class="grid grid-cols-2 gap-3 mt-4">
+<button onclick="saveInvoiceChanges()" class="bg-blue-600 text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
+<i class="fas fa-save"></i> حفظ التعديلات
+</button>
 <button onclick="printInvoice()" class="bg-[#0a0a0a] text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
 <i class="fas fa-print"></i> طباعة
 </button>
+</div>
+<div class="grid grid-cols-2 gap-3 mt-3">
 <button onclick="shareInvoiceWhatsApp()" class="bg-[#25D366] text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
 <i class="fab fa-whatsapp text-xl"></i> واتساب
 </button>
-</div>
-<button onclick="downloadPDF()" class="w-full bg-gray-800 text-white rounded-2xl py-4 font-bold btn-press mt-3 shadow-md flex items-center justify-center gap-2">
+<button onclick="downloadPDF()" class="bg-gray-800 text-white rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2">
 <i class="fas fa-file-pdf"></i> تحميل PDF
 </button>
 </div>
 </div>
 </div>
+</div>
 
-<!-- ===================== ITEMS ===================== -->
+<!-- ===================== ITEMS (بدون حقل رهن) ===================== -->
 <div id="screenItems" class="screen">
 <div class="min-h-screen bg-[#f0f2f5] pb-24">
 <div class="bg-[#0a0a0a] text-white px-4 pt-8 pb-5 rounded-b-[2rem] sticky top-0 z-30 shadow-lg">
@@ -371,6 +355,26 @@ class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm borde
 </div>
 </div>
 
+<!-- ===================== MODAL لتعديل الصنف ===================== -->
+<div id="editItemModal" class="modal-overlay">
+<div class="modal-content p-5">
+<h3 class="font-bold text-lg mb-4 text-center">تعديل الصنف</h3>
+<input type="hidden" id="editItemId">
+<input type="text" id="editItemName" placeholder="اسم الصنف" class="w-full px-4 py-3.5 mb-2.5 text-sm border-2 border-gray-200 rounded-xl">
+<input type="number" id="editItemPrice" placeholder="السعر" class="w-full px-4 py-3.5 mb-2.5 text-sm border-2 border-gray-200 rounded-xl">
+<select id="editItemCategory" class="w-full px-4 py-3.5 mb-3 text-sm border-2 border-gray-200 rounded-xl">
+<option value="side">طلب جانبي</option>
+<option value="sacrifice">ذبيحة</option>
+<option value="cooking">طبخ</option>
+<option value="other">أخرى</option>
+</select>
+<div class="flex gap-3">
+<button onclick="closeModal()" class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press">إلغاء</button>
+<button onclick="updateItem()" class="flex-1 bg-[#0a0a0a] text-white rounded-2xl py-3.5 font-bold btn-press">حفظ التعديل</button>
+</div>
+</div>
+</div>
+
 <!-- ===================== BOTTOM NAV ===================== -->
 <div class="bottom-nav">
 <div class="flex items-center justify-around py-2.5 px-2 max-w-md mx-auto">
@@ -399,7 +403,7 @@ class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm borde
 </div>
 </div>
 
-<!-- ===================== MODALS ===================== -->
+<!-- ===================== MODALS (تأكيد) ===================== -->
 <div id="confirmModal" class="modal-overlay">
 <div class="modal-content p-6 text-center">
 <div class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3">
@@ -456,9 +460,8 @@ document.getElementById('installBtn').addEventListener('click', async () => {
   }
 });
 
-// Service Worker Registration (للتخزين المؤقت)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('data:application/javascript;base64,Ci8vIFNpbXBsZSBTZXJ2aWNlIFdvcmtlciBmb3IgY2FjaGluZwppY29ucyA9IFsneyJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLDxzdmcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJyB2aWV3Qm94PScwIDAgNTEyIDUxMic+PHJlY3Qgd2lkdGg9JzUxMicgaGVpZ2h0PSc1MTInIGZpbGw9JyMwYTBhMGEnLz48dGV4dCB4PScyNTYnIHk9JzM0MCcgZm9udC1zaXplPScyNTAnIHRleHQtYW5jaG9yPSdtaWRkbGUnIGZpbGw9J3doaXRlJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZic+4J+dhDwvdGV4dD48L3N2Zz4iLCAic2l6ZXMiOiAiNTEyeDUxMiIsICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLCAicHVycG9zZSI6ICJhbnkgbWFza2FibGUifV07CmNvbnN0IENTID0gJ0NvbmZpZyBzaXRlOyc7CmNvbnN0IHVybHMgPSBbJy8nXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZXZlbnQgPT4gewogIGV2ZW50LndhaXRVbnRpbChzZWxmLmFjdGl2YXRlKCkpOwp9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGV2ZW50ID0+IHsKICBldmVudC53YWl0VW50aWwoc2VsZi5jbGllbnRzLmNsYWltKCkpOwp9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdmZXRjaCcsIGV2ZW50ID0+IHsKICBldmVudC5yZXNwb25kV2l0aChuZXcgUmVzcG9uc2UoJ09mZmxpbmUgc3VwcG9ydCcsIHtzdGF0dXM6IDIwMH0pKTsKfSk7')
+  navigator.serviceWorker.register('data:application/javascript;base64,Ci8vIFNpbXBsZSBTZXJ2aWNlIFdvcmtlciBmb3IgY2FjaGluZwppY29ucyA9IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJz48cmVjdCB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMicgZmlsbD0nIzBhMGEwYScvPjx0ZXh0IHg9JzI1NicgeT0nMzQwJyBmb250LXNpemU9JzI1MCcgdGV4dC1hbmNob3I9J21pZGRsZScgZmlsbD0nd2hpdGUnIGZvbnQtZmFtaWx5PSdzYW5zLXNlcmlmJz7gn52EPC90ZXh0Pjwvc3ZnPiIsICJzaXplcyI6ICI1MTJ4NTEyIiwgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSJ9XTsKY29uc3QgQ1MgPSAnQ29uZmlnIHNpdGU6JzsKY29uc3QgdXJscyA9IFsnLyddOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2luc3RhbGwnLCBldmVudCA9PiB7CiAgZXZlbnQud2FpdFVudGlsKHNlbGYuYWN0aXZhdGUoKSk7Cn0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2FjdGl2YXRlJywgZXZlbnQgPT4gewogIGV2ZW50LndhaXRVbnRpbChzZWxmLmNsaWVudHMuY2xhaW0oKSk7Cn0pOwpzZWxmLmFkZEV2ZW50TGlzdGVuZXIoJ2ZldGNoJywgZXZlbnQgPT4gewogIGV2ZW50LnJlc3BvbmRXaXRoKG5ldyBSZXNwb25zZSgnT2ZmbGluZSBzdXBwb3J0Jywge3N0YXR1czogMjAwfSkpOwp9KTs=')
   .then(() => console.log('Service Worker registered'))
   .catch(err => console.warn('SW registration failed', err));
 }
@@ -478,17 +481,18 @@ const defaultSettings = {
   }
 };
 
+// الأصناف بدون حقل رهن
 const defaultItems = [
-  {id:1,name:"أرز بسمتي",price:25,category:"side"},
-  {id:2,name:"سلطة خضراء",price:15,category:"side"},
-  {id:3,name:"تبولة",price:12,category:"side"},
-  {id:4,name:"حمص",price:10,category:"side"},
-  {id:5,name:"مشاوي مشكلة",price:80,category:"side"},
-  {id:6,name:"دجاج مشوي",price:45,category:"side"},
-  {id:7,name:"خبز",price:2,category:"side"},
-  {id:8,name:"ماء",price:1,category:"side"},
-  {id:9,name:"عصير برتقال",price:8,category:"side"},
-  {id:10,name:"فحم",price:15,category:"other"}
+  {id:1, name:"أرز بسمتي", price:25, category:"side"},
+  {id:2, name:"سلطة خضراء", price:15, category:"side"},
+  {id:3, name:"تبولة", price:12, category:"side"},
+  {id:4, name:"حمص", price:10, category:"side"},
+  {id:5, name:"مشاوي مشكلة", price:80, category:"side"},
+  {id:6, name:"دجاج مشوي", price:45, category:"side"},
+  {id:7, name:"خبز", price:2, category:"side"},
+  {id:8, name:"ماء", price:1, category:"side"},
+  {id:9, name:"عصير برتقال", price:8, category:"side"},
+  {id:10, name:"فحم", price:15, category:"other"}
 ];
 
 let appData = {
@@ -579,11 +583,11 @@ function updateStats() {
 // BOOKING FORM
 // ============================================================
 function resetBookingForm() {
-  ['custName','custPhone','custLocation','bookingMark','sacrificesCount','sacrificeType',
-   'sacrificeValue','cookingType','cuttingType','platesCount','bookingNotes','depositAmount']
+  ['custName','custPhone','custLocation','bookingMark','bookingNotes','depositAmount','platesDeposit']
     .forEach(id => document.getElementById(id).value = '');
   document.getElementById('bookingDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('bookingTime').value = '12:00';
+  document.getElementById('deliveryTime').value = 'ظهراً';
   document.getElementById('sideOrdersContainer').innerHTML = '';
   document.getElementById('bookingFormTitle').textContent = 'حجز جديد';
   calcBookingTotal();
@@ -592,34 +596,53 @@ function resetBookingForm() {
 function addSideOrderRow() {
   const container = document.getElementById('sideOrdersContainer');
   const opts = appData.items.map(i =>
-    `<option value="${i.id}" data-price="${i.price}">${i.name} - ${i.price} ر.س</option>`
+    `<option value="${i.id}" data-price="${i.price}">${i.name} - سعر: ${i.price} ر.س</option>`
   ).join('');
   const row = document.createElement('div');
-  row.className = 'flex gap-2 items-center animate-slideUp';
+  row.className = 'flex flex-wrap gap-2 items-center bg-gray-50 p-2 rounded-xl animate-slideUp';
   row.innerHTML = `
-    <select class="side-item-select flex-1 border-2 border-gray-200 rounded-xl px-3 py-3 text-sm bg-white focus:border-black" onchange="calcBookingTotal()">
+    <select class="side-item-select flex-1 min-w-[120px] border-2 border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:border-black" onchange="updateSidePrice(this)">
       <option value="">اختر الصنف</option>${opts}
     </select>
-    <input type="number" class="side-item-qty w-16 border-2 border-gray-200 rounded-xl px-2 py-3 text-center text-sm bg-white focus:border-black" value="1" min="1" oninput="calcBookingTotal()">
-    <button onclick="this.parentElement.remove();calcBookingTotal();" class="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
+    <input type="number" class="side-item-price w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" placeholder="سعر" value="0" min="0" step="0.5" oninput="calcBookingTotal()">
+    <input type="number" class="side-item-qty w-16 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" value="1" min="1" oninput="calcBookingTotal()">
+    <button onclick="this.parentElement.remove();calcBookingTotal();" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
       <i class="fas fa-times text-xs"></i>
     </button>
   `;
   container.appendChild(row);
+  const sel = row.querySelector('.side-item-select');
+  const priceInput = row.querySelector('.side-item-price');
+  if (sel.value) {
+    const price = parseFloat(sel.options[sel.selectedIndex]?.dataset?.price) || 0;
+    priceInput.value = price;
+  }
+  calcBookingTotal();
+}
+
+function updateSidePrice(sel) {
+  const row = sel.closest('.flex');
+  const priceInput = row.querySelector('.side-item-price');
+  const price = parseFloat(sel.options[sel.selectedIndex]?.dataset?.price) || 0;
+  priceInput.value = price;
+  calcBookingTotal();
 }
 
 function calcBookingTotal() {
-  let total = parseFloat(document.getElementById('sacrificeValue').value) || 0;
+  let total = 0;
   document.querySelectorAll('#sideOrdersContainer > div').forEach(row => {
     const sel = row.querySelector('.side-item-select');
     const qty = parseInt(row.querySelector('.side-item-qty').value) || 0;
-    const price = parseFloat(sel.options[sel.selectedIndex]?.dataset?.price) || 0;
+    const price = parseFloat(row.querySelector('.side-item-price').value) || 0;
     total += price * qty;
   });
-  const deposit = parseFloat(document.getElementById('depositAmount').value) || 0;
-  document.getElementById('bookingTotalDisplay').textContent = total.toFixed(2) + ' ر.س';
-  document.getElementById('remainingDisplay').textContent = Math.max(0, total - deposit).toFixed(2) + ' ر.س';
-  return total;
+  const depositPaid = parseFloat(document.getElementById('depositAmount').value) || 0;
+  const platesDeposit = parseFloat(document.getElementById('platesDeposit').value) || 0;
+  // الإجمالي = الطلبات + رهن الصحون (رهن يضاف للإجمالي)
+  const grandTotal = total + platesDeposit;
+  document.getElementById('bookingTotalDisplay').textContent = grandTotal.toFixed(2) + ' ر.س';
+  document.getElementById('remainingDisplay').textContent = Math.max(0, grandTotal - depositPaid).toFixed(2) + ' ر.س';
+  return grandTotal;
 }
 
 function saveBooking() {
@@ -630,14 +653,24 @@ function saveBooking() {
   document.querySelectorAll('#sideOrdersContainer > div').forEach(row => {
     const sel = row.querySelector('.side-item-select');
     const qty = parseInt(row.querySelector('.side-item-qty').value) || 0;
-    if (sel.value && qty > 0) {
-      const item = appData.items.find(i => i.id == sel.value);
-      if (item) sideOrders.push({id:item.id, name:item.name, price:item.price, quantity:qty, total:item.price*qty});
+    const price = parseFloat(row.querySelector('.side-item-price').value) || 0;
+    const itemId = parseInt(sel.value);
+    if (itemId && qty > 0 && price > 0) {
+      const item = appData.items.find(i => i.id === itemId);
+      sideOrders.push({
+        id: itemId,
+        name: item ? item.name : sel.options[sel.selectedIndex]?.text || 'صنف',
+        price: price,
+        quantity: qty,
+        total: price * qty
+      });
     }
   });
 
-  const total = calcBookingTotal();
-  const deposit = parseFloat(document.getElementById('depositAmount').value) || 0;
+  const platesDeposit = parseFloat(document.getElementById('platesDeposit').value) || 0;
+  const totalOrders = sideOrders.reduce((sum, s) => sum + s.total, 0);
+  const grandTotal = totalOrders + platesDeposit;
+  const depositPaid = parseFloat(document.getElementById('depositAmount').value) || 0;
   const existing = appData.editingId ? appData.bookings.find(b => b.id == appData.editingId) : null;
 
   const booking = {
@@ -651,19 +684,18 @@ function saveBooking() {
       date: document.getElementById('bookingDate').value,
       time: document.getElementById('bookingTime').value,
       mark: document.getElementById('bookingMark').value,
-      day: getDayName(document.getElementById('bookingDate').value)
-    },
-    banquet: {
-      sacrificesCount: parseInt(document.getElementById('sacrificesCount').value) || 0,
-      type: document.getElementById('sacrificeType').value,
-      value: parseFloat(document.getElementById('sacrificeValue').value) || 0,
-      cooking: document.getElementById('cookingType').value,
-      cutting: document.getElementById('cuttingType').value,
-      platesCount: parseInt(document.getElementById('platesCount').value) || 0
+      day: getDayName(document.getElementById('bookingDate').value),
+      deliveryTime: document.getElementById('deliveryTime').value
     },
     notes: document.getElementById('bookingNotes').value,
     sideOrders: sideOrders,
-    finance: { total, deposit, remaining: Math.max(0, total - deposit) },
+    platesDeposit: platesDeposit,   // رهن الصحون (مبلغ ثابت للفاتورة)
+    finance: {
+      totalOrders: totalOrders,
+      total: grandTotal,
+      deposit: depositPaid,
+      remaining: Math.max(0, grandTotal - depositPaid)
+    },
     status: existing ? existing.status : 'new',
     createdAt: existing ? existing.createdAt : new Date().toISOString()
   };
@@ -796,28 +828,25 @@ function editBooking(id) {
   document.getElementById('bookingDate').value = b.booking.date;
   document.getElementById('bookingTime').value = b.booking.time;
   document.getElementById('bookingMark').value = b.booking.mark;
-  document.getElementById('sacrificesCount').value = b.banquet.sacrificesCount;
-  document.getElementById('sacrificeType').value = b.banquet.type;
-  document.getElementById('sacrificeValue').value = b.banquet.value;
-  document.getElementById('cookingType').value = b.banquet.cooking;
-  document.getElementById('cuttingType').value = b.banquet.cutting;
-  document.getElementById('platesCount').value = b.banquet.platesCount;
+  document.getElementById('deliveryTime').value = b.booking.deliveryTime || 'ظهراً';
   document.getElementById('bookingNotes').value = b.notes;
+  document.getElementById('platesDeposit').value = b.platesDeposit || 0;
   document.getElementById('depositAmount').value = b.finance.deposit;
   document.getElementById('sideOrdersContainer').innerHTML = '';
   b.sideOrders.forEach(so => {
     const container = document.getElementById('sideOrdersContainer');
     const opts = appData.items.map(i =>
-      `<option value="${i.id}" data-price="${i.price}" ${i.id==so.id?'selected':''}>${i.name} - ${i.price} ر.س</option>`
+      `<option value="${i.id}" data-price="${i.price}" ${i.id==so.id?'selected':''}>${i.name} - سعر: ${i.price} ر.س</option>`
     ).join('');
     const row = document.createElement('div');
-    row.className = 'flex gap-2 items-center';
+    row.className = 'flex flex-wrap gap-2 items-center bg-gray-50 p-2 rounded-xl';
     row.innerHTML = `
-      <select class="side-item-select flex-1 border-2 border-gray-200 rounded-xl px-3 py-3 text-sm bg-white focus:border-black" onchange="calcBookingTotal()">
+      <select class="side-item-select flex-1 min-w-[120px] border-2 border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:border-black" onchange="updateSidePrice(this)">
         <option value="">اختر الصنف</option>${opts}
       </select>
-      <input type="number" class="side-item-qty w-16 border-2 border-gray-200 rounded-xl px-2 py-3 text-center text-sm bg-white focus:border-black" value="${so.quantity}" min="1" oninput="calcBookingTotal()">
-      <button onclick="this.parentElement.remove();calcBookingTotal();" class="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
+      <input type="number" class="side-item-price w-20 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" placeholder="سعر" value="${so.price}" min="0" step="0.5" oninput="calcBookingTotal()">
+      <input type="number" class="side-item-qty w-16 border-2 border-gray-200 rounded-xl px-2 py-2 text-center text-sm bg-white focus:border-black" value="${so.quantity}" min="1" oninput="calcBookingTotal()">
+      <button onclick="this.parentElement.remove();calcBookingTotal();" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
         <i class="fas fa-times text-xs"></i>
       </button>
     `;
@@ -847,31 +876,54 @@ function changeStatus(status) {
 function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
 
 // ============================================================
-// INVOICE
+// INVOICE (مع إمكانية التعديل المباشر)
 // ============================================================
 function viewInvoice(id) {
   const b = appData.bookings.find(x => x.id == id);
   if (!b) return;
   appData.tempBookingId = id;
   appData.currentInvoiceId = id;
+  renderEditableInvoice(b);
+  showScreen('screenInvoice');
+}
+
+function renderEditableInvoice(b) {
   const r = appData.settings.restaurant;
 
-  let sideRows = b.sideOrders.map(s =>
-    `<tr><td class="border border-gray-200 px-2.5 py-1.5 text-center">${s.name}</td><td class="border border-gray-200 px-2.5 py-1.5 text-center">${s.quantity}</td><td class="border border-gray-200 px-2.5 py-1.5 text-center">${s.price.toFixed(2)}</td><td class="border border-gray-200 px-2.5 py-1.5 text-center font-bold">${s.total.toFixed(2)}</td></tr>`
-  ).join('');
-  if (b.banquet.value > 0) {
-    sideRows = `<tr><td class="border border-gray-200 px-2.5 py-1.5 text-center">${b.banquet.type || 'ذبيحة'}</td><td class="border border-gray-200 px-2.5 py-1.5 text-center">${b.banquet.sacrificesCount || 1}</td><td class="border border-gray-200 px-2.5 py-1.5 text-center">-</td><td class="border border-gray-200 px-2.5 py-1.5 text-center font-bold">${b.banquet.value.toFixed(2)}</td></tr>` + sideRows;
-  }
+  let sideRows = '';
+  b.sideOrders.forEach((s, index) => {
+    sideRows += `
+      <tr>
+        <td class="border border-gray-200 px-2 py-1 text-center text-sm">${s.name}</td>
+        <td class="border border-gray-200 px-2 py-1 text-center">
+          <input type="number" class="invoice-editable-input inv-qty" data-index="${index}" value="${s.quantity}" min="1" onchange="updateInvoiceRow(${index})">
+        </td>
+        <td class="border border-gray-200 px-2 py-1 text-center">
+          <input type="number" class="invoice-editable-input inv-price" data-index="${index}" value="${s.price}" min="0" step="0.5" onchange="updateInvoiceRow(${index})">
+        </td>
+        <td class="border border-gray-200 px-2 py-1 text-center font-bold inv-total" id="inv-total-${index}">${(s.price * s.quantity).toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  const totalOrders = b.sideOrders.reduce((sum, s) => sum + s.price * s.quantity, 0);
+  const platesDeposit = b.platesDeposit || 0;
+  const grandTotal = totalOrders + platesDeposit;
+  const remaining = grandTotal - b.finance.deposit;
 
   let html = `<div id="invoicePrintArea" class="invoice-paper" style="font-family:Cairo,sans-serif;">`;
   html += `<div class="flex items-center justify-between mb-4 border-b-2 border-black pb-3"><div class="text-right"><p class="text-[10px] text-gray-500">${r.subtitle}</p><h2 class="text-xl font-black">${r.name}</h2><p class="text-[10px] text-gray-500">${r.specialty}</p></div><div class="w-14 h-14 rounded-2xl bg-black flex items-center justify-center"><i class="fas fa-utensils text-white text-xl"></i></div></div>`;
   html += `<div class="flex items-center justify-between mb-3 text-[11px] text-gray-500"><div>${r.social}</div><div class="bg-black text-white px-3 py-0.5 rounded-full text-[10px] font-bold">حجز وليمة</div><div><i class="fas fa-phone"></i> ${r.phone}</div></div>`;
   html += `<div class="flex items-center justify-between mb-3 text-sm font-bold"><span>التاريخ: ${b.booking.date}</span><span>اليوم: ${b.booking.day}</span><span>الساعة: ${b.booking.time}</span></div>`;
+  html += `<div class="flex items-center justify-between mb-3 text-sm"><span class="font-bold">موعد التسليم: ${b.booking.deliveryTime || 'ظهراً'}</span></div>`;
   html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="grid grid-cols-2 gap-1.5 text-sm"><div><span class="font-bold">العميل:</span> ${b.customer.name}</div><div><span class="font-bold">الجوال:</span> ${b.customer.phone || '-'}</div><div><span class="font-bold">الموقع:</span> ${b.customer.location || '-'}</div><div><span class="font-bold">العلامة:</span> ${b.booking.mark || '-'}</div></div></div>`;
-  html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="grid grid-cols-3 gap-2 text-center text-sm mb-2 border-b pb-2"><div><span class="font-bold">النوع</span><br>${b.banquet.type || '-'}</div><div><span class="font-bold">القيمة</span><br>${b.banquet.value.toFixed(2)}</div><div><span class="font-bold">الذبائح</span><br>${b.banquet.sacrificesCount || 0}</div></div><div class="text-sm space-y-0.5"><div><span class="font-bold">الطبخ:</span> ${b.banquet.cooking || '-'}</div><div><span class="font-bold">التفصيل:</span> ${b.banquet.cutting || '-'}</div><div><span class="font-bold">الصحون:</span> ${b.banquet.platesCount || 0}</div></div></div>`;
-  if (b.notes) html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="bg-black text-white text-center rounded-lg py-0.5 text-[10px] font-bold mb-1.5">الملاحظات</div><p class="text-sm">${b.notes}</p></div>`;
-  html += `<div class="mb-3"><div class="bg-black text-white text-center rounded-lg py-0.5 text-[10px] font-bold mb-1.5">الطلبات الجانبية</div><table class="w-full text-xs" style="border-collapse:collapse;"><thead><tr class="bg-black text-white"><th class="border border-gray-300 px-2 py-1">الصنف</th><th class="border border-gray-300 px-2 py-1">العدد</th><th class="border border-gray-300 px-2 py-1">السعر</th><th class="border border-gray-300 px-2 py-1">الإجمالي</th></tr></thead><tbody>${sideRows || '<tr><td colspan="4" class="border border-gray-200 px-2.5 py-1.5 text-center text-gray-400">لا توجد طلبات جانبية</td></tr>'}</tbody></table></div>`;
-  html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="grid grid-cols-2 gap-1.5 text-sm"><div><span class="font-bold">الإجمالي:</span> ${b.finance.total.toFixed(2)} ر.س</div><div><span class="font-bold">العربون:</span> ${b.finance.deposit.toFixed(2)} ر.س</div><div class="text-red-600 font-bold"><span>المتبقي:</span> ${b.finance.remaining.toFixed(2)} ر.س</div></div></div>`;
+  
+  html += `<div class="mb-3"><div class="bg-black text-white text-center rounded-lg py-0.5 text-[10px] font-bold mb-1.5">الطلبات الجانبية (قابل للتعديل)</div><table class="w-full text-xs" style="border-collapse:collapse;"><thead><tr class="bg-black text-white"><th class="border border-gray-300 px-2 py-1">الصنف</th><th class="border border-gray-300 px-2 py-1">العدد</th><th class="border border-gray-300 px-2 py-1">السعر</th><th class="border border-gray-300 px-2 py-1">الإجمالي</th></tr></thead><tbody>${sideRows || '<tr><td colspan="4" class="border border-gray-200 px-2.5 py-1.5 text-center text-gray-400">لا توجد طلبات جانبية</td></tr>'}</tbody></table></div>`;
+  html += `<div class="flex items-center justify-between mb-2 text-sm border-b border-gray-200 pb-1"><span class="font-bold">رهن الصحون</span><span class="font-bold" id="invPlatesDeposit">${platesDeposit.toFixed(2)} ر.س</span></div>`;
+  html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="grid grid-cols-2 gap-1.5 text-sm"><div><span class="font-bold">إجمالي الطلبات:</span> <span id="invTotalOrders">${totalOrders.toFixed(2)}</span> ر.س</div><div><span class="font-bold">الإجمالي (مع الرهن):</span> <span id="invGrandTotal">${grandTotal.toFixed(2)}</span> ر.س</div><div><span class="font-bold">العربون:</span> ${b.finance.deposit.toFixed(2)} ر.س</div><div class="text-red-600 font-bold"><span>المتبقي:</span> <span id="invRemainingDisplay">${Math.max(0, remaining).toFixed(2)}</span> ر.س</div></div></div>`;
+if (b.notes) {
+    html += `<div class="border-2 border-black rounded-xl p-3 mb-3"><div class="bg-black text-white text-center rounded-lg py-0.5 text-[10px] font-bold mb-1.5">تفاصيل الوليمة</div><p class="text-sm whitespace-pre-wrap">${b.notes}</p></div>`;
+  }
   html += `<div class="border-t-2 border-black pt-3 flex items-center justify-between text-[10px] text-gray-500"><div class="text-center"><i class="fas fa-map-marker-alt"></i><p>${r.address}</p></div><div class="text-center"><p>للحجز: ${r.phone}</p><p>للتوصيل: ${r.delivery}</p></div><div id="invoiceQR" class="qr-container"></div></div>`;
   html += `</div>`;
 
@@ -884,29 +936,77 @@ function viewInvoice(id) {
       });
     } catch(e) {}
   }, 150);
-  showScreen('screenInvoice');
 }
 
-function printInvoice() { window.print(); }
+// دالة لتحديث صف الفاتورة عند تغيير الكمية أو السعر
+function updateInvoiceRow(index) {
+  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
+  if (!b) return;
+  const qtyInput = document.querySelector(`.inv-qty[data-index="${index}"]`);
+  const priceInput = document.querySelector(`.inv-price[data-index="${index}"]`);
+  if (!qtyInput || !priceInput) return;
+  const newQty = parseInt(qtyInput.value) || 1;
+  const newPrice = parseFloat(priceInput.value) || 0;
+  b.sideOrders[index].quantity = newQty;
+  b.sideOrders[index].price = newPrice;
+  b.sideOrders[index].total = newPrice * newQty;
+  document.getElementById(`inv-total-${index}`).textContent = (newPrice * newQty).toFixed(2);
+  recalcInvoiceTotals(b);
+}
+
+function recalcInvoiceTotals(b) {
+  const totalOrders = b.sideOrders.reduce((sum, s) => sum + s.price * s.quantity, 0);
+  const platesDeposit = b.platesDeposit || 0;
+  const grandTotal = totalOrders + platesDeposit;
+  const remaining = grandTotal - b.finance.deposit;
+  b.finance.total = grandTotal;
+  b.finance.remaining = Math.max(0, remaining);
+  b.finance.totalOrders = totalOrders;
+  document.getElementById('invTotalOrders').textContent = totalOrders.toFixed(2);
+  document.getElementById('invGrandTotal').textContent = grandTotal.toFixed(2);
+  document.getElementById('invRemainingDisplay').textContent = Math.max(0, remaining).toFixed(2);
+  document.getElementById('invPlatesDeposit').textContent = platesDeposit.toFixed(2) + ' ر.س';
+}
+
+// حفظ التعديلات في localStorage
+function saveInvoiceChanges() {
+  const b = appData.bookings.find(x => x.id == appData.tempBookingId);
+  if (!b) return;
+  const idx = appData.bookings.findIndex(x => x.id == appData.tempBookingId);
+  if (idx !== -1) {
+    appData.bookings[idx] = b;
+    saveData();
+    showToast('تم حفظ التعديلات بنجاح');
+    renderEditableInvoice(b);
+  } else {
+    showToast('خطأ في حفظ التعديلات');
+  }
+}
 
 // ============================================================
-// SHARE WHATSAPP WITH PDF
+// PRINT & SHARE & PDF
 // ============================================================
+function printInvoice() { window.print(); }
+
 async function shareInvoiceWhatsApp() {
   const b = appData.bookings.find(x => x.id == appData.tempBookingId);
   if (!b) { showToast('لا توجد فاتورة'); return; }
 
   try {
     showToast('جاري تجهيز الملف...');
+    saveInvoiceChanges();
+    const b2 = appData.bookings.find(x => x.id == appData.tempBookingId);
+    if (!b2) return;
+    renderEditableInvoice(b2);
     const blob = await generatePdfBlob();
     if (!blob) return;
 
-    const file = new File([blob], `فاتورة_${b.customer.name}_${b.booking.date}.pdf`, { type: 'application/pdf' });
+    const file = new File([blob], `فاتورة_${b2.customer.name}_${b2.booking.date}.pdf`, { type: 'application/pdf' });
 
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         title: 'فاتورة حجز - شواطئ عدن',
-        text: `فاتورة حجز ${b.customer.name}`,
+        text: `فاتورة حجز ${b2.customer.name}`,
         files: [file]
       });
       showToast('تمت المشاركة بنجاح');
@@ -915,17 +1015,23 @@ async function shareInvoiceWhatsApp() {
 
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `فاتورة_${b.customer.name}_${b.booking.date}.pdf`;
+    link.download = `فاتورة_${b2.customer.name}_${b2.booking.date}.pdf`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 5000);
 
     const r = appData.settings.restaurant;
+    const totalOrders = b2.sideOrders.reduce((sum, s) => sum + s.price * s.quantity, 0);
+    const platesDeposit = b2.platesDeposit || 0;
+    const grandTotal = totalOrders + platesDeposit;
     const text = `*فاتورة حجز - ${r.name}*%0A%0A` +
-      `*العميل:* ${b.customer.name}%0A` +
-      `*التاريخ:* ${b.booking.date} ${b.booking.time}%0A` +
-      `*الإجمالي:* ${b.finance.total.toFixed(2)} ر.س%0A` +
-      `*العربون:* ${b.finance.deposit.toFixed(2)} ر.س%0A` +
-      `*المتبقي:* ${b.finance.remaining.toFixed(2)} ر.س%0A%0A` +
+      `*العميل:* ${b2.customer.name}%0A` +
+      `*التاريخ:* ${b2.booking.date} ${b2.booking.time}%0A` +
+      `*موعد التسليم:* ${b2.booking.deliveryTime || 'ظهراً'}%0A` +
+      `*إجمالي الطلبات:* ${totalOrders.toFixed(2)} ر.س%0A` +
+      `*رهن الصحون:* ${platesDeposit.toFixed(2)} ر.س%0A` +
+      `*الإجمالي الكلي:* ${grandTotal.toFixed(2)} ر.س%0A` +
+      `*العربون:* ${b2.finance.deposit.toFixed(2)} ر.س%0A` +
+      `*المتبقي:* ${Math.max(0, grandTotal - b2.finance.deposit).toFixed(2)} ر.س%0A%0A` +
       `*${r.name}* - ${r.phone}`;
     window.open(`https://wa.me/?text=${text}`, '_blank');
     showToast('تم تحميل الملف للمشاركة');
@@ -935,9 +1041,6 @@ async function shareInvoiceWhatsApp() {
   }
 }
 
-// ============================================================
-// PDF GENERATION
-// ============================================================
 async function generatePdfBlob() {
   const element = document.getElementById('invoicePrintArea');
   if (!element) { showToast('لا توجد فاتورة'); return null; }
@@ -970,6 +1073,7 @@ async function generatePdfBlob() {
 }
 
 async function downloadPDF() {
+  saveInvoiceChanges();
   const blob = await generatePdfBlob();
   if (!blob) return;
   const b = appData.bookings.find(x => x.id == appData.tempBookingId);
@@ -982,7 +1086,7 @@ async function downloadPDF() {
 }
 
 // ============================================================
-// ITEMS
+// ITEMS (بدون رهن)
 // ============================================================
 function renderItems() {
   const search = (document.getElementById('searchItems')?.value || '').toLowerCase();
@@ -992,9 +1096,21 @@ function renderItems() {
   const cats = {side:'طلب جانبي', sacrifice:'ذبيحة', cooking:'طبخ', other:'أخرى'};
   el.innerHTML = list.map(i =>
     `<div class="bg-white rounded-2xl p-3.5 flex items-center justify-between shadow-sm border border-gray-50/80">
-      <div><p class="font-bold text-sm">${i.name}</p><p class="text-[10px] text-gray-400">${cats[i.category] || i.category}</p></div>
-      <div class="flex items-center gap-3"><span class="font-bold text-sm text-gray-700">${i.price.toFixed(2)} ر.س</span>
-      <button onclick="deleteItem(${i.id})" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press"><i class="fas fa-trash text-xs"></i></button></div>
+      <div>
+        <p class="font-bold text-sm">${i.name}</p>
+        <div class="flex gap-3 text-xs text-gray-500 mt-0.5">
+          <span>السعر: ${i.price.toFixed(2)} ر.س</span>
+          <span class="text-gray-400">${cats[i.category] || i.category}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openEditItem(${i.id})" class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center btn-press">
+          <i class="fas fa-edit text-xs"></i>
+        </button>
+        <button onclick="deleteItem(${i.id})" class="w-8 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center btn-press">
+          <i class="fas fa-trash text-xs"></i>
+        </button>
+      </div>
     </div>`
   ).join('');
 }
@@ -1015,10 +1131,43 @@ function addItem() {
 }
 
 function deleteItem(id) {
-  appData.items = appData.items.filter(i => i.id != id);
+  appData.tempDeleteId = id;
+  document.getElementById('confirmText').textContent = 'هل أنت متأكد من حذف هذا الصنف؟';
+  document.getElementById('confirmBtn').onclick = function() {
+    appData.items = appData.items.filter(i => i.id != appData.tempDeleteId);
+    saveData();
+    renderItems();
+    closeModal();
+    showToast('تم حذف الصنف');
+  };
+  document.getElementById('confirmModal').classList.add('active');
+}
+
+function openEditItem(id) {
+  const item = appData.items.find(i => i.id == id);
+  if (!item) return;
+  document.getElementById('editItemId').value = id;
+  document.getElementById('editItemName').value = item.name;
+  document.getElementById('editItemPrice').value = item.price;
+  document.getElementById('editItemCategory').value = item.category;
+  document.getElementById('editItemModal').classList.add('active');
+}
+
+function updateItem() {
+  const id = parseInt(document.getElementById('editItemId').value);
+  const item = appData.items.find(i => i.id == id);
+  if (!item) { showToast('خطأ في التعديل'); return; }
+  const name = document.getElementById('editItemName').value.trim();
+  const price = parseFloat(document.getElementById('editItemPrice').value) || 0;
+  const category = document.getElementById('editItemCategory').value;
+  if (!name || price <= 0) { showToast('يرجى إدخال اسم وسعر صحيح'); return; }
+  item.name = name;
+  item.price = price;
+  item.category = category;
   saveData();
   renderItems();
-  showToast('تم حذف الصنف');
+  closeModal();
+  showToast('تم تحديث الصنف');
 }
 
 // ============================================================
