@@ -418,10 +418,65 @@
       </div>
     </div>
 
+    <!-- ===================== شاشة تسجيل الدخول ===================== -->
+    <div id="screenLogin" class="screen">
+      <div
+        class="min-h-screen flex items-center justify-center p-6"
+        style="background: var(--color-primary)"
+      >
+        <div class="w-full max-w-md">
+          <div class="text-center mb-8">
+            <div
+              class="w-20 h-20 rounded-3xl bg-white flex items-center justify-center mx-auto mb-4 shadow-2xl"
+            >
+              <i class="fas fa-utensils text-4xl text-black"></i>
+            </div>
+            <h1 class="text-2xl font-black text-white">شواطئ عدن</h1>
+            <p class="text-gray-400 text-sm">تسجيل الدخول لإدارة الولائم</p>
+          </div>
+
+          <div class="bg-white rounded-3xl p-6 shadow-2xl">
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-semibold text-gray-700 block mb-1"
+                  >البريد الإلكتروني</label
+                >
+                <input
+                  type="email"
+                  id="loginEmail"
+                  placeholder="admin@shawati.com"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition"
+                />
+              </div>
+              <div>
+                <label class="text-sm font-semibold text-gray-700 block mb-1"
+                  >كلمة المرور</label
+                >
+                <input
+                  type="password"
+                  id="loginPassword"
+                  placeholder="••••••••"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition"
+                  onkeydown="if (event.key === 'Enter') handleLogin();"
+                />
+              </div>
+              <button
+                onclick="handleLogin()"
+                class="w-full bg-black text-white rounded-2xl py-4 font-bold text-lg btn-press shadow-xl"
+              >
+                <i class="fas fa-sign-in-alt ml-2"></i> تسجيل الدخول
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===================== الصفحة الرئيسية ===================== -->
     <div id="screenHome" class="screen">
       <div class="min-h-screen pb-20" style="background: var(--color-bg)">
         <!-- الرأس -->
+        <!-- استبدل قسم header في screenHome بهذا: -->
         <header
           class="px-5 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
           style="background: var(--color-primary); color: #fff"
@@ -440,12 +495,21 @@
                 </p>
               </div>
             </div>
-            <button
-              onclick="showScreen('screenSettings')"
-              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-            >
-              <i class="fas fa-sliders-h text-sm text-white/70"></i>
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                onclick="logout()"
+                class="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center btn-press backdrop-blur-sm border border-red-500/10"
+                title="تسجيل الخروج"
+              >
+                <i class="fas fa-sign-out-alt text-sm text-red-400"></i>
+              </button>
+              <button
+                onclick="showScreen('screenSettings')"
+                class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
+              >
+                <i class="fas fa-sliders-h text-sm text-white/70"></i>
+              </button>
+            </div>
           </div>
         </header>
 
@@ -700,6 +764,102 @@
       </div>
     </div>
 
+    
+    <!-- ===================== مودال تأكيد الحجز ===================== -->
+<div id="confirmBookingModal" class="modal-overlay">
+    <div class="modal-content p-6">
+        <div class="text-center mb-4">
+            <div class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-file-invoice text-3xl text-yellow-600"></i>
+            </div>
+            <h3 class="font-bold text-xl">📋 تأكيد الحجز</h3>
+            <p class="text-sm text-gray-500 mt-1">يرجى مراجعة البيانات قبل الحفظ</p>
+        </div>
+        
+        <!-- تفاصيل العميل -->
+        <div class="bg-gray-50 rounded-2xl p-4 space-y-2.5 mb-4">
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">👤 العميل</span>
+                <span class="font-bold text-sm" id="confirmCustName">-</span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">📅 التاريخ</span>
+                <span class="font-bold text-sm" id="confirmBookingDate">-</span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">⏰ الوقت</span>
+                <span class="font-bold text-sm" id="confirmBookingTime">-</span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">📍 الموقع</span>
+                <span class="font-bold text-sm" id="confirmLocation">-</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-500">🏷️ العلامة</span>
+                <span class="font-bold text-sm" id="confirmMark">-</span>
+            </div>
+        </div>
+        
+        <!-- تفاصيل الطلبات -->
+        <div class="bg-gray-50 rounded-2xl p-4 space-y-2.5 mb-4">
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">📦 تفاصيل الطلبات</p>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">إجمالي الطلبات</span>
+                <span class="font-bold text-sm text-blue-600" id="confirmTotalOrders">-</span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">🍽️ تأمين الصحون</span>
+                <span class="font-bold text-sm" id="confirmPlatesDeposit">-</span>
+            </div>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+                <span class="text-sm text-gray-500">💳 طريقة الدفع</span>
+                <span class="font-bold text-sm" id="confirmPaymentMethod">-</span>
+            </div>
+            <div class="flex justify-between items-center pt-1">
+                <span class="text-sm font-bold text-gray-700">📊 إجمالي الفاتورة</span>
+                <span class="font-bold text-lg text-black" id="confirmGrandTotal">-</span>
+            </div>
+        </div>
+        
+        <!-- 💰 المبالغ (التركيز الأساسي) -->
+        <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-4 space-y-3 mb-4 border-2 border-green-200">
+            <p class="text-xs font-bold text-green-700 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-money-bill-wave"></i> المبالغ
+            </p>
+            
+            <div class="flex justify-between items-center border-b border-green-200 pb-2">
+                <span class="text-sm font-bold text-green-700 flex items-center gap-1">
+                    <i class="fas fa-hand-holding-usd"></i> المبلغ المدفوع
+                </span>
+                <span class="font-bold text-lg text-green-700" id="confirmPaidAmount">-</span>
+            </div>
+            
+            <div class="flex justify-between items-center pt-1">
+                <span class="text-sm font-bold text-red-600 flex items-center gap-1">
+                    <i class="fas fa-coins"></i> المبلغ المتبقي
+                </span>
+                <span class="font-bold text-2xl text-red-700" id="confirmRemaining">-</span>
+            </div>
+        </div>
+        
+        <!-- الأزرار -->
+        <div class="flex gap-3">
+            <button
+                onclick="closeConfirmModal()"
+                class="flex-1 bg-red-50 text-red-600 rounded-2xl py-3.5 font-bold btn-press border-2 border-red-200 flex items-center justify-center gap-2"
+            >
+                <i class="fas fa-times"></i> تعديل الحجز
+            </button>
+            <button
+                onclick="confirmAndSave()"
+                class="flex-1 bg-green-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 shadow-lg hover:bg-green-700 transition"
+            >
+                <i class="fas fa-check-circle"></i> تأكيد الحفظ
+            </button>
+        </div>
+    </div>
+</div>
+
     <!-- ===================== حجز جديد ===================== -->
     <div id="screenNewBooking" class="screen">
       <div class="min-h-screen pb-24" style="background: var(--color-bg)">
@@ -795,41 +955,111 @@
               class="w-full px-4 py-3.5 text-sm resize-none"
             ></textarea>
           </div>
+
           <!-- المالية -->
           <div class="section-card">
             <div class="section-title">
               <i class="fas fa-money-bill-wave"></i> المالية
             </div>
+
+            <!-- إجمالي الطلبات -->
             <div
               class="flex items-center justify-between bg-gray-50 rounded-2xl p-3.5 mb-3"
             >
               <span class="text-sm text-gray-500 font-semibold"
                 >إجمالي الطلبات</span
               >
-              <span class="font-black text-lg" id="bookingTotalDisplay"
+              <span
+                class="font-black text-lg text-blue-600"
+                id="bookingTotalDisplay"
                 >0.00 ر.س</span
               >
             </div>
+
+            <!-- تأمين الصحون -->
             <input
               type="number"
               id="platesDeposit"
               placeholder="تأمين الصحون (مبلغ ثابت)"
-              class="w-full px-4 py-3.5 mb-3 text-sm"
+              class="w-full px-4 py-3.5 mb-3 text-sm border-2 border-gray-200 rounded-xl focus:border-black focus:ring-0"
+              min="0"
+              step="0.5"
               oninput="calcBookingTotal()"
             />
-            <input
-              type="number"
-              id="depositAmount"
-              placeholder="مبلغ العربون المدفوع"
-              class="w-full px-4 py-3.5 mb-3 text-sm"
-              oninput="calcBookingTotal()"
-            />
+
+            <!-- ============================================ -->
+            <!-- 📌 الإجمالي الكلي (يتم حسابه تلقائياً) -->
+            <!-- ============================================ -->
             <div
-              class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5"
+              class="flex items-center justify-between bg-black rounded-2xl p-3.5 mb-3"
             >
-              <span class="text-sm text-red-400 font-semibold">المتبقي</span>
+              <span class="text-sm text-white font-semibold"
+                >إجمالي الفاتورة</span
+              >
               <span
-                class="font-black text-lg text-red-600"
+                class="font-black text-lg text-yellow-400"
+                id="grandTotalDisplay"
+                >0.00 ر.س</span
+              >
+            </div>
+
+            <!-- ============================================ -->
+            <!-- 💰 المبلغ المدفوع -->
+            <!-- ============================================ -->
+            <div
+              class="bg-green-50 rounded-2xl p-3.5 mb-3 border border-green-200"
+            >
+              <p
+                class="text-xs font-bold text-green-700 mb-2 flex items-center gap-1"
+              >
+                <i class="fas fa-check-circle"></i> المبلغ المدفوع
+              </p>
+              <input
+                type="number"
+                id="paidAmount"
+                placeholder="المبلغ المدفوع"
+                class="w-full px-4 py-3.5 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0"
+                min="0"
+                step="0.5"
+                oninput="calcBookingTotal()"
+              />
+            </div>
+
+            <!-- ============================================ -->
+            <!-- 💳 طريقة الدفع -->
+            <!-- ============================================ -->
+            <div
+              class="bg-blue-50 rounded-2xl p-3.5 mb-3 border border-blue-200"
+            >
+              <p
+                class="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1"
+              >
+                <i class="fas fa-credit-card"></i> طريقة الدفع
+              </p>
+              <select
+                id="paymentMethod"
+                class="w-full px-4 py-3.5 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 bg-white"
+              >
+                <option value="نقدي">💰 نقدي</option>
+                <option value="تحويل بنكي">🏦 تحويل بنكي</option>
+                <option value="بطاقة ائتمان">💳 بطاقة ائتمان</option>
+                <option value="أجل">📅 أجل</option>
+              </select>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- 📊 المتبقي -->
+            <!-- ============================================ -->
+            <div
+              class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5 border-2 border-red-200"
+            >
+              <span
+                class="text-sm text-red-600 font-bold flex items-center gap-1"
+              >
+                <i class="fas fa-coins"></i> المتبقي
+              </span>
+              <span
+                class="font-black text-xl text-red-700"
                 id="remainingDisplay"
                 >0.00 ر.س</span
               >
@@ -842,61 +1072,6 @@
           >
             <i class="fas fa-save"></i> حفظ الحجز
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===================== الفاتورة ===================== -->
-    <div id="screenInvoice" class="screen">
-      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div
-          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
-          style="background: var(--color-primary); color: #fff"
-        >
-          <div class="flex items-center gap-3">
-            <button
-              onclick="showScreen('screenBookings')"
-              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-            >
-              <i class="fas fa-arrow-right text-sm"></i>
-            </button>
-            <h1 class="font-bold text-lg">الفاتورة - تعديل</h1>
-          </div>
-        </div>
-        <div class="px-4 pt-6">
-          <div id="invoiceContainer"></div>
-          <div class="grid grid-cols-2 gap-3 mt-4">
-            <button
-              onclick="saveInvoiceChanges()"
-              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
-              style="background: var(--color-accent-blue); color: #fff"
-            >
-              <i class="fas fa-save"></i> حفظ التعديلات
-            </button>
-            <button
-              onclick="printInvoice()"
-              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
-              style="background: var(--color-primary); color: #fff"
-            >
-              <i class="fas fa-print"></i> طباعة
-            </button>
-          </div>
-          <div class="grid grid-cols-2 gap-3 mt-3">
-            <button
-              onclick="shareInvoiceWhatsApp()"
-              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
-              style="background: #25d366; color: #fff"
-            >
-              <i class="fab fa-whatsapp text-xl"></i> واتساب
-            </button>
-            <button
-              onclick="downloadPDF()"
-              class="rounded-2xl py-4 font-bold btn-press shadow-md flex items-center justify-center gap-2"
-              style="background: var(--color-text-muted); color: #fff"
-            >
-              <i class="fas fa-file-pdf"></i> تحميل PDF
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -985,16 +1160,35 @@
             <div class="section-title">
               <i class="fas fa-store"></i> بيانات المطعم
             </div>
-            
+
             <div class="mb-4">
-              <label class="text-sm text-gray-500 font-semibold mb-2 block">شعار المطعم</label>
+              <label class="text-sm text-gray-500 font-semibold mb-2 block"
+                >شعار المطعم</label
+              >
               <div class="flex items-center gap-3">
-                <img id="logoPreview" src="" alt="logo" class="w-16 h-16 rounded-xl object-cover bg-gray-100 hidden" />
-                <label class="flex-1 bg-gray-100 text-black rounded-2xl py-3 font-bold flex items-center justify-center gap-2 cursor-pointer">
+                <img
+                  id="logoPreview"
+                  src=""
+                  alt="logo"
+                  class="w-16 h-16 rounded-xl object-cover bg-gray-100 hidden"
+                />
+                <label
+                  class="flex-1 bg-gray-100 text-black rounded-2xl py-3 font-bold flex items-center justify-center gap-2 cursor-pointer"
+                >
                   <i class="fas fa-upload"></i> رفع شعار
-                  <input type="file" id="restLogo" accept="image/*" class="hidden" onchange="uploadLogo(this)" />
+                  <input
+                    type="file"
+                    id="restLogo"
+                    accept="image/*"
+                    class="hidden"
+                    onchange="uploadLogo(this)"
+                  />
                 </label>
-                <button id="removeLogoBtn" onclick="removeLogo()" class="hidden bg-red-50 text-red-500 rounded-2xl px-4 py-3 font-bold">
+                <button
+                  id="removeLogoBtn"
+                  onclick="removeLogo()"
+                  class="hidden bg-red-50 text-red-500 rounded-2xl px-4 py-3 font-bold"
+                >
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -1224,6 +1418,6 @@
       </div>
     </div>
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>
