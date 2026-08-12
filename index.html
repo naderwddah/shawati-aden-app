@@ -7,26 +7,23 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <meta name="theme-color" content="#0f172a" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <link
-      rel="manifest"
-      href="data:application/json;base64,ewogICJuYW1lIjogIuGZqNmK2YUg2YXYsdmK2YUiLAogICJzaG9ydF9uYW1lIjogIuGZqNmK2YUiLAogICJkZXNjcmlwdGlvbiI6ICLZhNmF2YUg2KfZhNiq2KfbjCDYp9mE2YjYp9mE2YrYsSDYp9mE2KfZg9in2Kwg2KfZhNmF2KfZhiIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMGYxNzJhIiwKICAidGhlbWVfY29sb3IiOiAiIzBmMTcyYSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDUxMiA1MTInPjxyZWN0IHdpZHRoPSc1MTInIGhlaWdodD0nNTEyJyBmaWxsPScjMGYxNzJhJy8+PHRleHQgeD0nMjU2JyB5PSczNDAnIGZvbnQtc2l6ZT0nMjUwJyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmaWxsPSd3aGl0ZScgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPteq2KfYryA8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0sCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAicHJlZmVyX3JlbGF0ZWRfYXBwbGljYXRpb25zIjogW10KfQ=="
-    />
+    <link rel="manifest" href="manifest.json" />
     <title>شواطئ عدن - إدارة الولائم</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
-      /* ========== متغيرات الألوان العالمية ========== */
+      /* كل الأنماط السابقة تبقى كما هي، لم تتغير */
       :root {
         --color-primary: #0f172a;
         --color-primary-light: #1e293b;
@@ -45,21 +42,18 @@
         --color-accent-red: #ef4444;
         --color-accent-yellow: #f59e0b;
       }
-
-      /* ========== الأنماط الأساسية ========== */
       * {
         font-family: "Cairo", sans-serif;
         box-sizing: border-box;
         -webkit-tap-highlight-color: transparent;
       }
-
       body {
         background: var(--color-bg);
         overflow-x: hidden;
         min-height: 100vh;
+        padding-top: 76px;
         padding-bottom: 80px;
       }
-
       .screen {
         display: none;
         min-height: 100vh;
@@ -68,22 +62,31 @@
       .screen.active {
         display: block;
       }
-      #screenSplash.active {
-        display: flex;
-      }
-
+#screenSplash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 99999; /* لضمان تغطية كل شيء بما فيها الأشرطة العلوية والسفلية */
+            background: var(--color-primary);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        #screenSplash.active { display: flex; }
       ::-webkit-scrollbar {
         width: 0;
         height: 0;
       }
-
       .btn-press {
         transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
       }
       .btn-press:active {
         transform: scale(0.94);
       }
-
       @keyframes slideUp {
         from {
           transform: translateY(24px);
@@ -111,12 +114,9 @@
           transform: scale(1.04);
         }
       }
-
       .animate-slideUp {
         animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       }
-
-      /* ========== حالة الحجوزات ========== */
       .status-new {
         background: var(--color-accent-blue);
         color: #fff;
@@ -133,8 +133,6 @@
         background: var(--color-accent-red);
         color: #fff;
       }
-
-      /* ========== القائمة السفلية ========== */
       .bottom-nav {
         position: fixed;
         bottom: 0;
@@ -159,7 +157,6 @@
       .bottom-nav .nav-btn.active .nav-icon {
         transform: scale(1.1);
       }
-
       .badge-count {
         position: absolute;
         top: -4px;
@@ -176,8 +173,6 @@
         font-weight: 700;
         border: 2px solid #fff;
       }
-
-      /* ========== المودالات ========== */
       .modal-overlay {
         position: fixed;
         inset: 0;
@@ -201,8 +196,6 @@
         overflow-y: auto;
         animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       }
-
-      /* ========== التوست ========== */
       .toast {
         position: fixed;
         top: 20px;
@@ -226,8 +219,6 @@
       .toast i {
         margin-left: 10px;
       }
-
-      /* ========== المدخلات والعناصر ========== */
       input,
       select,
       textarea {
@@ -250,7 +241,6 @@
         color: #b0b8c4;
         font-weight: 300;
       }
-
       .section-card {
         background: var(--color-card);
         border-radius: var(--radius-md);
@@ -271,8 +261,6 @@
         color: #9ca3af;
         font-size: 14px;
       }
-
-      /* ========== الفاتورة ========== */
       .invoice-paper {
         background: #fff;
         max-width: 400px;
@@ -311,8 +299,6 @@
         outline: none;
         box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
       }
-
-      /* ========== شاشة البداية ========== */
       #installBanner {
         display: none;
         background: var(--color-primary);
@@ -337,8 +323,6 @@
         font-weight: 700;
         font-size: 13px;
       }
-
-      /* ========== الطباعة ========== */
       @media print {
         body * {
           visibility: hidden;
@@ -358,6 +342,102 @@
           box-shadow: none;
         }
       }
+      /* AppBar Styles */
+      #appBar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        min-height: 64px;
+        padding: 8px 20px;
+        background: var(--color-primary);
+        color: #fff;
+        border-radius: 0 0 28px 28px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        overflow: hidden;
+      }
+      #appBar .app-bar-start {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        min-width: 0;
+      }
+      #appBar .app-bar-back {
+        display: none;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+      #appBar .app-bar-back:active {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(0.92);
+      }
+      #appBar .app-bar-back.show {
+        display: flex;
+      }
+      #appBar .app-bar-title {
+        font-weight: 800;
+        font-size: 18px;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: 0.3px;
+      }
+      #appBar .app-bar-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      #appBar .app-bar-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+        backdrop-filter: blur(4px);
+      }
+      #appBar .app-bar-btn:active {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(0.92);
+      }
+      #appBar .app-bar-btn.danger {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.15);
+      }
+      #appBar .app-bar-btn.danger:active {
+        background: rgba(239, 68, 68, 0.4);
+      }
+      /* إضافة نمط للحقول المقفلة في الإعدادات */
+      .settings-field:disabled {
+        background: #f1f5f9;
+        color: #64748b;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
     </style>
   </head>
   <body>
@@ -365,7 +445,7 @@
       <i class="fas fa-check-circle"></i><span id="toastText"></span>
     </div>
 
-    <!-- ======== شريط التثبيت ======== -->
+    <!-- شريط التثبيت -->
     <div id="installBanner" class="show">
       <div style="display: flex; align-items: center; gap: 10px">
         <i class="fas fa-mobile-alt text-xl"></i>
@@ -373,9 +453,7 @@
       </div>
       <button id="installBtn">تثبيت</button>
       <button
-        onclick="
-          document.getElementById('installBanner').classList.remove('show')
-        "
+        onclick="dismissInstallBanner()"
         style="
           background: transparent;
           color: #aaa;
@@ -387,38 +465,51 @@
       </button>
     </div>
 
-    <!-- ===================== شاشة البداية ===================== -->
-    <div id="screenSplash" class="screen active">
-      <div
-        class="flex flex-col items-center justify-center min-h-screen"
-        style="background: var(--color-primary); color: #fff"
-      >
-        <div
-          class="w-28 h-28 rounded-3xl bg-white flex items-center justify-center mb-5 shadow-2xl"
-          style="animation: pulse 2s infinite"
+    <!-- AppBar -->
+    <header id="appBar">
+      <div class="app-bar-start">
+        <button class="app-bar-back" id="backBtn" onclick="goBack()">
+          <i class="fas fa-arrow-right"></i>
+        </button>
+        <span class="app-bar-title" id="appBarTitle">شواطئ عدن</span>
+      </div>
+      <div class="app-bar-actions">
+        <button
+          class="app-bar-btn danger"
+          id="appBarLogout"
+          onclick="logout()"
+          title="تسجيل الخروج"
+          style="display: none"
         >
-          <i class="fas fa-utensils text-5xl text-black"></i>
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+        <button
+          class="app-bar-btn"
+          id="appBarSettings"
+          onclick="showScreen('screenSettings')"
+          title="الإعدادات"
+          style="display: none"
+        >
+          <i class="fas fa-sliders-h"></i>
+        </button>
+      </div>
+    </header>
+
+<!-- شاشة البداية -->
+    <div id="screenSplash" class="screen active">
+        <div class="w-28 h-28 rounded-3xl bg-white flex items-center justify-center mb-5 shadow-2xl" style="animation: pulse 2s infinite">
+            <i class="fas fa-utensils text-5xl text-black"></i>
         </div>
         <h1 class="text-3xl font-black tracking-tight">شواطئ عدن</h1>
         <p class="text-gray-400 text-sm font-medium mt-1">مطابخ ومطاعم</p>
         <div class="mt-6 flex gap-1">
-          <span
-            class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
-            style="animation-delay: 0s"
-          ></span>
-          <span
-            class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
-            style="animation-delay: 0.2s"
-          ></span>
-          <span
-            class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
-            style="animation-delay: 0.4s"
-          ></span>
+            <span class="w-2 h-2 rounded-full bg-white/20 animate-pulse" style="animation-delay:0s"></span>
+            <span class="w-2 h-2 rounded-full bg-white/20 animate-pulse" style="animation-delay:0.2s"></span>
+            <span class="w-2 h-2 rounded-full bg-white/20 animate-pulse" style="animation-delay:0.4s"></span>
         </div>
-      </div>
     </div>
 
-    <!-- ===================== شاشة تسجيل الدخول ===================== -->
+    <!-- شاشة تسجيل الدخول -->
     <div id="screenLogin" class="screen">
       <div
         class="min-h-screen flex items-center justify-center p-6"
@@ -434,7 +525,6 @@
             <h1 class="text-2xl font-black text-white">شواطئ عدن</h1>
             <p class="text-gray-400 text-sm">تسجيل الدخول لإدارة الولائم</p>
           </div>
-
           <div class="bg-white rounded-3xl p-6 shadow-2xl">
             <div class="space-y-4">
               <div>
@@ -472,50 +562,11 @@
       </div>
     </div>
 
-    <!-- ===================== الصفحة الرئيسية ===================== -->
+    <!-- الصفحة الرئيسية -->
     <div id="screenHome" class="screen">
       <div class="min-h-screen pb-20" style="background: var(--color-bg)">
-        <!-- الرأس -->
-        <!-- استبدل قسم header في screenHome بهذا: -->
-        <header
-          class="px-5 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
-          style="background: var(--color-primary); color: #fff"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/5"
-              >
-                <i class="fas fa-utensils text-lg text-white/80"></i>
-              </div>
-              <div>
-                <h1 class="font-black text-lg leading-tight">شواطئ عدن</h1>
-                <p class="text-[11px] text-gray-400 font-medium">
-                  إدارة الولائم
-                </p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                onclick="logout()"
-                class="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center btn-press backdrop-blur-sm border border-red-500/10"
-                title="تسجيل الخروج"
-              >
-                <i class="fas fa-sign-out-alt text-sm text-red-400"></i>
-              </button>
-              <button
-                onclick="showScreen('screenSettings')"
-                class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-              >
-                <i class="fas fa-sliders-h text-sm text-white/70"></i>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <!-- المحتوى الرئيسي -->
         <div class="px-4 mt-6 relative z-10">
-          <!-- 1. بطاقات الإحصائيات الأساسية -->
+          <!-- بطاقات الإحصائيات -->
           <div class="grid grid-cols-3 gap-3">
             <div
               class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
@@ -542,7 +593,7 @@
             </div>
           </div>
 
-          <!-- 2. بطاقات المبالغ المحصلة -->
+          <!-- المبالغ المحصلة -->
           <div
             class="mt-4 p-4 rounded-2xl shadow-md"
             style="background: var(--color-card)"
@@ -615,7 +666,7 @@
             </div>
           </div>
 
-          <!-- 3. أزرار الإجراءات السريعة -->
+          <!-- أزرار الإجراءات السريعة -->
           <div class="grid grid-cols-2 gap-3 mt-8">
             <button
               onclick="showScreen('screenNewBooking')"
@@ -654,7 +705,7 @@
             </button>
           </div>
 
-          <!-- 4. حجوزات اليوم -->
+          <!-- حجوزات اليوم -->
           <div class="mt-6">
             <div class="flex items-center justify-between mb-3">
               <h2
@@ -678,7 +729,7 @@
             <div id="todayBookingsList" class="space-y-2.5"></div>
           </div>
 
-          <!-- 5. الحجوزات القادمة -->
+          <!-- الحجوزات القادمة -->
           <div class="mt-6 pb-6">
             <h2
               class="font-bold text-base flex items-center gap-2 mb-3"
@@ -696,22 +747,10 @@
       </div>
     </div>
 
-    <!-- ===================== الحجوزات ===================== -->
+    <!-- الحجوزات -->
     <div id="screenBookings" class="screen">
       <div class="min-h-screen pb-20" style="background: var(--color-bg)">
-        <div
-          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
-          style="background: var(--color-primary); color: #fff"
-        >
-          <div class="flex items-center gap-3 mb-5">
-            <button
-              onclick="showScreen('screenHome')"
-              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-            >
-              <i class="fas fa-arrow-right text-sm"></i>
-            </button>
-            <h1 class="font-bold text-lg">الحجوزات</h1>
-          </div>
+        <div class="px-4 pt-6">
           <div class="relative">
             <i
               class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
@@ -720,7 +759,7 @@
               type="text"
               id="searchBookings"
               placeholder="ابحث بالاسم أو الجوال أو التاريخ..."
-              class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-none focus:bg-white/20 placeholder:text-gray-500"
+              class="w-full bg-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-2 border-gray-200 focus:border-black outline-none transition"
               oninput="filterBookings()"
             />
           </div>
@@ -730,154 +769,175 @@
           >
             <button
               onclick="filterByStatus('all', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white text-black whitespace-nowrap"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-black text-white whitespace-nowrap"
             >
               الكل
             </button>
             <button
               onclick="filterByStatus('new', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
             >
               جديد
             </button>
             <button
               onclick="filterByStatus('confirmed', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
             >
               مؤكد
             </button>
             <button
               onclick="filterByStatus('completed', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
             >
               مكتمل
             </button>
             <button
               onclick="filterByStatus('cancelled', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/70 whitespace-nowrap"
+              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
             >
               ملغي
             </button>
           </div>
+          <div class="pt-6" id="allBookingsList"></div>
         </div>
-        <div class="px-4 pt-6" id="allBookingsList"></div>
       </div>
     </div>
 
-    
-    <!-- ===================== مودال تأكيد الحجز ===================== -->
-<div id="confirmBookingModal" class="modal-overlay">
-    <div class="modal-content p-6">
+    <!-- مودال تأكيد الحجز -->
+    <div id="confirmBookingModal" class="modal-overlay">
+      <div class="modal-content p-6">
         <div class="text-center mb-4">
-            <div class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3">
-                <i class="fas fa-file-invoice text-3xl text-yellow-600"></i>
-            </div>
-            <h3 class="font-bold text-xl">📋 تأكيد الحجز</h3>
-            <p class="text-sm text-gray-500 mt-1">يرجى مراجعة البيانات قبل الحفظ</p>
+          <div
+            class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3"
+          >
+            <i class="fas fa-file-invoice text-3xl text-yellow-600"></i>
+          </div>
+          <h3 class="font-bold text-xl">📋 تأكيد الحجز</h3>
+          <p class="text-sm text-gray-500 mt-1">
+            يرجى مراجعة البيانات قبل الحفظ
+          </p>
         </div>
-        
-        <!-- تفاصيل العميل -->
         <div class="bg-gray-50 rounded-2xl p-4 space-y-2.5 mb-4">
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">👤 العميل</span>
-                <span class="font-bold text-sm" id="confirmCustName">-</span>
-            </div>
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">📅 التاريخ</span>
-                <span class="font-bold text-sm" id="confirmBookingDate">-</span>
-            </div>
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">⏰ الوقت</span>
-                <span class="font-bold text-sm" id="confirmBookingTime">-</span>
-            </div>
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">📍 الموقع</span>
-                <span class="font-bold text-sm" id="confirmLocation">-</span>
-            </div>
-            <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-500">🏷️ العلامة</span>
-                <span class="font-bold text-sm" id="confirmMark">-</span>
-            </div>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">👤 العميل</span>
+            <span class="font-bold text-sm" id="confirmCustName">-</span>
+          </div>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">📅 التاريخ</span>
+            <span class="font-bold text-sm" id="confirmBookingDate">-</span>
+          </div>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">⏰ الوقت</span>
+            <span class="font-bold text-sm" id="confirmBookingTime">-</span>
+          </div>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">📍 الموقع</span>
+            <span class="font-bold text-sm" id="confirmLocation">-</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-500">🏷️ العلامة</span>
+            <span class="font-bold text-sm" id="confirmMark">-</span>
+          </div>
         </div>
-        
-        <!-- تفاصيل الطلبات -->
         <div class="bg-gray-50 rounded-2xl p-4 space-y-2.5 mb-4">
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">📦 تفاصيل الطلبات</p>
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">إجمالي الطلبات</span>
-                <span class="font-bold text-sm text-blue-600" id="confirmTotalOrders">-</span>
-            </div>
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">🍽️ تأمين الصحون</span>
-                <span class="font-bold text-sm" id="confirmPlatesDeposit">-</span>
-            </div>
-            <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span class="text-sm text-gray-500">💳 طريقة الدفع</span>
-                <span class="font-bold text-sm" id="confirmPaymentMethod">-</span>
-            </div>
-            <div class="flex justify-between items-center pt-1">
-                <span class="text-sm font-bold text-gray-700">📊 إجمالي الفاتورة</span>
-                <span class="font-bold text-lg text-black" id="confirmGrandTotal">-</span>
-            </div>
+          <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            📦 تفاصيل الطلبات
+          </p>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">إجمالي الطلبات</span>
+            <span
+              class="font-bold text-sm text-blue-600"
+              id="confirmTotalOrders"
+              >-</span
+            >
+          </div>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">🍽️ تأمين الصحون</span>
+            <span class="font-bold text-sm" id="confirmPlatesDeposit">-</span>
+          </div>
+          <div
+            class="flex justify-between items-center border-b border-gray-200 pb-2"
+          >
+            <span class="text-sm text-gray-500">💳 طريقة الدفع</span>
+            <span class="font-bold text-sm" id="confirmPaymentMethod">-</span>
+          </div>
+          <div class="flex justify-between items-center pt-1">
+            <span class="text-sm font-bold text-gray-700"
+              >📊 إجمالي الفاتورة</span
+            >
+            <span class="font-bold text-lg text-black" id="confirmGrandTotal"
+              >-</span
+            >
+          </div>
         </div>
-        
-        <!-- 💰 المبالغ (التركيز الأساسي) -->
-        <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-4 space-y-3 mb-4 border-2 border-green-200">
-            <p class="text-xs font-bold text-green-700 uppercase tracking-wider flex items-center gap-2">
-                <i class="fas fa-money-bill-wave"></i> المبالغ
-            </p>
-            
-            <div class="flex justify-between items-center border-b border-green-200 pb-2">
-                <span class="text-sm font-bold text-green-700 flex items-center gap-1">
-                    <i class="fas fa-hand-holding-usd"></i> المبلغ المدفوع
-                </span>
-                <span class="font-bold text-lg text-green-700" id="confirmPaidAmount">-</span>
-            </div>
-            
-            <div class="flex justify-between items-center pt-1">
-                <span class="text-sm font-bold text-red-600 flex items-center gap-1">
-                    <i class="fas fa-coins"></i> المبلغ المتبقي
-                </span>
-                <span class="font-bold text-2xl text-red-700" id="confirmRemaining">-</span>
-            </div>
+        <div
+          class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-4 space-y-3 mb-4 border-2 border-green-200"
+        >
+          <p
+            class="text-xs font-bold text-green-700 uppercase tracking-wider flex items-center gap-2"
+          >
+            <i class="fas fa-money-bill-wave"></i> المبالغ
+          </p>
+          <div
+            class="flex justify-between items-center border-b border-green-200 pb-2"
+          >
+            <span
+              class="text-sm font-bold text-green-700 flex items-center gap-1"
+            >
+              <i class="fas fa-hand-holding-usd"></i> المبلغ المدفوع
+            </span>
+            <span
+              class="font-bold text-lg text-green-700"
+              id="confirmPaidAmount"
+              >-</span
+            >
+          </div>
+          <div class="flex justify-between items-center pt-1">
+            <span
+              class="text-sm font-bold text-red-600 flex items-center gap-1"
+            >
+              <i class="fas fa-coins"></i> المبلغ المتبقي
+            </span>
+            <span class="font-bold text-2xl text-red-700" id="confirmRemaining"
+              >-</span
+            >
+          </div>
         </div>
-        
-        <!-- الأزرار -->
         <div class="flex gap-3">
-            <button
-                onclick="closeConfirmModal()"
-                class="flex-1 bg-red-50 text-red-600 rounded-2xl py-3.5 font-bold btn-press border-2 border-red-200 flex items-center justify-center gap-2"
-            >
-                <i class="fas fa-times"></i> تعديل الحجز
-            </button>
-            <button
-                onclick="confirmAndSave()"
-                class="flex-1 bg-green-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 shadow-lg hover:bg-green-700 transition"
-            >
-                <i class="fas fa-check-circle"></i> تأكيد الحفظ
-            </button>
+          <button
+            onclick="closeConfirmModal()"
+            class="flex-1 bg-red-50 text-red-600 rounded-2xl py-3.5 font-bold btn-press border-2 border-red-200 flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-times"></i> تعديل الحجز
+          </button>
+          <button
+            onclick="confirmAndSave()"
+            class="flex-1 bg-green-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 shadow-lg hover:bg-green-700 transition"
+          >
+            <i class="fas fa-check-circle"></i> تأكيد الحفظ
+          </button>
         </div>
+      </div>
     </div>
-</div>
-
     <!-- ===================== حجز جديد ===================== -->
     <div id="screenNewBooking" class="screen">
       <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div
-          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
-          style="background: var(--color-primary); color: #fff"
-        >
-          <div class="flex items-center gap-3">
-            <button
-              onclick="showScreen('screenHome')"
-              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-            >
-              <i class="fas fa-arrow-right text-sm"></i>
-            </button>
-            <h1 class="font-bold text-lg" id="bookingFormTitle">حجز جديد</h1>
-          </div>
-        </div>
         <div class="px-4 pt-6 space-y-3.5">
+          <!-- ✅ إضافة عنوان النموذج -->
+          <h1 id="bookingFormTitle" class="font-bold text-lg mb-4">حجز جديد</h1>
+
           <!-- بيانات العميل -->
           <div class="section-card">
             <div class="section-title">
@@ -902,6 +962,7 @@
               class="w-full px-4 py-3.5 text-sm"
             />
           </div>
+
           <!-- تفاصيل الحجز -->
           <div class="section-card">
             <div class="section-title">
@@ -929,6 +990,7 @@
               <option value="مساءً">مساءً</option>
             </select>
           </div>
+
           <!-- الطلبات الجانبية -->
           <div class="section-card">
             <div class="section-title">
@@ -943,6 +1005,7 @@
               <i class="fas fa-plus ml-1.5"></i> إضافة صنف جانبي
             </button>
           </div>
+
           <!-- ملاحظات -->
           <div class="section-card">
             <div class="section-title">
@@ -962,7 +1025,6 @@
               <i class="fas fa-money-bill-wave"></i> المالية
             </div>
 
-            <!-- إجمالي الطلبات -->
             <div
               class="flex items-center justify-between bg-gray-50 rounded-2xl p-3.5 mb-3"
             >
@@ -976,7 +1038,6 @@
               >
             </div>
 
-            <!-- تأمين الصحون -->
             <input
               type="number"
               id="platesDeposit"
@@ -987,9 +1048,6 @@
               oninput="calcBookingTotal()"
             />
 
-            <!-- ============================================ -->
-            <!-- 📌 الإجمالي الكلي (يتم حسابه تلقائياً) -->
-            <!-- ============================================ -->
             <div
               class="flex items-center justify-between bg-black rounded-2xl p-3.5 mb-3"
             >
@@ -1003,9 +1061,6 @@
               >
             </div>
 
-            <!-- ============================================ -->
-            <!-- 💰 المبلغ المدفوع -->
-            <!-- ============================================ -->
             <div
               class="bg-green-50 rounded-2xl p-3.5 mb-3 border border-green-200"
             >
@@ -1025,9 +1080,6 @@
               />
             </div>
 
-            <!-- ============================================ -->
-            <!-- 💳 طريقة الدفع -->
-            <!-- ============================================ -->
             <div
               class="bg-blue-50 rounded-2xl p-3.5 mb-3 border border-blue-200"
             >
@@ -1047,17 +1099,13 @@
               </select>
             </div>
 
-            <!-- ============================================ -->
-            <!-- 📊 المتبقي -->
-            <!-- ============================================ -->
             <div
               class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5 border-2 border-red-200"
             >
               <span
                 class="text-sm text-red-600 font-bold flex items-center gap-1"
+                ><i class="fas fa-coins"></i> المتبقي</span
               >
-                <i class="fas fa-coins"></i> المتبقي
-              </span>
               <span
                 class="font-black text-xl text-red-700"
                 id="remainingDisplay"
@@ -1065,6 +1113,7 @@
               >
             </div>
           </div>
+
           <button
             onclick="saveBooking()"
             class="w-full rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2"
@@ -1076,35 +1125,9 @@
       </div>
     </div>
 
-    <!-- ===================== الأصناف ===================== -->
+    <!-- الأصناف -->
     <div id="screenItems" class="screen">
       <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div
-          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
-          style="background: var(--color-primary); color: #fff"
-        >
-          <div class="flex items-center gap-3 mb-5">
-            <button
-              onclick="showScreen('screenHome')"
-              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-            >
-              <i class="fas fa-arrow-right text-sm"></i>
-            </button>
-            <h1 class="font-bold text-lg">الأصناف</h1>
-          </div>
-          <div class="relative">
-            <i
-              class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
-            ></i>
-            <input
-              type="text"
-              id="searchItems"
-              placeholder="ابحث عن صنف..."
-              class="w-full bg-white/10 text-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-none focus:bg-white/20 placeholder:text-gray-500"
-              oninput="filterItems()"
-            />
-          </div>
-        </div>
         <div class="px-4 pt-6">
           <div class="section-card mb-4">
             <h3
@@ -1138,29 +1161,16 @@
       </div>
     </div>
 
-    <!-- ===================== الإعدادات ===================== -->
+    <!-- الإعدادات (المعدلة) -->
     <div id="screenSettings" class="screen">
       <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div
-          class="px-4 pt-8 pb-8 rounded-b-[2rem] sticky top-0 z-30 shadow-lg"
-          style="background: var(--color-primary); color: #fff"
-        >
-          <div class="flex items-center gap-3">
-            <button
-              onclick="showScreen('screenHome')"
-              class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center btn-press backdrop-blur-sm border border-white/5"
-            >
-              <i class="fas fa-arrow-right text-sm"></i>
-            </button>
-            <h1 class="font-bold text-lg">الإعدادات</h1>
-          </div>
-        </div>
         <div class="px-4 pt-6 space-y-3.5">
           <div class="section-card">
             <div class="section-title">
               <i class="fas fa-store"></i> بيانات المطعم
             </div>
 
+            <!-- عرض الشعار -->
             <div class="mb-4">
               <label class="text-sm text-gray-500 font-semibold mb-2 block"
                 >شعار المطعم</label
@@ -1172,8 +1182,15 @@
                   alt="logo"
                   class="w-16 h-16 rounded-xl object-cover bg-gray-100 hidden"
                 />
+                <div
+                  id="logoPlaceholder"
+                  class="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400 text-xs"
+                >
+                  لا يوجد
+                </div>
                 <label
-                  class="flex-1 bg-gray-100 text-black rounded-2xl py-3 font-bold flex items-center justify-center gap-2 cursor-pointer"
+                  class="flex-1 bg-gray-100 text-black rounded-2xl py-3 font-bold flex items-center justify-center gap-2 cursor-pointer settings-action"
+                  style="display: none"
                 >
                   <i class="fas fa-upload"></i> رفع شعار
                   <input
@@ -1187,50 +1204,78 @@
                 <button
                   id="removeLogoBtn"
                   onclick="removeLogo()"
-                  class="hidden bg-red-50 text-red-500 rounded-2xl px-4 py-3 font-bold"
+                  class="hidden bg-red-50 text-red-500 rounded-2xl px-4 py-3 font-bold settings-action"
                 >
-                  <i class="fas fa-trash"></i>
+                  حذف
                 </button>
               </div>
             </div>
 
+            <!-- الحقول -->
             <input
               type="text"
               id="restName"
               placeholder="اسم المطعم"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
+              disabled
             />
             <input
               type="text"
               id="restSubtitle"
               placeholder="الوصف"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
+              disabled
             />
             <input
               type="tel"
               id="restPhone"
               placeholder="رقم الهاتف"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
+              disabled
             />
             <input
               type="tel"
               id="restDelivery"
               placeholder="رقم التوصيل"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
+              disabled
             />
             <input
               type="text"
               id="restAddress"
               placeholder="العنوان"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
+              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
+              disabled
             />
             <input
               type="text"
               id="restSocial"
               placeholder="حساب التواصل"
-              class="w-full px-4 py-3.5 text-sm"
+              class="settings-field w-full px-4 py-3.5 text-sm"
+              disabled
             />
+
+            <!-- أزرار التحكم -->
+            <div class="flex gap-3 mt-4">
+              <button
+                id="editSettingsBtn"
+                onclick="enableEditing()"
+                class="flex-1 bg-blue-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
+              >
+                <i class="fas fa-pen"></i> تعديل
+              </button>
+              <button
+                id="saveSettingsBtn"
+                onclick="saveSettings()"
+                class="flex-1 bg-green-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
+                style="display: none"
+              >
+                <i class="fas fa-save"></i> حفظ
+              </button>
+            </div>
           </div>
+
+          <!-- النسخ الاحتياطي -->
           <div class="section-card">
             <div class="section-title">
               <i class="fas fa-database"></i> النسخ الاحتياطي
@@ -1254,18 +1299,29 @@
               />
             </label>
           </div>
-          <button
-            onclick="saveSettings()"
-            class="w-full rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2"
-            style="background: var(--color-primary); color: #fff"
-          >
-            <i class="fas fa-save"></i> حفظ الإعدادات
-          </button>
+          <!-- قسم تثبيت التطبيق -->
+          <div class="section-card" id="installAppSection">
+            <div class="section-title">
+              <i class="fas fa-download"></i> تثبيت التطبيق
+            </div>
+            <button
+              id="installAppBtn"
+              onclick="installApp()"
+              class="w-full bg-black text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
+            >
+              <i class="fas fa-mobile-alt"></i> تثبيت التطبيق
+            </button>
+            <p
+              id="installAppStatus"
+              class="text-center text-sm text-gray-500 mt-2"
+              style="display: none"
+            ></p>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ===================== القائمة السفلية ===================== -->
+    <!-- القائمة السفلية -->
     <div class="bottom-nav">
       <div
         class="flex items-center justify-around py-2.5 px-2 max-w-md mx-auto"
@@ -1318,7 +1374,7 @@
       </div>
     </div>
 
-    <!-- ===================== المودالات ===================== -->
+    <!-- المودالات العامة -->
     <div id="confirmModal" class="modal-overlay">
       <div class="modal-content p-6 text-center">
         <div
@@ -1383,7 +1439,6 @@
       </div>
     </div>
 
-    <!-- ===================== مودال تعديل الصنف ===================== -->
     <div id="editItemModal" class="modal-overlay">
       <div class="modal-content p-5">
         <h3 class="font-bold text-lg mb-4 text-center">تعديل الصنف</h3>

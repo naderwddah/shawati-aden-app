@@ -1,1206 +1,569 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>فاتورة وليمة - شواطئ عدن</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    />
-    <style>
-      @page {
-        size: A5 portrait;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فاتورة وليمة - شواطئ عدن</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+  <link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"
+/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* ========================================================= */
+    /* إعدادات الطباعة - صفحة A5 بدون هوامش */
+    /* ========================================================= */
+    @page {
+      size: A5 portrait;
+      margin: 0;
+    }
+
+    * {
+      font-family: "Tajawal", sans-serif;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ========================================================= */
+    /* تنسيق العرض في المتصفح (حجم ثابت مع تمرير) */
+    /* ========================================================= */
+    body {
+      background: #e8e0d5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .invoice-pages-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      max-width: 100%;
+    }
+
+    /* ========================================================= */
+    /* كل صفحة فاتورة بحجم A5 ثابت */
+    /* ========================================================= */
+    .invoice-page {
+      width: 148mm;
+      height: 210mm;
+      background-color: #fafbf6;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      border-radius: 4px;
+    }
+
+    /* الإطار الداخلي لكل صفحة */
+    .invoice-inner {
+      position: absolute;
+      top: 3mm;
+      left: 3mm;
+      right: 3mm;
+      bottom: 3mm;
+      border: 1px solid #420a09;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    /* ========================================================= */
+    /* العلامة المائية */
+    /* ========================================================= */
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60%;
+      height: 30%;
+      opacity: 0.05;
+      pointer-events: none;
+      z-index: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .watermark img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* ========================================================= */
+    /* الهيدر */
+    /* ========================================================= */
+    .header {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      align-items: start;
+      padding: 4mm 5mm 2mm;
+      position: relative;
+      z-index: 2;
+      gap: 2mm;
+      flex-shrink: 0;
+    }
+
+    .header-right {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .header-right .title {
+      font-size: 17px;
+      font-weight: 900;
+      color: #420a09;
+    }
+
+    .header-right .subtitle {
+      font-size: 12px;
+      color: #420a09;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    .header-right .phone {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: 24px;
+      font-weight: 800;
+      color: #420a09;
+      justify-content: flex-end;
+    }
+
+    .logo-center {
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-top: 2mm;
+    }
+
+    .main-logo {
+      width: 38mm;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .social-box {
+      border: 1px solid #420a09;
+      border-radius: 6px;
+      padding: 4px;
+      text-align: center;
+      width: 100%;
+    }
+
+    .social-icons {
+      display: flex;
+      gap: 13px;
+      justify-content: center;
+      margin-bottom: 2px;
+    }
+
+    .social-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: #420a09;
+      color: #fafbf6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 21px;
+    }
+
+    .social-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #420a09;
+      line-height: 1.2;
+    }
+
+    /* ========================================================= */
+    /* شريط الفاتورة */
+    /* ========================================================= */
+    .invoice-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: center;
+      padding: 2mm 5mm;
+      z-index: 2;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .invoice-badge-container {
+      text-align: center;
+    }
+
+    .invoice-badge {
+      background-color: #420a09;
+      color: #fafbf6;
+      padding: 4px 16px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-block;
+    }
+
+    .invoice-no {
+      font-size: 11px;
+      font-weight: 700;
+      color: #c0392b;
+      text-align: left;
+    }
+
+    /* ========================================================= */
+    /* بيانات العميل */
+    /* ========================================================= */
+    .customer-box {
+      border: 1px solid #420a09;
+      border-radius: 6px;
+      margin: 2mm 5mm;
+      padding: 4mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 2;
+      background-color: transparent;
+      height: 26mm;
+      flex-shrink: 0;
+    }
+
+    .customer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #420a09;
+    }
+
+    .customer-field {
+      display: flex;
+      align-items: center;
+    }
+
+    .customer-label {
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .customer-value {
+      border-bottom: 1px dotted #420a09;
+      min-width: 20mm;
+      text-align: center;
+      font-weight: 600;
+      margin-right: 4px;
+      margin-left: 4px;
+      padding-bottom: 1px;
+    }
+
+    /* ========================================================= */
+    /* جدول الأصناف - يتمدد لملء المساحة */
+    /* ========================================================= */
+    .table-container {
+      margin: 2mm 5mm;
+      z-index: 2;
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .items-table th {
+      background-color: #f4ebe2;
+      border: 1px solid #420a09;
+      padding: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #420a09;
+    }
+
+    .items-table td {
+      border: 1px solid #420a09;
+      padding: 2px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #420a09;
+      height: 7mm;
+    }
+
+    .col-item {
+      width: 40%;
+    }
+    .col-qty {
+      width: 16%;
+    }
+    .col-price {
+      width: 18%;
+    }
+    .col-total {
+      width: 26%;
+    }
+
+    /* ========================================================= */
+    /* تذييل الجدول (الإجمالي) */
+    /* ========================================================= */
+    .items-table tfoot td {
+      border: none;
+      border-top: 1.5px solid #420a09;
+      background-color: transparent;
+      padding: 2mm 0;
+    }
+
+    .total-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0 2px;
+    }
+
+    .total-label {
+      text-align: right;
+      font-weight: 800;
+      font-size: 12px;
+      color: #420a09;
+    }
+
+    .total-value {
+      text-align: left;
+      font-weight: 900;
+      font-size: 16px;
+      color: #420a09;
+    }
+
+    /* ========================================================= */
+    /* الملاحظات */
+    /* ========================================================= */
+    .note-text {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #420a09;
+      margin-top: 2mm;
+      z-index: 2;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    /* ========================================================= */
+    /* الموجة والتذييل */
+    /* ========================================================= */
+    .footer-wave {
+      position: relative;
+      height: 12mm;
+      width: 100%;
+      z-index: 2;
+      margin-bottom: -1px;
+      flex-shrink: 0;
+    }
+
+    .footer-content {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      align-items: center;
+      z-index: 2;
+      height: 26mm;
+      gap: 2mm;
+      flex-shrink: 0;
+    }
+
+    .qr-box {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .qr-image {
+      width: 18mm;
+      height: 18mm;
+      object-fit: contain;
+    }
+
+    .qr-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: #420a09;
+      margin-top: 3px;
+    }
+
+    .footer-center {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .contact-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin-bottom: 3px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #420a09;
+    }
+
+    .address {
+      font-size: 15px;
+      font-weight: 700;
+      color: #420a09;
+      line-height: 1.3;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+
+    .payment-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #420a09;
+    }
+
+    .payment-line {
+      display: inline-block;
+      width: 42mm;
+      height: 6mm;
+      border: 1px solid #420a09;
+      border-radius: 2mm;
+      background-color: #fafbf6;
+    }
+
+    /* ========================================================= */
+    /* أزرار التحكم (تظهر فقط في المتصفح) */
+    /* ========================================================= */
+    .actions {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 8px 16px;
+      border-radius: 12px;
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-print {
+      background-color: #420a09;
+    }
+    .btn-back {
+      background-color: #8b7355;
+    }
+
+    /* ========================================================= */
+    /* الطباعة - إزالة المسافات بين الصفحات */
+    /* ========================================================= */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
         margin: 0;
       }
-
-      * {
-        font-family: "Tajawal", sans-serif;
-        box-sizing: border-box;
+      .actions {
+        display: none !important;
+      }
+      .invoice-pages-wrapper {
+        display: block;
+        padding: 0;
+        margin: 0;
+        gap: 0;
+      }
+      .invoice-page {
+        box-shadow: none;
+        border-radius: 0;
+        width: 148mm;
+        height: 210mm;
+        page-break-after: always;
         margin: 0;
         padding: 0;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-
-      body {
-        background: #e8e0d5;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        padding: 20px;
-      }
-
-      .invoice-container {
-        width: 148mm;
-        height: 210mm;
-        background-color: #fafbf6;
-        position: relative;
-        overflow: hidden;
-      }
-
-      /* الإطار الداخلي */
-      .invoice-inner {
-        position: absolute;
-        top: 3mm;
-        left: 3mm;
-        right: 3mm;
-        bottom: 3mm;
-        border: 1px solid #420a09;
-        border-radius: 6px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        z-index: 2;
-      }
-
-      /* العلامة المائية */
-      .watermark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 60%;
-        height: 30%;
-        opacity: 0.05;
-        pointer-events: none;
-        z-index: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      .watermark img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-      }
-
-      /* Header */
-      .header {
-        display: grid;
-        grid-template-columns: 1fr 1.2fr 1fr;
-        align-items: start;
-        padding: 4mm 5mm 2mm;
-        position: relative;
-        z-index: 2;
-        gap: 2mm;
-      }
-
-      /* اليمين: بيانات المطعم */
-      .header-right {
-        text-align: right;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-      }
-
-      .header-right .title {
-        font-size: 17px;
-        font-weight: 900;
-        color: #420a09;
-      }
-
-      .header-right .subtitle {
-        font-size: 12px;
-        color: #420a09;
-        font-weight: 600;
-        margin-top: 1px;
-      }
-
-      .header-right .phone {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-top: 4px;
-        font-size: 24px;
-        font-weight: 800;
-        color: #420a09;
-        justify-content: flex-end;
-      }
-
-      /* الوسط: الشعار */
-      .logo-center {
-        text-align: center;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding-top: 2mm;
-      }
-
-      .main-logo {
-        width: 38mm;
-        height: auto;
         display: block;
-        object-fit: contain;
       }
-
-      /* اليسار: السوشيال ميديا */
-      .social-box {
-        border: 1px solid #420a09;
-        border-radius: 6px;
-        padding: 4px;
-        text-align: center;
-        width: 100%;
+      .invoice-page:last-child {
+        page-break-after: avoid;
       }
+    }
 
-      .social-icons {
-        display: flex;
-        gap: 13px;
-        justify-content: center;
-        margin-bottom: 2px;
+    /* ========================================================= */
+    /* التمرير العمودي في المتصفح مع تكبير تلقائي */
+    /* ========================================================= */
+    @media screen and (max-width: 160mm) {
+      .invoice-page {
+        transform: scale(0.85);
+        margin: -15px 0;
       }
-
-      .social-icon {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        background-color: #420a09;
-        color: #fafbf6;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 21px;
+    }
+    @media screen and (max-width: 130mm) {
+      .invoice-page {
+        transform: scale(0.7);
+        margin: -30px 0;
       }
-
-      .social-text {
-        font-size: 18px;
-        font-weight: 700;
-        color: #420a09;
-        line-height: 1.2;
+    }
+    @media screen and (max-width: 110mm) {
+      .invoice-page {
+        transform: scale(0.55);
+        margin: -45px 0;
       }
-
-      /* Invoice Bar */
-      .invoice-bar {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        align-items: center;
-        padding: 2mm 5mm;
-        z-index: 2;
-        position: relative;
-      }
-
-      .invoice-badge-container {
-        text-align: center;
-      }
-
-      .invoice-badge {
-        background-color: #420a09;
-        color: #fafbf6;
-        padding: 4px 16px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 800;
-        display: inline-block;
-      }
-
-      .invoice-no {
-        font-size: 11px;
-        font-weight: 700;
-        color: #c0392b;
-        text-align: left;
-      }
-
-      /* Customer Box */
-      .customer-box {
-        border: 1px solid #420a09;
-        border-radius: 6px;
-        margin: 2mm 5mm;
-        padding: 4mm;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        z-index: 2;
-        background-color: transparent;
-        height: 26mm;
-      }
-
-      .customer-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 11px;
-        color: #420a09;
-      }
-
-      .customer-field {
-        display: flex;
-        align-items: center;
-      }
-
-      .customer-label {
-        font-weight: 700;
-        white-space: nowrap;
-      }
-
-      .customer-value {
-        border-bottom: 1px dotted #420a09;
-        min-width: 20mm;
-        text-align: center;
-        font-weight: 600;
-        margin-right: 4px;
-        margin-left: 4px;
-        padding-bottom: 1px;
-      }
-
-      /* Items Table */
-      .table-container {
-        margin: 2mm 5mm;
-        z-index: 2;
-        position: relative;
-      }
-
-      .items-table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;
-      }
-
-      .items-table th {
-        background-color: #f4ebe2;
-        border: 1px solid #420a09;
-        padding: 4px;
-        font-size: 11px;
-        font-weight: 800;
-        color: #420a09;
-      }
-
-      .items-table td {
-        border: 1px solid #420a09;
-        padding: 2px;
-        text-align: center;
-        font-size: 11px;
-        font-weight: 600;
-        color: #420a09;
-        height: 7mm; /* ارتفاع ثابت للصفوف لضمان ثبات التصميم */
-      }
-
-      .col-item {
-        width: 40%;
-      }
-      .col-qty {
-        width: 16%;
-      }
-      .col-price {
-        width: 18%;
-      }
-      .col-total {
-        width: 26%;
-      }
-
-      .items-table tfoot td {
-        border: none;
-        border-top: 1.5px solid #420a09;
-        background-color: transparent;
-        padding: 2mm 0;
-      }
-
-      .total-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-        padding: 0 2px;
-      }
-
-      .total-label {
-        text-align: right;
-        font-weight: 800;
-        font-size: 12px;
-        color: #420a09;
-      }
-
-      .total-value {
-        text-align: left;
-        font-weight: 900;
-        font-size: 16px;
-        color: #420a09;
-      }
-
-      /* Note */
-      .note-text {
-        text-align: center;
-        font-size: 10px;
-        font-weight: 700;
-        color: #420a09;
-        margin-top: 2mm;
-        z-index: 2;
-        position: relative;
-      }
-
-      /* Spacer */
-      .spacer {
-        flex-grow: 1;
-      }
-
-      /* Footer Wave */
-      .footer-wave {
-        position: relative;
-        height: 12mm;
-        width: 100%;
-        z-index: 2;
-        margin-bottom: -1px;
-      }
-
-      /* Footer Content */
-      .footer-content {
-        display: grid;
-        grid-template-columns: 1fr 2fr 1fr;
-        align-items: center;
-        z-index: 2;
-        height: 26mm;
-        gap: 2mm;
-      }
-
-      .qr-box {
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .qr-image {
-        width: 18mm;
-        height: 18mm;
-        object-fit: contain;
-      }
-
-      .qr-label {
-        font-size: 9px;
-        font-weight: 700;
-        color: #420a09;
-        margin-top: 3px;
-      }
-
-      .footer-center {
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .contact-row {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        margin-bottom: 3px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #420a09;
-      }
-
-      .address {
-        font-size: 15px;
-        font-weight: 700;
-        color: #420a09;
-        line-height: 1.3;
-        margin-top: 4px;
-        margin-bottom: 6px;
-      }
-
-      .payment-box {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        font-size: 10px;
-        font-weight: 700;
-        color: #420a09;
-      }
-
-      .payment-line {
-        display: inline-block;
-        width: 35mm;
-        height: 6mm;
-        border: 1px solid #420a09;
-        border-radius: 2mm;
-        background-color: #fafbf6;
-      }
-
-      /* Action Buttons (For Screen Only) */
-      .actions {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 10px;
-        z-index: 1000;
-        background: rgba(255, 255, 255, 0.9);
-        padding: 8px 16px;
-        border-radius: 12px;
-      }
-
-      .action-btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 6px;
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-        font-size: 12px;
-      }
-
-      .btn-print {
-        background-color: #420a09;
-      }
-      .btn-back {
-        background-color: #8b7355;
-      }
-
-      /* منع الاقتصاص عند التصدير */
-      .invoice-container {
-        width: 148mm;
-        height: 210mm;
-        background-color: #fafbf6;
-        position: relative;
-        overflow: hidden;
-        margin: 0 auto;
-      }
-
-      .invoice-inner {
-        position: absolute;
-        top: 3mm;
-        left: 3mm;
-        right: 3mm;
-        bottom: 3mm;
-        border: 1px solid #420a09;
-        border-radius: 6px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        z-index: 2;
-      }
-
-      /* طباعة A5 */
-      @media print {
-        body {
-          background: #fff !important;
-          padding: 0 !important;
-          margin: 0 !important;
-        }
-
-        .actions {
-          display: none !important;
-        }
-
-        .invoice-container {
-          width: 148mm !important;
-          height: 210mm !important;
-          margin: 0 auto !important;
-          padding: 0 !important;
-          background-color: #fafbf6 !important;
-          box-shadow: none !important;
-          overflow: hidden !important;
-        }
-
-        .invoice-inner {
-          top: 3mm !important;
-          left: 3mm !important;
-          right: 3mm !important;
-          bottom: 3mm !important;
-          border: 1px solid #420a09 !important;
-        }
-
-        .watermark {
-          opacity: 0.05 !important;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="invoice-container" id="invoicePaper">
-      <!-- العلامة المائية -->
-      <div class="watermark">
-        <img src="assets/watermark.png" alt="Watermark" />
-      </div>
-
-      <div class="invoice-inner">
-        <!-- Header -->
-        <div class="header">
-          <!-- يمين: بيانات المطعم -->
-          <div class="header-right">
-            <div class="title">مطابخ شواطئ عدن</div>
-            <div class="subtitle">للحجوزات الولائم والمناسبات</div>
-            <div class="phone">
-              <i class="fas fa-phone"></i>
-              <span>0550724459</span>
-            </div>
-          </div>
-
-          <!-- وسط: الشعار -->
-          <div class="logo-center">
-            <img
-              src="assets/logo.png"
-              alt="مطابخ شواطئ عدن"
-              class="main-logo"
-            />
-          </div>
-
-          <!-- يسار: السوشيال ميديا -->
-          <div class="social-box">
-            <div class="social-icons">
-              <div class="social-icon">
-                <i class="fab fa-snapchat-ghost"></i>
-              </div>
-              <div class="social-icon"><i class="fab fa-instagram"></i></div>
-              <div class="social-icon"><i class="fab fa-tiktok"></i></div>
-              <div class="social-icon"><i class="fab fa-x-twitter"></i></div>
-            </div>
-            <div class="social-text">مطابخ شواطئ عدن</div>
-            <div
-              class="social-text"
-              style="font-size: 14px; font-weight: bold; color: black"
-            >
-              SHAWATI ADEN KITCHENS
-            </div>
-          </div>
-        </div>
-
-        <!-- Invoice Bar -->
-        <div class="invoice-bar">
-          <div></div>
-          <!-- مسافة فارغة يمين -->
-          <div class="invoice-badge-container">
-            <div class="invoice-badge">فاتورة وليمة</div>
-          </div>
-          <div class="invoice-no">No./ <span id="invoiceNumber"></span></div>
-        </div>
-
-        <!-- Customer Box -->
-        <div class="customer-box">
-          <div class="customer-row">
-            <div class="customer-field">
-              <span class="customer-label">اسم العميل :</span>
-              <span class="customer-value" id="custName"></span>
-            </div>
-            <div class="customer-field">
-              <span class="customer-label">الجوال :</span>
-              <span class="customer-value" id="custPhone"></span>
-            </div>
-          </div>
-          <div class="customer-row">
-            <div class="customer-field">
-              <span class="customer-label">اليوم :</span>
-              <span class="customer-value" id="custDay"></span>
-            </div>
-            <div class="customer-field">
-              <span class="customer-label">الساعة :</span>
-              <span class="customer-value" id="custTime"></span>
-            </div>
-            <div class="customer-field">
-              <span class="customer-label">التاريخ :</span>
-              <span class="customer-value" id="custDate"></span>
-            </div>
-          </div>
-          <div class="customer-row">
-            <div class="customer-field">
-              <span class="customer-label">موقع التوصيل :</span>
-              <span class="customer-value" id="custLocation"></span>
-            </div>
-            <div class="customer-field">
-              <span class="customer-label">العلامة :</span>
-              <span class="customer-value" id="custMark"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Items Table -->
-        <div class="table-container">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th class="col-item">الصنف</th>
-                <th class="col-qty">العدد</th>
-                <th class="col-price">السعر</th>
-                <th class="col-total">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody id="itemsBody">
-              <!-- يتم حقن الصفوف هنا -->
-            </tbody>
-            <!-- إجمالي الفاتورة -->
-            <tfoot>
-              <tr>
-                <td
-                  colspan="4"
-                  style="
-                    padding: 0;
-                    border: 1.5px solid #420a09;
-                    background-color: #fafbf6;
-                  "
-                >
-                  <div
-                    class="total-container"
-                    style="
-                      width: 100%;
-                      min-height: 10mm;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      gap: 5mm;
-                      text-align: center;
-                      direction: rtl;
-                    "
-                  >
-                    <span
-                      class="total-label"
-                      style="
-                        font-size: 11px;
-                        font-weight: 800;
-                        color: #420a09;
-                        white-space: nowrap;
-                      "
-                    >
-                      إجمالي المبلغ :
-                    </span>
-
-                    <span
-                      class="total-value"
-                      id="totalAmount"
-                      style="
-                        font-size: 15px;
-                        font-weight: 900;
-                        color: #420a09;
-                        white-space: nowrap;
-                      "
-                    >
-                      0.00
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <!-- Note -->
-        <div class="note-text">
-          ملاحظة : أي تعديل في محتوى الفاتورة يكون قبل الموعد بساعة
-        </div>
-
-        <!-- ========================================================= -->
-        <!-- Footer Wave + Footer Background -->
-        <!-- ========================================================= -->
-
-        <div class="footer-wave">
-          <svg
-            viewBox="0 0 800 100"
-            preserveAspectRatio="none"
-            style="width: 100%; height: 100%; display: block"
-          >
-            <!-- الموجة العنابية الرئيسية -->
-            <path
-              d="
-            M0,67
-            C55,54 105,52 160,57
-            C225,63 285,82 350,87
-            C420,92 475,82 530,68
-            C585,54 635,51 690,57
-            C735,61 770,69 800,76
-          "
-              fill="none"
-              stroke="#420A09"
-              stroke-width="9"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-
-            <!-- الموجة الذهبية الرفيعة -->
-            <path
-              d="
-            M0,75
-            C55,62 105,60 160,65
-            C225,71 285,90 350,95
-            C420,100 475,90 530,76
-            C585,62 635,59 690,65
-            C735,69 770,77 800,84
-          "
-              fill="none"
-              stroke="#8B6914"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            ></path>
-          </svg>
-        </div>
-
-        <!-- ========================================================= -->
-        <!-- Footer Content -->
-        <!-- ========================================================= -->
-
-        <div class="footer-content">
-          <!-- QR الموقع - يسار -->
-          <div class="qr-box">
-            <img
-              src="assets/location-qr.png"
-              class="qr-image"
-              alt="Location QR"
-            />
-
-            <div class="qr-label">الموقع</div>
-          </div>
-
-          <!-- ===================================================== -->
-          <!-- المنتصف: الأرقام + الموقع + طريقة الدفع -->
-          <!-- ===================================================== -->
-
-          <div
-            class="footer-center"
-            style="
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              width: 100%;
-            "
-          >
-            <!-- الأرقام والعنوان -->
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                width: 100%;
-                align-items: center;
-                padding: 0 4mm;
-                margin-bottom: 4px;
-              "
-            >
-              <!-- =============================================== -->
-              <!-- العنوان + أيقونة الموقع -->
-              <!-- =============================================== -->
-
-              <div
-                class="address-location"
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  gap: 3mm;
-                  text-align: right;
-                  margin: 0;
-                "
-              >
-                <!-- أيقونة الموقع -->
-                <i
-                  class="fas fa-location-dot"
-                  style="font-size: 22px; color: #420a09; flex-shrink: 0"
-                ></i>
-
-                <!-- العنوان -->
-                <div class="address" style="text-align: right; margin: 0">
-                  <p>
-                    جدة . شارع جاك<br />
-                    جوار كودو
-                  </p>
-                </div>
-              </div>
-
-              <!-- =============================================== -->
-              <!-- أرقام التواصل -->
-              <!-- =============================================== -->
-
-              <div style="display: flex; flex-direction: column; gap: 4px">
-                <!-- WhatsApp -->
-                <div
-                  class="contact-row"
-                  style="margin: 0; justify-content: flex-start"
-                >
-                  <i class="fab fa-whatsapp"></i>
-                  <span>0550724459</span>
-                </div>
-
-                <!-- Phone -->
-                <div
-                  class="contact-row"
-                  style="margin: 0; justify-content: flex-start"
-                >
-                  <i class="fas fa-phone"></i>
-                  <span>0566869958</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- ================================================= -->
-            <!-- طريقة الدفع -->
-            <!-- ================================================= -->
-
-            <div
-              class="payment-box"
-              style="
-                margin-top: 4px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 4mm;
-              "
-            >
-              <span> طريقة الدفع : </span>
-
-              <span
-                class="payment-line"
-                style="
-                  display: inline-block;
-                  width: 42mm;
-                  height: 7mm;
-                  background-color: #fafbf6;
-                  border: 1px solid #420a09;
-                  border-radius: 2mm;
-                "
-              ></span>
-            </div>
-          </div>
-
-          <!-- ===================================================== -->
-          <!-- QR قناة واتساب - يمين -->
-          <!-- ===================================================== -->
-
-          <div class="qr-box">
-            <img
-              src="assets/whatsapp-qr.png"
-              class="qr-image"
-              alt="Whatsapp QR"
-            />
-
-            <div class="qr-label">قناة واتساب</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Action Buttons -->
-    <div class="actions">
-      <button class="action-btn btn-back" onclick="goBack()">
-        <i class="fas fa-arrow-right"></i> رجوع
-      </button>
-      <button class="action-btn btn-print" onclick="printInvoiceA5()">
-        <i class="fas fa-print"></i> طباعة
-      </button>
-      <button
-        class="action-btn"
-        style="background: #25d366"
-        onclick="shareWhatsApp()"
-      >
-        <i class="fab fa-whatsapp"></i> واتساب
-      </button>
-      <button
-        class="action-btn"
-        style="background: #dc3545"
-        onclick="downloadPDFInvoice()"
-      >
-        <i class="fas fa-file-pdf"></i> PDF
-      </button>
-    </div>
-
-    <script>
-      // ============================================================
-      // تحميل البيانات من localStorage
-      // ============================================================
-      function loadInvoiceData() {
-        try {
-          const saved = localStorage.getItem("preview_invoice_data");
-          if (saved) {
-            const data = JSON.parse(saved);
-            console.log("📥 Invoice data loaded:", data);
-            return data;
-          }
-        } catch (e) {
-          console.error("Error loading invoice data:", e);
-        }
-        return null;
-      }
-
-      // البيانات الافتراضية
-      let invoiceData = {
-        id: "",
-        customer: { name: "", phone: "", location: "" },
-        booking: { date: "", time: "", day: "", mark: "" },
-        items: [],
-        total: "0.00",
-        platesDeposit: "0.00",
-        notes: "",
-        deposit: "0.00",
-        remaining: "0.00",
-        deliveryTime: "ظهراً",
-        restaurant: {
-          name: "مطابخ شواطئ عدن",
-          subtitle: "للحجوزات الولائم والمناسبات",
-          phone: "0550724459",
-          delivery: "0566869958",
-          address: "جدة . شارع جاك جوار كودو",
-          social: "SHAWATI ADEN KITCHENS",
-        },
-      };
-
-      function renderInvoice(data) {
-        document.getElementById("invoiceNumber").textContent = data.id || "";
-        document.getElementById("custName").textContent =
-          data.customer?.name || "";
-        document.getElementById("custPhone").textContent =
-          data.customer?.phone || "";
-        document.getElementById("custDay").textContent =
-          data.booking?.day || "";
-        document.getElementById("custTime").textContent =
-          data.booking?.time || "";
-        document.getElementById("custDate").textContent =
-          data.booking?.date || "2026 / /";
-        document.getElementById("custLocation").textContent =
-          data.customer?.location || "";
-        document.getElementById("custMark").textContent =
-          data.booking?.mark || "";
-
-        const paymentMethod = data.paymentMethod || "نقدي";
-        const paymentLine = document.querySelector(".payment-line");
-        if (paymentLine) {
-          paymentLine.textContent = paymentMethod;
-          paymentLine.style.display = "flex";
-          paymentLine.style.alignItems = "center";
-          paymentLine.style.justifyContent = "center";
-          paymentLine.style.fontWeight = "bold";
-          paymentLine.style.fontSize = "12px";
-          paymentLine.style.color = "#420a09";
-          paymentLine.style.padding = "0 8px";
-        }
-
-        const restaurantName = data.restaurant?.name || "مطابخ شواطئ عدن";
-        document.querySelector(".header-right .title").textContent =
-          restaurantName;
-
-        const socialText = data.restaurant?.social || "SHAWATI ADEN KITCHENS";
-        document.querySelector(".social-text:last-child").textContent =
-          socialText;
-
-        const phone = data.restaurant?.phone || "0550724459";
-        document.querySelector(".header-right .phone span").textContent = phone;
-
-        const footerPhone = data.restaurant?.phone || "0550724459";
-        const footerDelivery = data.restaurant?.delivery || "0566869958";
-        const footerPhones = document.querySelectorAll(".contact-row span");
-        if (footerPhones.length >= 2) {
-          footerPhones[0].textContent = footerPhone;
-          footerPhones[1].textContent = footerDelivery;
-        }
-
-        const address = data.restaurant?.address || "جدة . شارع جاك جوار كودو";
-        const addressElement = document.querySelector(".address p");
-        if (addressElement) {
-          addressElement.innerHTML = address.replace(/\n/g, "<br>");
-        }
-
-        const tbody = document.getElementById("itemsBody");
-        tbody.innerHTML = "";
-        const items = data.items || [];
-
-        items.forEach((item) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-                <td style="text-align: right; padding-right: 4px;">${item.name || ""}</td>
-                <td>${item.qty || 0}</td>
-                <td>${Number(item.price || 0).toFixed(2)}</td>
-                <td style="font-weight: 800;">${Number(item.total || 0).toFixed(2)}</td>
-            `;
-          tbody.appendChild(tr);
-        });
-
-        const emptyRows = Math.max(8 - items.length, 0);
-        for (let i = 0; i < emptyRows; i++) {
-          const tr = document.createElement("tr");
-          tr.innerHTML = "<td>&nbsp;</td><td></td><td></td><td></td>";
-          tbody.appendChild(tr);
-        }
-
-        document.getElementById("totalAmount").textContent = Number(
-          data.total || 0,
-        ).toFixed(2);
-      }
-
-      // ============================================================
-      // SHARE & PDF FUNCTIONS
-      // ============================================================
-      // ============================================================
-      // GO BACK (العودة للصفحة السابقة)
-      // ============================================================
-      function goBack() {
-        window.history.back();
-      }
-
-      // ============================================================
-      // SHARE & PDF FUNCTIONS
-      // ============================================================
-      function shareWhatsApp() {
-        const data = loadInvoiceData() || invoiceData;
-        const text =
-          `*فاتورة وليمة - ${data.restaurant?.name || "شواطئ عدن"}*%0A%0A` +
-          `*العميل:* ${data.customer?.name || ""}%0A` +
-          `*التاريخ:* ${data.booking?.date || ""} ${data.booking?.time || ""}%0A` +
-          `*إجمالي المبلغ:* ${data.total || "0.00"} ر.س%0A%0A` +
-          `*${data.restaurant?.name || ""}*%0A` +
-          `${data.restaurant?.address || ""}`;
-
-        window.open(`https://wa.me/?text=${text}`, "_blank");
-      }
-
-      // ============================================================
-      // PDF FUNCTIONS (مع إصلاح الاقتصاص)
-      // ============================================================
-      function downloadPDFInvoice() {
-        const element = document.getElementById("invoicePaper");
-        if (!element) {
-          alert("لا توجد فاتورة للتحميل");
-          return;
-        }
-
-        // إظهار حالة التحميل
-        const btn = document.querySelector(
-          '.action-btn[style*="background: #dc3545"]',
-        );
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
-        btn.disabled = true;
-
-        // استخدام html2canvas
-        if (typeof html2canvas === "undefined") {
-          const script = document.createElement("script");
-          script.src =
-            "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-          script.onload = function () {
-            generatePDF(element, btn, originalText);
-          };
-          document.head.appendChild(script);
-          return;
-        }
-
-        generatePDF(element, btn, originalText);
-      }
-
-      function generatePDF(element, btn, originalText) {
-        // حساب الأبعاد الصحيحة
-        const rect = element.getBoundingClientRect();
-        const width = rect.width;
-        const height = rect.height;
-
-        // نسبة العرض إلى الارتفاع
-        const aspectRatio = width / height;
-
-        // حجم A5 بالبكسل (تقريبي)
-        const targetWidth = 148;
-        const targetHeight = 210;
-
-        html2canvas(element, {
-          scale: 3, // دقة عالية
-          backgroundColor: "#fafbf6",
-          useCORS: true,
-          logging: false,
-          width: width * 1.5,
-          height: height * 1.5,
-          onclone: function (clonedDoc) {
-            const clonedEl = clonedDoc.getElementById("invoicePaper");
-            if (clonedEl) {
-              clonedEl.style.width = "148mm";
-              clonedEl.style.height = "210mm";
-              clonedEl.style.padding = "3mm";
-              clonedEl.style.margin = "0";
-              clonedEl.style.transform = "none";
-            }
-          },
-        })
-          .then((canvas) => {
-            const imgData = canvas.toDataURL("image/png");
-
-            if (typeof window.jspdf === "undefined") {
-              const script = document.createElement("script");
-              script.src =
-                "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-              script.onload = function () {
-                createPDF(imgData, canvas, btn, originalText);
-              };
-              document.head.appendChild(script);
-              return;
-            }
-
-            createPDF(imgData, canvas, btn, originalText);
-          })
-          .catch((err) => {
-            console.error("PDF Error:", err);
-            alert("حدث خطأ في إنشاء PDF: " + err.message);
-            if (btn) {
-              btn.innerHTML = originalText;
-              btn.disabled = false;
-            }
-          });
-      }
-
-      function createPDF(imgData, canvas, btn, originalText) {
-        try {
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF("p", "mm", "a5");
-
-          // حساب الأبعاد للحفاظ على النسبة
-          const imgWidth = 148;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-          // إضافة الصورة مع توسيطها
-          const xOffset = 0;
-          const yOffset = (210 - imgHeight) / 2;
-
-          pdf.addImage(
-            imgData,
-            "PNG",
-            xOffset,
-            Math.max(0, yOffset),
-            imgWidth,
-            Math.min(imgHeight, 210),
-          );
-          pdf.save(`فاتورة_${invoiceData.customer?.name || "حجز"}.pdf`);
-
-          if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-          }
-        } catch (err) {
-          console.error("PDF Create Error:", err);
-          alert("حدث خطأ في إنشاء PDF: " + err.message);
-          if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-          }
-        }
-      }
-
-      // ============================================================
-      // PRINT FUNCTIONS
-      // ============================================================
-      function printInvoiceA5() {
-        // إضافة class للطباعة
-        document.body.classList.add("printing-a5");
-
-        // طباعة
-        window.print();
-
-        // إزالة class بعد الطباعة
-        setTimeout(() => {
-          document.body.classList.remove("printing-a5");
-        }, 1000);
-      }
-
-      // ============================================================
-      // INIT
-      // ============================================================
-      document.addEventListener("DOMContentLoaded", () => {
-        const data = loadInvoiceData();
-        if (data) {
-          invoiceData = data;
-        }
-        renderInvoice(invoiceData);
-      });
-
-      window.addEventListener("beforeunload", function () {
-        localStorage.removeItem("preview_invoice_data");
-      });
-    </script>
-  </body>
+    }
+  </style>
+</head>
+<body>
+
+  <div class="invoice-pages-wrapper" id="pagesWrapper">
+    <!-- سيتم إنشاء الصفحات بواسطة JavaScript -->
+  </div>
+
+<!-- أزرار التحكم -->
+  <div class="actions">
+    <button class="action-btn btn-back" onclick="window.location.href='index.html'">رجوع</button>
+    <button class="action-btn btn-print" onclick="window.print()">طباعة / PDF</button>
+    <button class="action-btn btn-whatsapp" onclick="shareInvoiceWhatsApp()" style="background-color: #25D366; color: white;">
+      <i class="fab fa-whatsapp" style="margin-left:4px; font-size:14px;"></i> واتساب
+    </button>
+  </div>
+
+  <script src="invoice.js"></script>
+</body>
 </html>

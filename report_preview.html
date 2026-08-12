@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>معاينة التقرير - شواطئ عدن</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Tajawal',sans-serif; }
+        body { background:#f5f0eb; padding:20px; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
+        .report-container {
+            background:#fff;
+            max-width:1000px;
+            width:100%;
+            padding:30px;
+            border-radius:16px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.08);
+            position:relative;
+        }
+        /* ترويسة التقرير */
+        .report-header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            border-bottom:2px solid #e0d6ce;
+            padding-bottom:15px;
+            margin-bottom:20px;
+            flex-wrap:wrap;
+            gap:10px;
+        }
+        .report-header .brand {
+            display:flex;
+            align-items:center;
+            gap:12px;
+        }
+        .report-header .brand img {
+            max-height:60px;
+            max-width:80px;
+        }
+        .report-header .brand h1 {
+            font-size:24px;
+            font-weight:900;
+            color:#420a09;
+        }
+        .report-header .brand span {
+            color:#8B6914;
+        }
+        .report-header .date-range {
+            text-align:left;
+            color:#4a3f39;
+            font-weight:700;
+            font-size:14px;
+        }
+        /* البطاقات */
+        .kpi-grid {
+            display:grid;
+            grid-template-columns:repeat(auto-fit, minmax(170px,1fr));
+            gap:16px;
+            margin-bottom:24px;
+        }
+        .kpi-card {
+            background:#faf8f6;
+            border-radius:12px;
+            padding:16px;
+            border-right:5px solid #b8860b;
+        }
+        .kpi-card .label { font-size:13px; font-weight:700; color:#8a7a70; text-transform:uppercase; }
+        .kpi-card .value { font-size:28px; font-weight:900; color:#1e1a17; }
+        .kpi-card .sub { font-size:12px; color:#8a7a70; }
+        .kpi-card.gold { border-right-color:#b8860b; }
+        .kpi-card.gold .value { color:#b8860b; }
+        .kpi-card.green { border-right-color:#2e8b57; }
+        .kpi-card.green .value { color:#2e8b57; }
+        .kpi-card.red { border-right-color:#c0392b; }
+        .kpi-card.red .value { color:#c0392b; }
+        .kpi-card.blue { border-right-color:#2980b9; }
+        .kpi-card.blue .value { color:#2980b9; }
+        /* الجدول */
+        .table-wrapper { overflow-x:auto; margin-top:10px; }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        table thead { background:#f8f4f0; }
+        table thead th { padding:12px 10px; text-align:center; font-weight:800; color:#4a3f39; border-bottom:2px solid #e0d6ce; }
+        table tbody td { padding:10px; text-align:center; border-bottom:1px solid #f0ebe7; }
+        table tbody tr:hover { background:#fdfcfb; }
+        .badge-paid { background:#d4edda; color:#155724; padding:3px 12px; border-radius:30px; font-weight:700; font-size:12px; }
+        .badge-unpaid { background:#f8d7da; color:#721c24; padding:3px 12px; border-radius:30px; font-weight:700; font-size:12px; }
+        .total-row td { background:#f8f4f0; font-weight:900; border-top:3px solid #b8860b; }
+        .remaining-zero { color:#2e8b57; }
+        .remaining-positive { color:#c0392b; font-weight:900; }
+        /* أزرار التحكم */
+        .actions {
+            display:flex;
+            gap:12px;
+            justify-content:center;
+            margin-top:24px;
+            flex-wrap:wrap;
+        }
+        .actions button {
+            padding:10px 24px;
+            border:none;
+            border-radius:30px;
+            font-weight:700;
+            cursor:pointer;
+            font-size:14px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            transition:0.3s;
+        }
+        .btn-print { background:#420a09; color:#fff; }
+        .btn-print:hover { background:#5c0f0e; }
+        .btn-pdf { background:#c0392b; color:#fff; }
+        .btn-pdf:hover { background:#a93226; }
+        .btn-excel { background:#1e8449; color:#fff; }
+        .btn-excel:hover { background:#196f3d; }
+        .btn-whatsapp { background:#25D366; color:#fff; }
+        .btn-whatsapp:hover { background:#1ebc5a; }
+        .btn-back { background:#8b7355; color:#fff; }
+        .btn-back:hover { background:#6d5a42; }
+        @media print {
+            body { background:#fff; padding:0; }
+            .report-container { box-shadow:none; border-radius:0; padding:15px; }
+            .actions { display:none !important; }
+            .kpi-card { border:1px solid #ddd; }
+        }
+        @media (max-width:768px) {
+            body { padding:10px; }
+            .report-container { padding:16px; }
+            .report-header { flex-direction:column; align-items:stretch; text-align:center; }
+            .report-header .date-range { text-align:center; }
+            .kpi-grid { grid-template-columns:1fr 1fr; gap:10px; }
+            .kpi-card .value { font-size:22px; }
+            table { font-size:12px; }
+            .actions button { flex:1; justify-content:center; padding:10px; font-size:13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container" id="reportContainer">
+        <!-- الهيدر -->
+        <div class="report-header">
+            <div class="brand">
+                <img id="reportLogo" src="assets/logo.png" alt="شواطئ عدن" />
+                <h1>شواطئ <span>عدن</span></h1>
+            </div>
+            <div class="date-range" id="reportDateRange">الفترة: 2026-01-01 إلى 2026-01-31</div>
+        </div>
+
+        <!-- البطاقات -->
+        <div class="kpi-grid">
+            <div class="kpi-card gold">
+                <div class="label">💰 إجمالي الإيرادات</div>
+                <div class="value" id="previewTotalRevenue">0.00</div>
+                <div class="sub">ر.س</div>
+            </div>
+            <div class="kpi-card green">
+                <div class="label">✅ إجمالي المدفوع</div>
+                <div class="value" id="previewTotalPaid">0.00</div>
+                <div class="sub">ر.س</div>
+            </div>
+            <div class="kpi-card red">
+                <div class="label">⏳ إجمالي المتبقي</div>
+                <div class="value" id="previewTotalRemaining">0.00</div>
+                <div class="sub">ر.س</div>
+            </div>
+            <div class="kpi-card blue">
+                <div class="label">📄 عدد الفواتير</div>
+                <div class="value" id="previewTotalCount">0</div>
+                <div class="sub">فاتورة</div>
+            </div>
+        </div>
+
+        <!-- الجدول -->
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>العميل</th>
+                        <th>التاريخ</th>
+                        <th>الإجمالي</th>
+                        <th>المدفوع</th>
+                        <th>المتبقي</th>
+                        <th>طريقة الدفع</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody id="previewTableBody">
+                    <tr><td colspan="8" style="text-align:center; padding:30px; color:#8a7a70;">لا توجد بيانات</td></tr>
+                </tbody>
+                <tfoot id="previewTableFoot" style="display:none;"></tfoot>
+            </table>
+        </div>
+
+        <!-- الأزرار -->
+        <div class="actions">
+            <button class="btn-back" onclick="window.close()"><i class="fas fa-arrow-right"></i> رجوع</button>
+            <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> طباعة / PDF</button>
+            <button class="btn-pdf" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> تحميل PDF</button>
+            <button class="btn-excel" onclick="downloadExcel()"><i class="fas fa-file-excel"></i> تحميل Excel</button>
+            <button class="btn-whatsapp" onclick="shareWhatsApp()"><i class="fab fa-whatsapp"></i> مشاركة</button>
+        </div>
+    </div>
+
+    <script src="report_preview.js"></script>
+</body>
+</html>
