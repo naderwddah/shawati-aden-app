@@ -414,7 +414,23 @@ async function updateBookingStatus(id, status) {
   });
   if (response?.success) {
     const idx = appData.bookings.findIndex((b) => b.id === id);
-    if (idx !== -1) appData.bookings[idx] = response.data;
+    if (idx !== -1) {
+      const oldBooking = appData.bookings[idx];
+      const newData = response.data;
+
+      if (!newData.platesDeposit && oldBooking.platesDeposit !== undefined) {
+        newData.platesDeposit = oldBooking.platesDeposit;
+      }
+      if (!newData.plates_deposit && oldBooking.plates_deposit !== undefined) {
+        newData.plates_deposit = oldBooking.plates_deposit;
+      }
+      if (!newData.finance) newData.finance = {};
+      if (!newData.finance.platesDeposit && oldBooking.finance?.platesDeposit) {
+        newData.finance.platesDeposit = oldBooking.finance.platesDeposit;
+      }
+
+      appData.bookings[idx] = newData;
+    }
     return true;
   }
   return false;
@@ -451,7 +467,6 @@ async function confirmReturnPlates(id) {
 
     const paidAmount = parseFloat(b.finance?.paid || b.paid_amount || b.deposit_paid || 0);
 
-    // تجهيز الداتا مع تصفير التأمين (0)
     const apiData = {
       customer_name: b.customer?.name || b.customer_name || "عميل",
       customer_phone: b.customer?.phone || b.customer_phone || "",
@@ -461,7 +476,7 @@ async function confirmReturnPlates(id) {
       delivery_time: b.booking?.deliveryTime || b.delivery_time || "ظهراً",
       mark: b.booking?.mark || b.mark || "",
       notes: b.notes || "",
-      plates_deposit: 0, // 🔴 تصفير التأمين
+      plates_deposit: 0,
       paid_amount: paidAmount,
       deposit_paid: paidAmount, 
       payment_method: b.payment?.method || b.payment_method || "نقدي",
@@ -474,7 +489,6 @@ async function confirmReturnPlates(id) {
     });
 
     if (response?.success) {
-      // إكمال الحجز
       await updateBookingStatus(id, "completed");
       showToast("✅ تم استلام الصحون وإقفال الحجز بنجاح");
       await loadAllData();
@@ -486,6 +500,88 @@ async function confirmReturnPlates(id) {
   };
   
   document.getElementById("confirmModal").classList.add("active");
+}
+
+// دالة تسديد المتبقي بعد الإكمال
+let tempPaymentBookingId = null;
+
+function showPaymentModal(id) {
+  const b = appData.bookings.find(x => x.id == id);
+  if (!b) {
+    showToast("❌ الحجز غير موجود");
+    return;
+  }
+
+  const remaining = parseFloat(b.finance?.remaining || b.remaining || 0);
+  if (remaining <= 0) {
+    showToast("✅ لا يوجد مبلغ متبقي لتسديده");
+    return;
+  }
+
+  tempPaymentBookingId = id;
+  document.getElementById("paymentCustName").textContent = b.customer?.name || "غير معروف";
+  document.getElementById("paymentRemaining").textContent = remaining.toFixed(2);
+  document.getElementById("paymentInput").value = remaining.toFixed(2);
+  document.getElementById("paymentInput").max = remaining.toFixed(2);
+  document.getElementById("paymentMaxDisplay").textContent = remaining.toFixed(2);
+  document.getElementById("paymentModal").classList.add("active");
+}
+
+function closePaymentModal() {
+  document.getElementById("paymentModal").classList.remove("active");
+  tempPaymentBookingId = null;
+}
+
+async function confirmPayment() {
+  const input = document.getElementById("paymentInput").value.trim();
+  const payment = parseFloat(input);
+
+  if (isNaN(payment) || payment <= 0) {
+    showToast("⚠️ يرجى إدخال مبلغ صحيح");
+    return;
+  }
+
+  const id = tempPaymentBookingId;
+  const b = appData.bookings.find(x => x.id == id);
+  if (!b) {
+    showToast("❌ الحجز غير موجود");
+    return;
+  }
+
+  const remaining = parseFloat(b.finance?.remaining || b.remaining || 0);
+  const actualPayment = Math.min(payment, remaining);
+  const total = parseFloat(b.finance?.total || b.total_amount || 0);
+  const oldPaid = parseFloat(b.finance?.paid || b.paid_amount || 0);
+  const newPaid = oldPaid + actualPayment;
+  const newRemaining = Math.max(0, total - newPaid);
+
+  const bookingToUpdate = {
+    id: b.id,
+    customer: b.customer,
+    booking: b.booking,
+    notes: b.notes,
+    sideOrders: b.sideOrders || b.side_orders || b.items || [],
+    platesDeposit: parseFloat(b.platesDeposit || b.plates_deposit || 0),
+    finance: {
+      ...b.finance,
+      total: total,
+      paid: newPaid,
+      remaining: newRemaining
+    },
+    payment: { method: b.payment?.method || b.payment_method || "نقدي" },
+    status: b.status
+  };
+
+  const saved = await saveBookingToAPI(bookingToUpdate);
+  if (saved) {
+    showToast(`✅ تم تسجيل دفعة بقيمة ${actualPayment.toFixed(2)} ر.س بنجاح`);
+    closePaymentModal();
+    await loadAllData();
+    renderAllBookings();
+    updateStats();
+  } else {
+    showToast("❌ حدث خطأ في تسجيل الدفعة");
+  }
 }
 
 // ============================================================
@@ -612,7 +708,7 @@ function renderTodayBookings() {
   if (!list.length) {
     el.innerHTML = `<div class="text-center py-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200"><i class="fas fa-calendar-day text-3xl mb-2 opacity-40"></i><p class="text-sm font-medium">لا توجد حجوزات اليوم</p></div>`;
   } else {
-    el.innerHTML = list.map((b) => renderBookingCard(b, false)).join("");
+    el.innerHTML = list.map((b) => renderBookingCard(b, true)).join("");
   }
 }
 
@@ -628,16 +724,32 @@ function renderUpcomingBookings() {
   if (!list.length) {
     el.innerHTML = `<div class="text-center py-8 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200"><i class="fas fa-calendar-alt text-3xl mb-2 opacity-40"></i><p class="text-sm font-medium">لا توجد حجوزات قادمة</p></div>`;
   } else {
-    el.innerHTML = list.map((b) => renderBookingCard(b, false)).join("");
+    el.innerHTML = list.map((b) => renderBookingCard(b, true)).join("");
   }
 }
 
 function renderAllBookings() {
-  let list = [...(appData.bookings || [])].sort(
-    (a, b) => (b.id || 0) - (a.id || 0),
-  );
+  let list = [...(appData.bookings || [])].sort((a, b) => {
+    const statusOrder = { 'new': 1, 'confirmed': 2, 'completed': 3, 'cancelled': 4 };
+    const weightA = statusOrder[a.status] || 5;
+    const weightB = statusOrder[b.status] || 5;
+
+    if (weightA !== weightB) {
+        return weightA - weightB;
+    }
+
+    const dateA = a.booking?.date || "";
+    const dateB = b.booking?.date || "";
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+
+    const timeA = a.booking?.time || "";
+    const timeB = b.booking?.time || "";
+    return timeA.localeCompare(timeB);
+  });
+
   if (appData.currentFilter !== "all")
     list = list.filter((b) => b.status === appData.currentFilter);
+    
   const search = (
     document.getElementById("searchBookings")?.value || ""
   ).toLowerCase();
@@ -716,7 +828,16 @@ function renderBookingCard(b, showActions) {
   const total = (b.finance?.total || b.total_amount || b.total_orders || 0).toFixed(0);
   const paid = (b.finance?.deposit || b.finance?.paid || b.paid_amount || b.deposit_paid || 0).toFixed(0);
   const remaining = (b.finance?.remaining || b.remaining || 0).toFixed(0);
-  const pDeposit = parseFloat(b.platesDeposit || b.plates_deposit || 0).toFixed(0);
+
+  let pDeposit = 0;
+  if (b.platesDeposit !== undefined && b.platesDeposit !== null) {
+      pDeposit = parseFloat(b.platesDeposit);
+  } else if (b.plates_deposit !== undefined && b.plates_deposit !== null) {
+      pDeposit = parseFloat(b.plates_deposit);
+  } else if (b.finance && b.finance.platesDeposit !== undefined) {
+      pDeposit = parseFloat(b.finance.platesDeposit);
+  }
+  if (isNaN(pDeposit) || pDeposit < 0) pDeposit = 0;
 
   let html = `<div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-50/80" data-id="${b.id}">`;
   
@@ -753,16 +874,20 @@ function renderBookingCard(b, showActions) {
   if (showActions) {
     html += `<div class="flex flex-col gap-2 mt-3 pt-3 border-t border-gray-100">`;
     
-    // 🌟 التعديل هنا: قفل الحجز إذا كان مكتمل
     if (b.status === 'completed') {
+        const remainingNum = parseFloat(b.finance?.remaining || b.remaining || 0);
         html += `<div class="bg-green-50 border border-green-200 text-green-700 rounded-xl py-2 px-3 text-center text-xs font-bold mb-1">
                     <i class="fas fa-lock ml-1"></i> الحجز مغلق (تم تسليم الصحون)
                  </div>`;
+        if (remainingNum > 0) {
+            html += `<button onclick="showPaymentModal(${b.id})" class="w-full bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-300 rounded-xl py-2.5 text-xs font-bold btn-press transition-colors shadow-sm mb-1">
+                        <i class="fas fa-hand-holding-usd ml-1"></i> تسديد المتبقي (${remainingNum.toFixed(2)} ر.س)
+                     </button>`;
+        }
         html += `<button onclick="viewInvoice(${b.id})" class="w-full bg-gray-800 text-white rounded-xl py-2.5 text-xs font-bold btn-press"><i class="fas fa-receipt ml-1"></i> عرض الفاتورة النهائية</button>`;
     } else {
-        // إذا لم يكن مكتمل، نظهر باقي الأزرار
-        if (pDeposit > 0 && b.status !== 'cancelled') {
-            html += `<button onclick="confirmReturnPlates(${b.id})" class="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-xl py-2.5 text-xs font-bold btn-press transition-colors shadow-sm"><i class="fas fa-undo-alt ml-1"></i> تسليم الصحون (إرجاع التأمين وإقفال الحجز)</button>`;
+        if (pDeposit > 0 && b.status === 'confirmed') {
+            html += `<button onclick="confirmReturnPlates(${b.id})" class="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-xl py-2.5 text-xs font-bold btn-press transition-colors shadow-sm mb-1"><i class="fas fa-undo-alt ml-1"></i> تسليم الصحون (إرجاع التأمين وإقفال الحجز)</button>`;
         }
 
         html += `<div class="flex gap-2 w-full">`;
@@ -977,7 +1102,6 @@ function calcBookingTotal() {
     totalOrders += price * qty;
   });
 
-  // 🔴 تأمين الصحون لا يجمع مع الفاتورة نهائياً
   const grandTotal = totalOrders; 
 
   const paidAmount = parseFloat(document.getElementById("paidAmount").value) || 0;
@@ -1031,7 +1155,6 @@ async function saveBooking() {
     parseFloat(document.getElementById("platesDeposit").value) || 0;
   const totalOrders = sideOrders.reduce((sum, s) => sum + s.total, 0);
   
-  // 🔴 الإجمالي مفصول عن التأمين
   const grandTotal = totalOrders; 
   
   const paidAmount =
@@ -1066,7 +1189,7 @@ async function saveBooking() {
     },
     notes: document.getElementById("bookingNotes").value,
     sideOrders: sideOrders,
-    platesDeposit: platesDeposit, // يعامل كحقل مستقل
+    platesDeposit: platesDeposit,
     finance: {
       totalOrders: totalOrders,
       total: grandTotal,
@@ -1308,7 +1431,7 @@ function viewInvoice(id) {
 
   const invoiceData = {
     id: b.id,
-    status: b.status, // 🌟 إضافة سطر الحالة هنا
+    status: b.status,
     customer: {
       name: b.customer?.name || "",
       phone: b.customer?.phone || "",

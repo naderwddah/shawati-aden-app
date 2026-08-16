@@ -1,6 +1,6 @@
 // ============================================================
-// report.js - تقارير الفواتير (شواطئ عدن)
-// يعتمد على هيكل قاعدة البيانات والتوثيق الرسمي
+// report.js - تقارير الفواتير (شواطئ عدن) - النسخة المعدلة
+// فصل تأمين الصحون عن الحسابات المالية الأساسية
 // ============================================================
 
 (function() {
@@ -11,7 +11,7 @@
   // ---------------------------------------------
   const API_BASE = "https://cafe.technova.fun/api";
   let authToken = localStorage.getItem("auth_token") || null;
-  let currentReportData = []; // سيتم حفظ البيانات المعالجة للتصدير
+  let currentReportData = [];
 
   // ---------------------------------------------
   // 2. التواريخ الافتراضية (اليوم)
@@ -106,26 +106,29 @@
   }
 
   // ---------------------------------------------
-  // 6. حساب الإحصائيات
+  // 6. حساب الإحصائيات (مع فصل التأمين)
   // ---------------------------------------------
   function calculateStats(bookings) {
-    let totalRevenue = 0;    // مجموع total_amount (الإجمالي النهائي)
-    let totalPaid = 0;       // مجموع deposit_paid
-    let totalRemaining = 0;  // مجموع remaining (مع تجاهل السالب)
+    let totalOrders = 0;      // مجموع total_orders (قيمة الطلبات الفعلية)
+    let totalPaid = 0;        // مجموع deposit_paid (المدفوعات الفعلية من العميل)
+    let totalDeposit = 0;     // مجموع plates_deposit (تأمين الصحون)
+    let totalRemaining = 0;   // المتبقي الفعلي = totalOrders - (totalPaid - totalDeposit)
     let paidCount = 0;
     let unpaidCount = 0;
 
     bookings.forEach(b => {
-      // البيانات قد تأتي في مستويات مختلفة، نأخذ الأكثر موثوقية
-      const total = parseFloat(b.finance?.total || b.total_amount || 0);
-      const paid = parseFloat(b.finance?.deposit || b.deposit_paid || 0);
-      let remaining = parseFloat(b.finance?.remaining || b.remaining || 0);
+      // قراءة القيم من عدة مصادر محتملة
+      const orders = parseFloat(b.total_orders || b.finance?.totalOrders || 0);
+      const deposit = parseFloat(b.platesDeposit || b.plates_deposit || 0);
+      const paid = parseFloat(b.deposit_paid || b.finance?.deposit || 0);
+      
+      // حساب المتبقي الصحيح (على أساس الطلبات فقط)
+      const netPaid = Math.max(0, paid - deposit); // المدفوع الصافي (بدون التأمين)
+      const remaining = Math.max(0, orders - netPaid);
 
-      // إذا كان المتبقي سالباً (دفع أكثر من الإجمالي) نعتبره صفراً
-      if (remaining < 0) remaining = 0;
-
-      totalRevenue += total;
-      totalPaid += paid;
+      totalOrders += orders;
+      totalPaid += paid;           // المدفوع الإجمالي (يشمل التأمين)
+      totalDeposit += deposit;
       totalRemaining += remaining;
 
       if (remaining === 0) {
@@ -135,14 +138,19 @@
       }
     });
 
+    // إجمالي المدفوع الصافي (المحصل في الصندوق بدون التأمين)
+    const netPaidTotal = totalPaid - totalDeposit;
+
     return {
-      totalRevenue,
-      totalPaid,
-      totalRemaining,
+      totalOrders,           // إجمالي الطلبات
+      totalPaid,             // إجمالي المدفوع (مع التأمين)
+      totalDeposit,          // إجمالي تأمين الصحون
+      totalRemaining,        // إجمالي المتبقي (الصحيح)
+      netPaidTotal,          // المدفوع الصافي (بدون التأمين)
       totalCount: bookings.length,
       paidCount,
       unpaidCount,
-      collectionRate: totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0
+      collectionRate: totalOrders > 0 ? (netPaidTotal / totalOrders) * 100 : 0
     };
   }
 
@@ -151,40 +159,47 @@
   // ---------------------------------------------
   function renderReport(bookings, stats) {
     // تحديث البطاقات
-    document.getElementById('totalRevenue').textContent = stats.totalRevenue.toFixed(2);
-    document.getElementById('totalPaid').textContent = stats.totalPaid.toFixed(2);
+    document.getElementById('totalRevenue').textContent = stats.totalOrders.toFixed(2);
+    document.getElementById('totalPaid').textContent = stats.netPaidTotal.toFixed(2);
     document.getElementById('totalRemaining').textContent = stats.totalRemaining.toFixed(2);
     document.getElementById('totalCount').textContent = stats.totalCount;
+
+    // إضافة بطاقة تأمين الصحون (إذا كانت موجودة في الـ HTML)
+    const depositCard = document.getElementById('totalDeposit');
+    if (depositCard) {
+      depositCard.textContent = stats.totalDeposit.toFixed(2);
+    }
 
     // الجدول
     const tbody = document.getElementById('tableBody');
     const tfoot = document.getElementById('tableFoot');
 
     if (bookings.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#8a7a70; font-weight:bold;">📭 لا توجد بيانات للفترة المحددة</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:40px; color:#8a7a70; font-weight:bold;">📭 لا توجد بيانات للفترة المحددة</td></tr>`;
       tfoot.style.display = 'none';
       currentReportData = [];
       return;
     }
 
     let rows = '';
-    let sumTotal = 0, sumPaid = 0, sumRemaining = 0;
+    let sumOrders = 0, sumPaid = 0, sumRemaining = 0, sumDeposit = 0;
 
     bookings.forEach((b, index) => {
-      const total = parseFloat(b.finance?.total || b.total_amount || 0);
-      const paid = parseFloat(b.finance?.deposit || b.deposit_paid || 0);
-      let remaining = parseFloat(b.finance?.remaining || b.remaining || 0);
-      if (remaining < 0) remaining = 0;
+      const orders = parseFloat(b.total_orders || b.finance?.totalOrders || 0);
+      const deposit = parseFloat(b.platesDeposit || b.plates_deposit || 0);
+      const paid = parseFloat(b.deposit_paid || b.finance?.deposit || 0);
+      const netPaid = Math.max(0, paid - deposit);
+      const remaining = Math.max(0, orders - netPaid);
 
-      sumTotal += total;
+      sumOrders += orders;
       sumPaid += paid;
+      sumDeposit += deposit;
       sumRemaining += remaining;
 
       const isPaid = (remaining === 0);
       const statusBadge = isPaid
         ? '<span class="badge-paid">✅ مدفوع</span>'
         : '<span class="badge-unpaid">⏳ آجل</span>';
-
       const remainingClass = (remaining === 0) ? 'remaining-zero' : 'remaining-positive';
 
       rows += `
@@ -192,9 +207,10 @@
           <td style="text-align:center;">${index + 1}</td>
           <td style="font-weight:700;">${b.customer?.name || b.customer_name || '-'}</td>
           <td>${formatDateDisplay(b.booking?.date || b.booking_date || b.createdAt)}</td>
-          <td style="font-weight:800;">${total.toFixed(2)}</td>
+          <td style="font-weight:800;">${orders.toFixed(2)}</td>
           <td>${paid.toFixed(2)}</td>
           <td class="${remainingClass}">${remaining.toFixed(2)}</td>
+          <td style="font-weight:800; color:#b8860b;">${deposit.toFixed(2)}</td>
           <td>${statusBadge}</td>
         </tr>
       `;
@@ -207,35 +223,38 @@
     tfoot.innerHTML = `
       <tr class="total-row">
         <td colspan="3" style="text-align:left; padding-right:20px; font-weight:900;">📊 الإجمالي التراكمي</td>
-        <td style="font-weight:900;">${sumTotal.toFixed(2)}</td>
+        <td style="font-weight:900;">${sumOrders.toFixed(2)}</td>
         <td style="font-weight:900;">${sumPaid.toFixed(2)}</td>
         <td style="font-weight:900;">${sumRemaining.toFixed(2)}</td>
+        <td style="font-weight:900; color:#b8860b;">${sumDeposit.toFixed(2)}</td>
         <td></td>
       </tr>
     `;
 
-    // حفظ البيانات للتصدير (معالجة القيم النهائية)
+    // حفظ البيانات للتصدير
     currentReportData = bookings.map(b => {
-      const total = parseFloat(b.finance?.total || b.total_amount || 0);
-      const paid = parseFloat(b.finance?.deposit || b.deposit_paid || 0);
-      let remaining = parseFloat(b.finance?.remaining || b.remaining || 0);
-      if (remaining < 0) remaining = 0;
+      const orders = parseFloat(b.total_orders || b.finance?.totalOrders || 0);
+      const deposit = parseFloat(b.platesDeposit || b.plates_deposit || 0);
+      const paid = parseFloat(b.deposit_paid || b.finance?.deposit || 0);
+      const netPaid = Math.max(0, paid - deposit);
+      const remaining = Math.max(0, orders - netPaid);
       return {
         id: b.id,
         customer: b.customer?.name || b.customer_name || '-',
         date: formatDateDisplay(b.booking?.date || b.booking_date || b.createdAt),
-        total: total,
+        orders: orders,
         paid: paid,
         remaining: remaining,
+        deposit: deposit,
+        netPaid: netPaid,
         method: b.payment?.method || b.payment_method || 'نقدي',
-        status: remaining === 0 ? 'مدفوع' : 'آجل',
-        platesDeposit: parseFloat(b.platesDeposit || 0)
+        status: remaining === 0 ? 'مدفوع' : 'آجل'
       };
     });
   }
 
   // ---------------------------------------------
-  // 8. الدالة الرئيسية لجلب وعرض التقرير
+  // 8. الدالة الرئيسية
   // ---------------------------------------------
   window.fetchAndRender = async function() {
     const from = document.getElementById('fromDate').value;
@@ -250,7 +269,7 @@
 
     const bookings = await fetchBookings();
     if (!bookings || bookings.length === 0) {
-      renderReport([], { totalRevenue:0, totalPaid:0, totalRemaining:0, totalCount:0, paidCount:0, unpaidCount:0, collectionRate:0 });
+      renderReport([], { totalOrders:0, totalPaid:0, totalDeposit:0, totalRemaining:0, netPaidTotal:0, totalCount:0, paidCount:0, unpaidCount:0, collectionRate:0 });
       showToast('📭 لا توجد بيانات للعرض');
       return;
     }
@@ -263,7 +282,7 @@
   };
 
   // ---------------------------------------------
-  // 9. فتح صفحة المعاينة والتصدير
+  // 9. فتح صفحة المعاينة
   // ---------------------------------------------
   window.openPreview = function() {
     if (!currentReportData || currentReportData.length === 0) {
@@ -271,19 +290,19 @@
       return;
     }
 
-    // حساب الإحصائيات من البيانات المحفوظة
     const stats = {
-      totalRevenue: currentReportData.reduce((s, r) => s + r.total, 0),
+      totalOrders: currentReportData.reduce((s, r) => s + r.orders, 0),
       totalPaid: currentReportData.reduce((s, r) => s + r.paid, 0),
+      totalDeposit: currentReportData.reduce((s, r) => s + r.deposit, 0),
       totalRemaining: currentReportData.reduce((s, r) => s + r.remaining, 0),
+      netPaidTotal: currentReportData.reduce((s, r) => s + r.netPaid, 0),
       totalCount: currentReportData.length,
       paidCount: currentReportData.filter(r => r.status === 'مدفوع').length,
       unpaidCount: currentReportData.filter(r => r.status === 'آجل').length,
       collectionRate: 0
     };
-    stats.collectionRate = stats.totalRevenue > 0 ? (stats.totalPaid / stats.totalRevenue) * 100 : 0;
+    stats.collectionRate = stats.totalOrders > 0 ? (stats.netPaidTotal / stats.totalOrders) * 100 : 0;
 
-    // بناء كائن التقرير
     const reportData = {
       fromDate: document.getElementById('fromDate').value,
       toDate: document.getElementById('toDate').value,
@@ -302,7 +321,7 @@
   };
 
   // ---------------------------------------------
-  // 10. Toast (إشعارات)
+  // 10. Toast
   // ---------------------------------------------
   function showToast(msg) {
     const existing = document.querySelector('.custom-toast');
@@ -339,7 +358,6 @@
     }, 3000);
   }
 
-  // إضافة الـ Keyframes الخاصة بالـ Toast
   const style = document.createElement('style');
   style.textContent = `
     @keyframes slideUp {
@@ -350,20 +368,19 @@
   document.head.appendChild(style);
 
   // ---------------------------------------------
-  // 11. التشغيل عند تحميل الصفحة
+  // 11. التشغيل
   // ---------------------------------------------
   document.addEventListener('DOMContentLoaded', function() {
     if (!authToken) {
       showToast('⚠️ يرجى تسجيل الدخول أولاً');
       document.getElementById('tableBody').innerHTML = `
-        <tr><td colspan="7" style="text-align:center; padding:40px; color:#c0392b; font-weight:bold;">
+        <tr><td colspan="8" style="text-align:center; padding:40px; color:#c0392b; font-weight:bold;">
           🔒 الرجاء تسجيل الدخول من الصفحة الرئيسية
         </td></tr>
       `;
       return;
     }
     setDefaultDates();
-    // تأخير بسيط للتأكد من تحميل العناصر
     setTimeout(window.fetchAndRender, 100);
   });
 

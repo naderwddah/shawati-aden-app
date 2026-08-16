@@ -12,7 +12,7 @@
   const API_BASE = "https://cafe.technova.fun/api";
   let authToken = localStorage.getItem("auth_token") || null;
   let displayedCustomers = [];
-  let allBookingsData = []; // تخزين جميع الحجوزات للرجوع إليها
+  let allBookingsData = [];
 
   // ---------------------------------------------
   // 2. دوال التواريخ
@@ -116,7 +116,7 @@
           lastDate: dateObj,
           totalBookings: 0,
           totalSpent: 0,
-          bookings: [], // نضيف جميع الحجوزات كاملة
+          bookings: [],
           firstBookingId: b.id,
           lastBookingId: b.id,
         });
@@ -125,7 +125,7 @@
       const customer = customersMap.get(key);
       customer.totalBookings += 1;
       customer.totalSpent += totalAmount;
-      customer.bookings.push(b); // تخزين الحجز كاملاً
+      customer.bookings.push(b);
 
       if (dateObj < customer.firstDate) {
         customer.firstDate = dateObj;
@@ -245,7 +245,6 @@
   // 8. عرض فواتير العميل في مودال
   // ---------------------------------------------
   window.showInvoicesModal = function (name, phone) {
-    // البحث عن العميل في displayedCustomers
     const customer = displayedCustomers.find(
       (c) => c.name === name && c.phone === phone,
     );
@@ -254,7 +253,6 @@
       return;
     }
 
-    // إنشاء المودال
     const modal = document.createElement("div");
     modal.className = "invoices-modal";
     modal.style.cssText = `
@@ -273,7 +271,6 @@
       animation: modalFadeIn 0.3s ease;
     `;
 
-    // محتوى المودال
     let invoicesList = "";
     customer.bookings.forEach((b, index) => {
       const total = parseFloat(b.total_amount || b.finance?.total || 0);
@@ -364,7 +361,6 @@
 
     document.body.appendChild(modal);
 
-    // إضافة تأثيرات الـ CSS إذا لم تكن موجودة
     if (!document.querySelector("#modalStyles")) {
       const style = document.createElement("style");
       style.id = "modalStyles";
@@ -394,7 +390,6 @@
       document.head.appendChild(style);
     }
 
-    // إغلاق المودال عند النقر خارج المحتوى
     modal.addEventListener("click", function (e) {
       if (e.target === this) this.remove();
     });
@@ -409,21 +404,19 @@
       return;
     }
 
-    // البحث عن الحجز في allBookingsData (جميع الحجوزات المحملة)
     const targetBooking = allBookingsData.find((b) => b.id == bookingId);
     if (!targetBooking) {
       showToast("⚠️ لم يتم العثور على الفاتورة");
       return;
     }
 
-    // بناء كائن الفاتورة
     const invoiceData = buildInvoiceData(targetBooking);
     localStorage.setItem("preview_invoice_data", JSON.stringify(invoiceData));
     window.location.href = "invoice.html";
   };
 
   // ---------------------------------------------
-  // 10. بناء كائن الفاتورة (نسخة مطابقة للـ script.js)
+  // 10. بناء كائن الفاتورة
   // ---------------------------------------------
   function buildInvoiceData(b) {
     let restaurant = {
@@ -560,19 +553,141 @@
     };
   }
 
-  // ---------------------------------------------
-  // 11. عرض حجوزات العميل (الانتقال للصفحة الرئيسية)
-  // ---------------------------------------------
-  window.viewCustomerBookings = function (name, phone) {
-    const filterData = { name, phone };
-    localStorage.setItem("filter_customer_data", JSON.stringify(filterData));
-    window.location.href = "index.html?screen=screenBookings";
+  // ============================================================
+  // 11. دوال المعاينة والتصدير (مودال مدمج)
+  // ============================================================
+
+  window.openPreview = function () {
+    if (!displayedCustomers || displayedCustomers.length === 0) {
+      showToast("⚠️ لا توجد بيانات للمعاينة");
+      return;
+    }
+
+    const stats = {
+      count: displayedCustomers.length,
+      revenue: displayedCustomers.reduce((s, c) => s + c.totalSpent, 0),
+      avg: displayedCustomers.length > 0
+        ? displayedCustomers.reduce((s, c) => s + c.totalSpent, 0) / displayedCustomers.length
+        : 0,
+    };
+
+    document.getElementById("previewCount").textContent = stats.count;
+    document.getElementById("previewRevenue").textContent = stats.revenue.toFixed(2);
+    document.getElementById("previewAvg").textContent = stats.avg.toFixed(2);
+    document.getElementById("summaryCount").textContent = stats.count;
+    document.getElementById("summaryAvg").textContent = stats.avg.toFixed(2);
+
+    document.getElementById("displayFrom").textContent = document.getElementById("fromDate").value;
+    document.getElementById("displayTo").textContent = document.getElementById("toDate").value;
+
+    const tbody = document.getElementById("previewTableBody");
+    const tfoot = document.getElementById("previewTableFoot");
+
+    if (displayedCustomers.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#8a7a70; font-weight:700;">📭 لا توجد بيانات للعرض</td></tr>`;
+      tfoot.style.display = "none";
+    } else {
+      let rows = "";
+      let sumSpent = 0;
+      displayedCustomers.forEach((c, index) => {
+        sumSpent += c.totalSpent;
+        rows += `
+          <tr>
+            <td>${index + 1}</td>
+            <td style="font-weight:700;">${c.name}</td>
+            <td>${c.phone || "-"}</td>
+            <td>${formatDateDisplay(c.firstDate)}</td>
+            <td><span class="badge-new">${c.totalBookings}</span></td>
+            <td style="font-weight:800; color:#b8860b;">${c.totalSpent.toFixed(2)}</td>
+            <td>${formatDateDisplay(c.lastDate)}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = rows;
+
+      tfoot.style.display = "table-footer-group";
+      tfoot.innerHTML = `
+        <tr class="total-row" style="background: #1e1a17; color: #ffffff; font-weight: 900; font-size: 15px; border-top: 3px solid #b8860b;">
+          <td colspan="5" style="text-align:left; padding-right:20px; font-weight:900;">📊 الإجمالي التراكمي</td>
+          <td style="font-weight:900;">${sumSpent.toFixed(2)}</td>
+          <td></td>
+        </tr>
+      `;
+    }
+
+    document.getElementById("customersPreviewModal").classList.add("active");
   };
 
-  // ---------------------------------------------
-  // 12. تصدير Excel
-  // ---------------------------------------------
-  window.exportExcel = function () {
+  window.closePreviewModal = function () {
+    document.getElementById("customersPreviewModal").classList.remove("active");
+  };
+
+  window.downloadPDF = async function () {
+    const container = document.getElementById("previewContainer");
+    const btn = document.querySelector(".btn-pdf");
+    const originalText = btn.innerHTML;
+
+    try {
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
+      btn.disabled = true;
+
+      const originalWidth = container.style.width;
+      const originalMaxWidth = container.style.maxWidth;
+      const originalPadding = container.style.padding;
+
+      container.style.width = "210mm";
+      container.style.maxWidth = "210mm";
+      container.style.padding = "20px 24px";
+      container.style.background = "#ffffff";
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        allowTaint: true,
+        onclone: function(clonedDoc) {
+          const actions = clonedDoc.querySelector(".actions-preview");
+          if (actions) actions.style.display = "none";
+        }
+      });
+
+      container.style.width = originalWidth || "";
+      container.style.maxWidth = originalMaxWidth || "";
+      container.style.padding = originalPadding || "";
+      container.style.background = "";
+
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const finalWidth = imgWidth * ratio;
+      const finalHeight = imgHeight * ratio;
+      const x = (pdfWidth - finalWidth) / 2;
+      const y = (pdfHeight - finalHeight) / 2;
+
+      pdf.addImage(imgData, "JPEG", x, y, finalWidth, finalHeight);
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      pdf.save(`عملاء_جدد_${from}_الى_${to}.pdf`);
+
+      showToast("✅ تم تحميل PDF بنجاح");
+    } catch (error) {
+      console.error("PDF Error:", error);
+      showToast("❌ حدث خطأ في إنشاء PDF");
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  };
+
+  window.downloadExcelPreview = function () {
     if (!displayedCustomers || displayedCustomers.length === 0) {
       showToast("⚠️ لا توجد بيانات للتصدير");
       return;
@@ -580,9 +695,9 @@
 
     try {
       const excelData = displayedCustomers.map((c, index) => ({
-        رقم: index + 1,
+        "رقم": index + 1,
         "اسم العميل": c.name,
-        الجوال: c.phone || "-",
+        "الجوال": c.phone || "-",
         "تاريخ أول حجز": formatDateDisplay(c.firstDate),
         "عدد الحجوزات": c.totalBookings,
         "إجمالي المشتريات (ر.س)": c.totalSpent,
@@ -590,16 +705,13 @@
       }));
 
       const totalCustomers = displayedCustomers.length;
-      const totalRevenue = displayedCustomers.reduce(
-        (s, c) => s + c.totalSpent,
-        0,
-      );
+      const totalRevenue = displayedCustomers.reduce((s, c) => s + c.totalSpent, 0);
       const avg = totalCustomers > 0 ? totalRevenue / totalCustomers : 0;
 
       excelData.push({
-        رقم: "",
+        "رقم": "",
         "اسم العميل": "📊 الإجمالي التراكمي",
-        الجوال: "",
+        "الجوال": "",
         "تاريخ أول حجز": "",
         "عدد الحجوزات": totalCustomers,
         "إجمالي المشتريات (ر.س)": totalRevenue,
@@ -607,9 +719,9 @@
       });
 
       excelData.push({
-        رقم: "",
+        "رقم": "",
         "اسم العميل": "📈 متوسط الإنفاق",
-        الجوال: "",
+        "الجوال": "",
         "تاريخ أول حجز": "",
         "عدد الحجوزات": "",
         "إجمالي المشتريات (ر.س)": avg,
@@ -618,22 +730,15 @@
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
-
       ws["!cols"] = [
-        { wch: 8 }, // رقم
-        { wch: 30 }, // اسم العميل
-        { wch: 18 }, // الجوال
-        { wch: 22 }, // تاريخ أول حجز
-        { wch: 18 }, // عدد الحجوزات
-        { wch: 25 }, // إجمالي المشتريات
-        { wch: 22 }, // تاريخ آخر حجز
+        { wch: 8 }, { wch: 30 }, { wch: 18 }, { wch: 22 },
+        { wch: 18 }, { wch: 25 }, { wch: 22 }
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, "العملاء الجدد");
-      XLSX.writeFile(
-        wb,
-        `عملاء_جدد_${document.getElementById("fromDate").value}_الى_${document.getElementById("toDate").value}.xlsx`,
-      );
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      XLSX.writeFile(wb, `عملاء_جدد_${from}_الى_${to}.xlsx`);
 
       showToast("✅ تم تحميل Excel بنجاح");
     } catch (error) {
@@ -642,8 +747,94 @@
     }
   };
 
+  window.shareWhatsAppPreview = async function () {
+    const container = document.getElementById("previewContainer");
+    const btn = document.querySelector(".btn-whatsapp");
+    const originalText = btn.innerHTML;
+
+    try {
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
+      btn.disabled = true;
+
+      const originalWidth = container.style.width;
+      const originalMaxWidth = container.style.maxWidth;
+      const originalPadding = container.style.padding;
+
+      container.style.width = "210mm";
+      container.style.maxWidth = "210mm";
+      container.style.padding = "20px 24px";
+      container.style.background = "#ffffff";
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        allowTaint: true,
+        onclone: function(clonedDoc) {
+          const actions = clonedDoc.querySelector(".actions-preview");
+          if (actions) actions.style.display = "none";
+        }
+      });
+
+      container.style.width = originalWidth || "";
+      container.style.maxWidth = originalMaxWidth || "";
+      container.style.padding = originalPadding || "";
+      container.style.background = "";
+
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const finalWidth = imgWidth * ratio;
+      const finalHeight = imgHeight * ratio;
+      const x = (pdfWidth - finalWidth) / 2;
+      const y = (pdfHeight - finalHeight) / 2;
+
+      pdf.addImage(imgData, "JPEG", x, y, finalWidth, finalHeight);
+      const pdfBlob = pdf.output("blob");
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      const pdfFile = new File(
+        [pdfBlob],
+        `عملاء_جدد_${from}.pdf`,
+        { type: "application/pdf" }
+      );
+
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          title: "تقرير العملاء الجدد - شواطئ عدن",
+          text: `📊 تقرير العملاء الجدد للفترة من ${from} إلى ${to}`,
+          files: [pdfFile]
+        });
+        showToast("✅ تمت المشاركة بنجاح");
+      } else {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(pdfBlob);
+        link.download = `عملاء_جدد_${from}.pdf`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast("✅ تم تحميل PDF، يمكنك مشاركته يدوياً");
+      }
+    } catch (error) {
+      console.error("Share Error:", error);
+      if (error.name !== "AbortError") {
+        showToast("❌ حدث خطأ في المشاركة");
+      }
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  };
+
   // ---------------------------------------------
-  // 13. Toast
+  // 12. Toast
   // ---------------------------------------------
   function showToast(msg) {
     const existing = document.querySelector(".custom-toast");
@@ -662,7 +853,7 @@
   }
 
   // ---------------------------------------------
-  // 14. التشغيل عند تحميل الصفحة
+  // 13. التشغيل عند تحميل الصفحة
   // ---------------------------------------------
   document.addEventListener("DOMContentLoaded", function () {
     if (!authToken) {
@@ -677,4 +868,5 @@
     setDefaultDates();
     setTimeout(window.fetchAndRender, 100);
   });
+
 })();

@@ -470,15 +470,15 @@
       .bottom-nav .nav-btn.active .nav-icon {
         color: #b8860b;
       }
-
-      /* زر الإضافة العائم (FAB) */
+      /* زر الإضافة العائم (FAB) - تعديل اللون ليتناسب مع الأزرار الأخرى */
       .fab-btn {
-        background: linear-gradient(145deg, #b8860b, #9e7a0a);
-        border: 2px solid rgba(255, 255, 255, 0.25);
-        box-shadow: 0 8px 24px rgba(184, 134, 11, 0.35);
+        background: #0f172a; /* اللون الأسود/الداكن */
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
       }
       .fab-btn:hover {
-        box-shadow: 0 12px 32px rgba(184, 134, 11, 0.5);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.45);
+        transform: scale(1.05);
       }
       .fab-btn:active {
         transform: scale(0.92);
@@ -1581,7 +1581,62 @@
         </div>
       </div>
     </div>
+    
 
+<!-- مودال تسديد المتبقي -->
+<div id="paymentModal" class="modal-overlay">
+  <div class="modal-content p-6" style="max-width: 420px;">
+    <div class="text-center mb-4">
+      <div class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-hand-holding-usd text-3xl text-yellow-600"></i>
+      </div>
+      <h3 class="font-bold text-xl">💰 تسديد المتبقي</h3>
+      <p class="text-sm text-gray-500 mt-1">أدخل المبلغ الذي سيدفعه العميل</p>
+    </div>
+
+    <div class="bg-gray-50 rounded-2xl p-4 space-y-3 mb-4">
+      <div class="flex justify-between items-center border-b border-gray-200 pb-2">
+        <span class="text-sm text-gray-500">👤 العميل</span>
+        <span class="font-bold text-sm" id="paymentCustName">-</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-sm text-gray-500">💰 المبلغ المتبقي</span>
+        <span class="font-bold text-lg text-red-600" id="paymentRemaining">0.00</span>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-sm font-bold text-gray-700 block mb-2">المبلغ المدفوع الآن</label>
+      <div class="relative">
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">ر.س</span>
+        <input
+          type="number"
+          id="paymentInput"
+          step="0.5"
+          min="0.5"
+          class="w-full pl-4 pr-16 py-3.5 border-2 border-gray-200 rounded-xl text-center text-lg font-bold focus:border-yellow-500 focus:ring-0 outline-none transition"
+          placeholder="0.00"
+        />
+      </div>
+      <p class="text-xs text-gray-400 mt-1">القيمة القصوى: <span id="paymentMaxDisplay">0.00</span> ر.س</p>
+    </div>
+
+    <div class="flex gap-3">
+      <button
+        onclick="closePaymentModal()"
+        class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press border-2 border-gray-200 hover:bg-gray-200 transition"
+      >
+        إلغاء
+      </button>
+      <button
+        onclick="confirmPayment()"
+        class="flex-1 bg-yellow-600 text-white rounded-2xl py-3.5 font-bold btn-press shadow-lg hover:bg-yellow-700 transition flex items-center justify-center gap-2"
+      >
+        <i class="fas fa-check-circle"></i> تأكيد الدفعة
+      </button>
+    </div>
+  </div>
+</div>
     <script src="script.js"></script>
   </body>
 </html>

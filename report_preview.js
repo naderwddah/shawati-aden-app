@@ -117,7 +117,7 @@
   // 3. دوال التصدير (PDF, Excel, WhatsApp)
   // ---------------------------------------------
 
-  // 3.1 تحميل PDF باستخدام html2canvas + jsPDF
+  // 3.1 تحميل PDF باستخدام html2canvas + jsPDF (بحجم A4)
   window.downloadPDF = async function() {
     const container = document.getElementById('reportContainer');
     const btn = document.querySelector('.btn-pdf');
@@ -127,6 +127,23 @@
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
       btn.disabled = true;
 
+      // حفظ الأبعاد الأصلية
+      const originalWidth = container.style.width;
+      const originalMaxWidth = container.style.maxWidth;
+      const originalTransform = container.style.transform;
+      const originalPadding = container.style.padding;
+
+      // ضبط الحاوية بحجم مناسب للطباعة (A4)
+      container.style.width = '210mm';
+      container.style.maxWidth = '210mm';
+      container.style.padding = '20px 24px';
+      container.style.transform = 'scale(1)';
+      container.style.margin = '0 auto';
+      container.style.background = '#ffffff';
+
+      // انتظار إعادة التخطيط
+      await new Promise(resolve => requestAnimationFrame(resolve));
+
       const canvas = await html2canvas(container, {
         scale: 2,
         useCORS: true,
@@ -134,11 +151,18 @@
         logging: false,
         allowTaint: true,
         onclone: function(clonedDoc) {
-          // إخفاء الأزرار في النسخة المطبوعة
           const actions = clonedDoc.querySelector('.actions');
           if (actions) actions.style.display = 'none';
         }
       });
+
+      // استعادة الأبعاد الأصلية
+      container.style.width = originalWidth || '';
+      container.style.maxWidth = originalMaxWidth || '';
+      container.style.padding = originalPadding || '';
+      container.style.transform = originalTransform || '';
+      container.style.margin = '';
+      container.style.background = '';
 
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
       const { jsPDF } = window.jspdf;
@@ -207,7 +231,6 @@
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
 
-      // تنسيق الأعمدة
       ws['!cols'] = [
         { wch: 8 },   // رقم
         { wch: 28 },  // العميل
@@ -230,7 +253,7 @@
     }
   };
 
-  // 3.3 المشاركة عبر واتساب
+  // 3.3 المشاركة عبر واتساب مع ضبط الحجم
   window.shareWhatsApp = async function() {
     const container = document.getElementById('reportContainer');
     const btn = document.querySelector('.btn-whatsapp');
@@ -239,6 +262,22 @@
     try {
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري...';
       btn.disabled = true;
+
+      // حفظ الأبعاد الأصلية
+      const originalWidth = container.style.width;
+      const originalMaxWidth = container.style.maxWidth;
+      const originalTransform = container.style.transform;
+      const originalPadding = container.style.padding;
+
+      // ضبط الحاوية بحجم مناسب للطباعة (A4)
+      container.style.width = '210mm';
+      container.style.maxWidth = '210mm';
+      container.style.padding = '20px 24px';
+      container.style.transform = 'scale(1)';
+      container.style.margin = '0 auto';
+      container.style.background = '#ffffff';
+
+      await new Promise(resolve => requestAnimationFrame(resolve));
 
       const canvas = await html2canvas(container, {
         scale: 2,
@@ -251,6 +290,14 @@
           if (actions) actions.style.display = 'none';
         }
       });
+
+      // استعادة الأبعاد الأصلية
+      container.style.width = originalWidth || '';
+      container.style.maxWidth = originalMaxWidth || '';
+      container.style.padding = originalPadding || '';
+      container.style.transform = originalTransform || '';
+      container.style.margin = '';
+      container.style.background = '';
 
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
       const { jsPDF } = window.jspdf;
@@ -273,7 +320,6 @@
         { type: 'application/pdf' }
       );
 
-      // محاولة المشاركة عبر Web Share API
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           title: 'تقرير الفواتير - شواطئ عدن',
@@ -282,7 +328,6 @@
         });
         showToast('✅ تمت المشاركة بنجاح');
       } else {
-        // بديل: تحميل الملف مع إعلام المستخدم
         const link = document.createElement('a');
         link.href = URL.createObjectURL(pdfBlob);
         link.download = `تقرير_فواتير_${data.fromDate}.pdf`;
@@ -339,7 +384,6 @@
     }, 3000);
   }
 
-  // إضافة الـ Keyframes إذا لم تكن موجودة
   if (!document.querySelector('#previewToastStyle')) {
     const style = document.createElement('style');
     style.id = 'previewToastStyle';
