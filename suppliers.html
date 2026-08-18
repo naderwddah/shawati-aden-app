@@ -1,10 +1,11 @@
 <!doctype html>
-<html dir="rtl" lang="ar" data-page="customers">
+<html dir="rtl" lang="ar" data-page="suppliers">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="theme-color" content="#8F1720" />
-    <title>العملاء - شواطئ عدن</title>
+    <meta name="description" content="إدارة الموردين - شواطئ عدن" />
+    <title>الموردين - شواطئ عدن</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -14,7 +15,7 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
     <style>
-      .customers-summary {
+      .suppliers-summary {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
@@ -30,7 +31,7 @@
       .summary-value { font-size: 18px; font-weight: 800; color: var(--text); }
       .summary-value.danger { color: var(--danger); }
 
-      .customer-card {
+      .supplier-card {
         display: flex;
         align-items: stretch;
         background: var(--surface-card);
@@ -43,8 +44,8 @@
         gap: var(--space-3);
         position: relative;
       }
-      .customer-card:last-child { margin-bottom: 0; }
-      .customer-card .click-area {
+      .supplier-card:last-child { margin-bottom: 0; }
+      .supplier-card .click-area {
         flex: 1;
         display: flex;
         align-items: stretch;
@@ -52,8 +53,8 @@
         cursor: pointer;
         min-width: 0;
       }
-      .customer-card .click-area:active { transform: scale(0.99); }
-      .customer-card .avatar {
+      .supplier-card .click-area:active { transform: scale(0.99); }
+      .supplier-card .avatar {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -66,10 +67,11 @@
         font-weight: 700;
         flex-shrink: 0;
       }
-      .customer-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-      .customer-card .info .name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-      .customer-card .info .phone { font-size: 13px; color: var(--text-muted); direction: ltr; text-align: start; }
-      .customer-card .financial {
+      .supplier-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+      .supplier-card .info .name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
+      .supplier-card .info .phone { font-size: 13px; color: var(--text-muted); direction: ltr; text-align: start; }
+      .supplier-card .info .category { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+      .supplier-card .financial {
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-3);
@@ -77,17 +79,17 @@
         font-size: 12px;
         color: var(--text-secondary);
       }
-      .customer-card .financial .label { color: var(--text-muted); margin-left: 2px; }
-      .customer-card .financial .amount { font-weight: 700; }
-      .customer-card .financial .remaining { color: var(--danger); font-weight: 800; }
-      .customer-card .financial .paid { color: var(--success); }
-      .customer-card .actions {
+      .supplier-card .financial .label { color: var(--text-muted); margin-left: 2px; }
+      .supplier-card .financial .amount { font-weight: 700; }
+      .supplier-card .financial .remaining { color: var(--danger); font-weight: 800; }
+      .supplier-card .financial .paid { color: var(--success); }
+      .supplier-card .actions {
         display: flex;
         align-items: center;
         gap: var(--space-1);
         flex-shrink: 0;
       }
-      .customer-card .actions .arrow {
+      .supplier-card .actions .arrow {
         display: flex;
         align-items: center;
         color: var(--text-muted);
@@ -102,25 +104,25 @@
       .page-header .btn-sm { display: none; }
 
       @media (max-width: 767px) {
-        .customers-summary { grid-template-columns: repeat(3, 1fr); padding: 10px; gap: 6px; }
+        .suppliers-summary { grid-template-columns: repeat(3, 1fr); padding: 10px; gap: 6px; }
         .summary-value { font-size: 16px; }
-        .customer-card { padding: 12px 14px; }
-        .customer-card .avatar { width: 38px; height: 38px; font-size: 15px; }
-        .customer-card .info .name { font-size: 14px; }
-        .customer-card .info .phone { font-size: 12px; }
-        .customer-card .financial { font-size: 11px; gap: var(--space-2); }
+        .supplier-card { padding: 12px 14px; }
+        .supplier-card .avatar { width: 38px; height: 38px; font-size: 15px; }
+        .supplier-card .info .name { font-size: 14px; }
+        .supplier-card .info .phone { font-size: 12px; }
+        .supplier-card .financial { font-size: 11px; gap: var(--space-2); }
       }
       @media (min-width: 768px) {
         .page-header .btn-sm { display: inline-flex; }
-        .customers-summary { padding: 16px 20px; }
+        .suppliers-summary { padding: 16px 20px; }
         .summary-value { font-size: 22px; }
-        .customer-card { padding: 16px 20px; }
-        .customer-card .avatar { width: 50px; height: 50px; font-size: 20px; }
-        .customer-card .info .name { font-size: 17px; }
+        .supplier-card { padding: 16px 20px; }
+        .supplier-card .avatar { width: 50px; height: 50px; font-size: 20px; }
+        .supplier-card .info .name { font-size: 17px; }
       }
       @media (min-width: 1024px) {
-        #customersList { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
-        .customer-card { margin-bottom: 0; }
+        #suppliersList { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+        .supplier-card { margin-bottom: 0; }
       }
     </style>
   </head>
@@ -142,90 +144,90 @@
         <main class="content" id="pageContent">
           <div class="page-header">
             <div>
-              <h1 class="page-title">العملاء</h1>
-              <p class="page-subtitle">إدارة العملاء والحسابات المالية</p>
+              <h1 class="page-title">الموردين</h1>
+              <p class="page-subtitle">إدارة الموردين والحسابات المالية</p>
             </div>
-            <button class="btn btn-primary btn-sm" id="addCustomerBtn">
-              <i class="fas fa-user-plus"></i> <span>عميل جديد</span>
+            <button class="btn btn-primary btn-sm" id="addSupplierBtn">
+              <i class="fas fa-truck"></i> <span>مورد جديد</span>
             </button>
           </div>
 
-          <div class="customers-summary">
+          <div class="suppliers-summary">
             <div class="summary-item">
-              <span class="summary-label">إجمالي العملاء</span>
-              <span class="summary-value" id="customersCount">0</span>
+              <span class="summary-label">إجمالي الموردين</span>
+              <span class="summary-value" id="suppliersCount">0</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">إجمالي المستحقات</span>
-              <span class="summary-value danger" id="customersReceivables">0 ر.س</span>
+              <span class="summary-label">إجمالي المستحقات (علينا)</span>
+              <span class="summary-value danger" id="suppliersPayables">0 ر.س</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">إجمالي المحصل</span>
-              <span class="summary-value" id="customersCollected">0 ر.س</span>
+              <span class="summary-label">إجمالي المدفوع للموردين</span>
+              <span class="summary-value" id="suppliersPaid">0 ر.س</span>
             </div>
           </div>
 
           <div class="search-bar">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" id="customerSearch" placeholder="ابحث عن اسم العميل أو رقم الجوال" />
+            <input type="text" class="search-input" id="supplierSearch" placeholder="ابحث عن اسم المورد أو رقم الجوال" />
           </div>
 
-          <div id="customersList"></div>
+          <div id="suppliersList"></div>
         </main>
       </div>
     </div>
 
     <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="إضافة عميل"><i class="fas fa-plus"></i></button>
+    <button id="fab" class="fab" aria-label="إضافة مورد"><i class="fas fa-plus"></i></button>
     <div id="modalContainer"></div>
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- ===== مودال إضافة عميل جديد (حقلين فقط: الاسم + رقم الجوال) ===== -->
-    <div class="modal" id="addCustomerModal" role="dialog" aria-modal="true">
-      <div class="modal-overlay" data-close="addCustomerModal"></div>
+    <!-- ===== مودال إضافة مورد جديد (حقلين فقط: الاسم + رقم الجوال) ===== -->
+    <div class="modal" id="addSupplierModal" role="dialog" aria-modal="true">
+      <div class="modal-overlay" data-close="addSupplierModal"></div>
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3 class="modal-title">إضافة عميل جديد</h3>
-          <button class="modal-close" data-close="addCustomerModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+          <h3 class="modal-title">إضافة مورد جديد</h3>
+          <button class="modal-close" data-close="addSupplierModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label" for="newCustomerName">الاسم <span class="req">*</span></label>
-            <input type="text" class="form-input" id="newCustomerName" placeholder="أدخل اسم العميل" />
+            <label class="form-label" for="newSupplierName">اسم المورد <span class="req">*</span></label>
+            <input type="text" class="form-input" id="newSupplierName" placeholder="مثال: مؤسسة الغذاء الذهبي" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="newCustomerPhone">رقم الجوال <span class="req">*</span></label>
-            <input type="tel" class="form-input" id="newCustomerPhone" placeholder="05xxxxxxxx" />
+            <label class="form-label" for="newSupplierPhone">رقم الجوال <span class="req">*</span></label>
+            <input type="tel" class="form-input" id="newSupplierPhone" placeholder="05xxxxxxxx" />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" data-close="addCustomerModal">إلغاء</button>
-          <button class="btn btn-primary" id="saveNewCustomer">حفظ العميل</button>
+          <button class="btn btn-secondary" data-close="addSupplierModal">إلغاء</button>
+          <button class="btn btn-primary" id="saveNewSupplier">حفظ المورد</button>
         </div>
       </div>
     </div>
 
-    <!-- ===== مودال تعديل العميل (حقلين فقط: الاسم + رقم الجوال) ===== -->
-    <div class="modal" id="editCustomerModal" role="dialog" aria-modal="true">
-      <div class="modal-overlay" data-close="editCustomerModal"></div>
+    <!-- ===== مودال تعديل المورد (حقلين فقط: الاسم + رقم الجوال) ===== -->
+    <div class="modal" id="editSupplierModal" role="dialog" aria-modal="true">
+      <div class="modal-overlay" data-close="editSupplierModal"></div>
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3 class="modal-title">تعديل العميل</h3>
-          <button class="modal-close" data-close="editCustomerModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+          <h3 class="modal-title">تعديل المورد</h3>
+          <button class="modal-close" data-close="editSupplierModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label" for="editCustomerName">الاسم <span class="req">*</span></label>
-            <input type="text" class="form-input" id="editCustomerName" placeholder="اسم العميل" />
+            <label class="form-label" for="editSupplierName">اسم المورد <span class="req">*</span></label>
+            <input type="text" class="form-input" id="editSupplierName" placeholder="اسم المورد" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="editCustomerPhone">رقم الجوال <span class="req">*</span></label>
-            <input type="tel" class="form-input" id="editCustomerPhone" placeholder="05xxxxxxxx" />
+            <label class="form-label" for="editSupplierPhone">رقم الجوال <span class="req">*</span></label>
+            <input type="tel" class="form-input" id="editSupplierPhone" placeholder="05xxxxxxxx" />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" data-close="editCustomerModal">إلغاء</button>
-          <button class="btn btn-primary" id="saveEditCustomer">حفظ التغييرات</button>
+          <button class="btn btn-secondary" data-close="editSupplierModal">إلغاء</button>
+          <button class="btn btn-primary" id="saveEditSupplier">حفظ التغييرات</button>
         </div>
       </div>
     </div>
@@ -233,6 +235,6 @@
     <script src="assets/js/core/utils.js"></script>
     <script src="assets/js/core/api.js"></script>
     <script src="assets/js/components/layout.js"></script>
-    <script src="assets/js/pages/customers.js"></script>
+    <script src="assets/js/pages/suppliers.js"></script>
   </body>
 </html>

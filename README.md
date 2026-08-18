@@ -1,230 +1,265 @@
-# 🍖 شواطئ عدن - تطبيق إدارة حجوزات الولائم
+# شواطئ عدن
 
-<p align="center">
-  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
-  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
-  <img src="https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" />
-</p>
+نظام إدارة مختصر لإدارة الحجوزات، العملاء، الموردين، الأصناف، الفواتير والمدفوعات، والتقارير. المشروع تم تطويره كواجهة ويب ثابتة باستخدام HTML وCSS وJavaScript، مع طبقة بيانات وهمية (Mock API) لتشغيل التطبيق محلياً بدون Backend.
 
-تطبيق ويب تقدمي (PWA) لإدارة حجوزات الولائم والمناسبات داخل المطعم. مصمم خصيصاً للعمل على الهواتف المحمولة داخل المطعم.
+## لمحة عامة
 
----
+هذا المشروع مناسب لإدارة أنشطة مطعم/مؤسسة تقديم خدمات الطعام والمناسبات، ويغطي المراحل التالية:
 
-## ✨ المميزات
+- إدارة العملاء
+- إدارة الموردين
+- إدارة الحجوزات
+- إدارة الأصناف والأسعار
+- إدارة الفواتير والمدفوعات
+- عرض التقارير اليومية/الأسبوعية/الشهرية
+- تصدير ومشاركة التقارير
+- واجهة لوحية (Dashboard) وموبايل Friendly
 
-| الميزة | الوصف |
-|--------|-------|
-| 📅 **حجز جديد** | إضافة حجز مع بيانات العميل والتاريخ والأصناف |
-| 🔍 **بحث متقدم** | البحث بالاسم أو رقم الجوال أو التاريخ |
-| 📊 **لوحة تحكم** | إحصائيات يومية + حجوزات قادمة |
-| 🧾 **فاتورة احترافية** | مطابقة للفاتورة الورقية الأصلية مع QR Code |
-| 🖨️ **طباعة** | دعم طباعة الفاتورة (Bluetooth / WiFi Printer) |
-| 📱 **مشاركة واتساب** | إرسال الفاتورة مباشرة للعميل |
-| 📄 **PDF** | تصدير الفاتورة بصيغة PDF |
-| 🔔 **إشعارات** | تذكير قبل الموعد + إشعارات الحجوزات الجديدة |
-| 💾 **نسخ احتياطي** | تصدير واستيراد البيانات بصيغة JSON |
-| ⚙️ **إعدادات** | تخصيص بيانات المطعم والإشعارات |
+## التقنيات المستخدمة
 
----
+- HTML5
+- CSS3
+- JavaScript (Vanilla JS)
+- Font Awesome
+- Mock API داخل المتصفح
+- LocalStorage للتخزين المحلي للثيم/الإعدادات
 
-## 🚀 طريقة التشغيل
+## هيكل المشروع
 
-### 1. فتح الملف مباشرة
+```text
+shawati-aden-v2/
+├── index.html
+├── booking-new.html
+├── bookings.html
+├── customer-view.html
+├── customers.html
+├── supplier-view.html
+├── suppliers.html
+├── items.html
+├── reports.html
+├── settings.html
+├── test.html
+├── manifest.json
+├── components/
+│   ├── bottom-nav.html
+│   ├── head.html
+│   ├── header.html
+│   ├── modals.html
+│   └── sidebar.html
+├── assets/
+│   ├── css/
+│   │   ├── global.css
+│   │   └── layout.css
+│   ├── images/
+│   └── js/
+│       ├── components/
+│       │   └── layout.js
+│       ├── core/
+│       │   ├── api.js
+│       │   ├── state.js
+│       │   └── utils.js
+│       └── pages/
+│           ├── booking-form.js
+│           ├── bookings.js
+│           ├── customer-view.js
+│           ├── customers.js
+│           ├── dashboard.js
+│           ├── invoice.js
+│           ├── items.js
+│           ├── reports.js
+│           ├── settings.js
+│           ├── supplier-view.js
+│           ├── suppliers.js
+│           └── reports.js
+└── README.md
+```
+
+## الصفحات الرئيسية
+
+### 1. لوحة التحكم Dashboard
+
+- عرض إحصائيات رئيسية
+- عدد الحجوزات
+- الإيرادات
+- المدفوعات
+- التنبيهات المالية
+- الحجوزات القادمة
+
+### 2. صفحة العملاء
+
+- عرض قائمة العملاء
+- إضافة عميل جديد
+- عرض ملف العميل
+- تسجيل الحجوزات والمدفوعات الخاصة بالعميل
+
+### 3. صفحة الموردين
+
+- عرض الموردين
+- إضافة مورد جديد
+- عرض ملف المورد
+- فواتير الموردين
+- المدفوعات الخاصة بالمورد
+- تعديل أو حذف الفواتير والمدفوعات
+
+### 4. صفحة الحجوزات
+
+- عرض جميع الحجوزات
+- تفاصيل الحجز
+- تحديث الحالة
+- حذف أو تعديل الحجوزات
+
+### 5. صفحة الأصناف
+
+- إدارة الأصناف والخدمات
+- إضافة وتعديل وحذف الأصناف
+- تحديد السعر والوحدة
+
+### 6. صفحة التقارير
+
+- تقارير يومية / أسبوعية / شهرية / مخصصة
+- اختيار تاريخ محدد من إلى تاريخ
+- إحصائيات الإيرادات والمصروفات
+- شريط بياني للأرباح
+- تصدير CSV
+- تصدير JSON
+- مشاركة التقرير
+
+### 7. الإعدادات
+
+- تخصيص التطبيق
+- التبديل بين السطوع والإظلام
+- إعدادات النظام العامة
+
+## كيف يعمل المشروع
+
+### 1. التشغيل المحلي
+
+أبسط طريقة لتشغيل التطبيق هي فتح ملف `index.html` مباشرة في المتصفح، أو استخدام خادم محلي بسيط مثل Live Server أو Python HTTP Server.
+
+### 2. استخدام Mock API
+
+البيانات تُدار داخل ملف:
+
+- `assets/js/core/api.js`
+
+ويحتوي هذا الملف على:
+
+- customers
+- bookings
+- payments
+- suppliers
+- supplierInvoices
+- supplierPayments
+- items
+
+وتوفر دوال مثل:
+
+- `API.getCustomers()`
+- `API.addBooking()`
+- `API.updateBooking()`
+- `API.deleteBooking()`
+- `API.getSupplierInvoices()`
+- `API.addSupplierPayment()`
+- `API.updateSupplierPayment()`
+- `API.deleteSupplierInvoice()`
+
+### 3. Layout والواجهة المشتركة
+
+الواجهة الأساسية يتم تحميلها من:
+
+- `assets/js/components/layout.js`
+
+وهذا الملف يتحكم في:
+
+- السايدبار
+- الهيدر
+- شريط التنقل السفلي
+- القوائم
+- المودالات
+- التنبيهات (Toast)
+- زر الإضافة العائم (FAB)
+- الثيم الداكن/الفاتح
+
+### 4. الصفحات حسب النوع
+
+كل صفحة لها ملف JavaScript خاص داخل:
+
+- `assets/js/pages/`
+
+مثل:
+
+- `dashboard.js`
+- `customers.js`
+- `suppliers.js`
+- `supplier-view.js`
+- `reports.js`
+- `items.js`
+
+## ملاحظات مهمة
+
+- المشروع يعمل كواجهة أمامية فقط، دون قاعدة بيانات حقيقية.
+- جميع البيانات الحالية تجري داخل الذاكرة في المتصفح من خلال mock API.
+- مناسب للتجربة السريعة، العرض التقديمي، أو كشوف المشروع الأولية.
+- عند الحاجة إلى ربط مشروع حقيقي، يمكن ربطه بسهولة بواجهة Backend مثل Node.js أو Laravel أو ASP.NET.
+
+## تشغيل المشروع
+
+### الطريقة الأولى: فتح مباشر
+
+1. افتح المجلد الخاص بالمشروع
+2. اضغط مرتين على `index.html`
+3. ستفتح الصفحة مباشرة في المتصفح
+
+### الطريقة الثانية: خادم محلي
+
 ```bash
-# افتح الملف في المتصفح مباشرة
-open shawati_aden_app.html
-
-# أو استخدم خادم محلي
-npx serve .
-# ثم افتح: http://localhost:3000
+cd shawati-aden-v2
+python -m http.server 8000
 ```
 
-### 2. رفع على استضافة ويب
-```bash
-# يمكن رفع الملف على أي استضافة ويب
-# Netlify, Vercel, GitHub Pages, Firebase Hosting
+ثم افتح الرابط التالي في المتصفح:
+
+```text
+http://localhost:8000
 ```
 
----
+### الطريقة الثالثة: Live Server
 
-## 📁 هيكل المشروع
+إذا كنت تستخدم VS Code، قم بتثبيت extension `Live Server` ثم أعد التشغيل على أي صفحة HTML.
 
-```
-shawati-aden-app/
-├── 📄 shawati_aden_app.html    # التطبيق الكامل (صفحة واحدة)
-├── 📄 README.md                 # هذا الملف
-└── 📁 assets/                   # (اختياري) شعار المطعم + صور
-    └── logo.png
-```
+## التزامن مع المستودع البعيد
 
-> **ملاحظة:** التطبيق كامل في **ملف HTML واحد** فقط! لا يحتاج بناء (Build) أو تثبيت حزم.
-
----
-
-## 🔗 ربط API (للمطورين)
-
-لربط التطبيق بقاعدة بيانات حقيقية، استبدل الدالتين التاليتين في الكود:
-
-```javascript
-// الملف: shawati_aden_app.html
-
-// 🔴 الحالي: التخزين المحلي
-function saveData() {
-  localStorage.setItem('shawatiApp', JSON.stringify({
-    settings: appData.settings,
-    items: appData.items,
-    bookings: appData.bookings
-  }));
-}
-
-function loadData() {
-  const saved = localStorage.getItem('shawatiApp');
-  if (saved) { ... }
-}
-
-// 🟢 المستقبلي: ربط API
-async function saveData() {
-  await fetch('https://your-api.com/save', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(appData)
-  });
-}
-
-async function loadData() {
-  const res = await fetch('https://your-api.com/load');
-  const data = await res.json();
-  appData = data;
-}
-```
-
----
-
-## 🛠️ أوامر Git لرفع المشروع على GitHub
-
-### الخطوة 1: إنشاء مستودع جديد على GitHub
-1. ادخل على [github.com](https://github.com)
-2. اضغط **New Repository**
-3. اكتب اسم المستودع: `shawati-aden-app`
-4. اختر **Public** أو **Private**
-5. لا تضيف README أو .gitignore (عندك واحد جاهز)
-6. اضغط **Create Repository**
-7. انسخ رابط المستودع:
-   ```
-   https://github.com/YOUR_USERNAME/shawati-aden-app.git
-   ```
-
-### الخطوة 2: أوامر الطرفية (Terminal)
+لرفع المشروع إلى GitHub أو المستودع البعيد، استخدم الأوامر التالية:
 
 ```bash
-# 1. ادخل على مجلد المشروع
-cd ~/Desktop/shawati-aden-app
-
-# 2. تهيئة Git
- git init
-
-# 3. إضافة الملفات
- git add .
-
-# 4. أول Commit
- git commit -m "🎉 الإصدار الأول - تطبيق إدارة الولائم"
-
-# 5. تسمية الفرع الرئيسي
- git branch -M main
-
-# 6. ربط المستودع البعيد (استبدل YOUR_USERNAME)
- git remote add origin https://github.com/YOUR_USERNAME/shawati-aden-app.git
-
-# 7. الرفع الأول
- git push -u origin main
+git add .
+git commit -m "Add new project files and documentation"
+git push origin main
 ```
 
-### الخطوة 3: التحديثات المستقبلية
+إذا كانت هناك ملفات محذوفة أو ملفات جديدة غير متتبعة، فالأمر `git add .` سيضيفها جميعاً إلى المرحلة التالية.
 
-```bash
-# بعد أي تعديل:
- git add .
- git commit -m "✨ وصف التعديل"
- git push origin main
-```
+## مميزات التطبيق
+
+- واجهة عربية RTL
+- تصميم مسؤول ومناسب للمؤسسات
+- تجربة مناسبة للجوال والأجهزة اللوحية
+- إدارة كاملة للحجوزات والعميل والمورد
+- تقارير قابلة للتصدير والمشاركة
+- إمكانية التوسع وإضافة Backend مستقبلياً
+
+## ملاحظات المطور
+
+هذا المشروع يمثل نسخة إدارة أعمال قائمة على الواجهة الأمامية، ويمكن تطويرها لاحقاً إلى نسخة كاملة مع قاعدة بيانات حقيقية وأدوار مستخدمين، وإدارة أذونات، وتقارير أكثر تعقيداً.
+
+## الترخيص
+
+هذا المشروع مخصص للاستخدام الداخلي والتطوير المحلي، ويمكن تعديله حسب احتياج المشروع.
+
+## الاتصال / المساهمة
+
+إذا كنت ترغب في تطوير المشروع أو إضافة ميزات إضافية، يمكنك فتح pull request أو تعديل المشروع محلياً ثم رفع التعديلات إلى المستودع البعيد.
 
 ---
 
-## 🌐 نشر على GitHub Pages (مجاني)
-
-```bash
-# 1. اذهب لإعدادات المستودع على GitHub
-# 2. اختر Pages من القائمة الجانبية
-# 3. Source: Deploy from a branch
-# 4. Branch: main / root
-# 5. اضغط Save
-
-# الرابط سيكون:
-# https://YOUR_USERNAME.github.io/shawati-aden-app/shawati_aden_app.html
-```
-
----
-
-## 📱 تثبيت على الهاتف (PWA)
-
-```
-1. افتح الرابط في متصفح Chrome/Safari على الهاتف
-2. اضغط "إضافة إلى الشاشة الرئيسية"
-3. سيظهر التطبيق كأيقونة على الشاشة!
-```
-
----
-
-## 🎨 تخصيص الفاتورة
-
-لتغيير شعار المطعم في الفاتورة، ابحث عن هذا الكود واستبدله:
-
-```html
-<!-- الموجود حالياً: -->
-<div class="w-16 h-16 rounded-full bg-black flex items-center justify-center">
-  <i class="fas fa-utensils text-white text-xl"></i>
-</div>
-
-<!-- استبدله بـ: -->
-<img src="assets/logo.png" class="w-16 h-16 rounded-full object-cover">
-```
-
----
-
-## ⚠️ ملاحظات مهمة
-
-| النقطة | التوضيح |
-|--------|---------|
-| 💾 **التخزين** | البيانات تُحفظ في `LocalStorage` بالمتصفح |
-| 🔄 **النسخ الاحتياطي** | استخدم "تصدير البيانات" في الإعدادات بشكل دوري |
-| 📵 **بدون إنترنت** | يعمل بدون إنترنت بعد التحميل الأول |
-| 🖨️ **الطباعة** | استخدم `Ctrl+P` أو زر الطباعة في الفاتورة |
-
----
-
-## 📞 بيانات المطعم الافتراضية
-
-```
-الاسم: شواطئ عدن
-الوصف: مطابخ ومطاعم
-التخصص: للحجوزات والولائم والمناسبات
-الهاتف: 0550724459
-التوصيل: 0547504445
-العنوان: جده شارع جاك - جوار كودو
-السوشيال: @SHAWATI_ADEN
-```
-
-> يمكن تغييرها من شاشة **الإعدادات** داخل التطبيق.
-
----
-
-## 👨‍💻 المطور
-
-تم بناء هذا التطبيق خصيصاً لمطاعم **شواطئ عدن** لإدارة حجوزات الولائم بكفاءة واحترافية.
-
----
-
-<p align="center">
-  <strong>🤲 بارك الله في عملكم</strong>
-</p>
+تم إنشاء هذا الملف لشرح المشروع، هيكلته، طريقة التشغيل، وكيفية رفعه على المستودع البعيد.

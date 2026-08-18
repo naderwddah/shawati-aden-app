@@ -1,1642 +1,380 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html dir="rtl" lang="ar" data-page="dashboard">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
     />
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#8F1720" />
     <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
+      name="description"
+      content="نظام إدارة حجوزات قاعات المناسبات - شواطئ عدن"
     />
-    <link rel="manifest" href="manifest.json" />
-    <title>شواطئ عدن - إدارة الولائم</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>لوحة التحكم - شواطئ عدن</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css"
     />
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="assets/css/global.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" href="assets/images/logo.png" />
+    <link rel="apple-touch-icon" href="assets/images/logo.png" />
+
     <style>
-      /* كل الأنماط السابقة تبقى كما هي، لم تتغير */
-      :root {
-        --color-primary: #0f172a;
-        --color-primary-light: #1e293b;
-        --color-bg: #f1f5f9;
-        --color-card: #ffffff;
-        --color-text: #0f172a;
-        --color-text-muted: #64748b;
-        --color-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-        --color-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.1);
-        --radius-lg: 24px;
-        --radius-md: 16px;
-        --radius-sm: 12px;
-        --color-accent-blue: #3b82f6;
-        --color-accent-green: #10b981;
-        --color-accent-purple: #8b5cf6;
-        --color-accent-red: #ef4444;
-        --color-accent-yellow: #f59e0b;
-      }
-      * {
-        font-family: "Cairo", sans-serif;
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
-      }
-      body {
-        background: var(--color-bg);
-        overflow-x: hidden;
-        min-height: 100vh;
-        padding-top: 76px;
-        padding-bottom: 80px;
-      }
-      .screen {
-        display: none;
-        min-height: 100vh;
-        animation: fadeIn 0.3s ease-out;
-      }
-      .screen.active {
-        display: block;
-      }
-      #screenSplash {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 99999; /* لضمان تغطية كل شيء بما فيها الأشرطة العلوية والسفلية */
-        background: var(--color-primary);
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-      }
-      #screenSplash.active {
-        display: flex;
-      }
-      ::-webkit-scrollbar {
-        width: 0;
-        height: 0;
-      }
-      .btn-press {
-        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .btn-press:active {
-        transform: scale(0.94);
-      }
-      @keyframes slideUp {
-        from {
-          transform: translateY(24px);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-      @keyframes pulse {
-        0%,
-        100% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.04);
-        }
-      }
-      .animate-slideUp {
-        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .status-new {
-        background: var(--color-accent-blue);
-        color: #fff;
-      }
-      .status-confirmed {
-        background: var(--color-accent-green);
-        color: #fff;
-      }
-      .status-completed {
-        background: var(--color-accent-purple);
-        color: #fff;
-      }
-      .status-cancelled {
-        background: var(--color-accent-red);
-        color: #fff;
-      }
-      .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: var(--color-card);
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-        z-index: 50;
-        padding-bottom: env(safe-area-inset-bottom);
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
-      }
-      .bottom-nav .nav-btn {
-        color: #9ca3af;
-        transition: color 0.2s;
-      }
-      .bottom-nav .nav-btn.active {
-        color: var(--color-primary);
-      }
-      .bottom-nav .nav-btn .nav-icon {
-        transition: transform 0.2s;
-      }
-      .bottom-nav .nav-btn.active .nav-icon {
-        transform: scale(1.1);
-      }
-      .badge-count {
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        background: var(--color-accent-red);
-        color: #fff;
-        font-size: 9px;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
+      .dashboard-topbar {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+        margin-bottom: var(--space-5);
+        padding: 0 0 10px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .eyebrow {
+        display: inline-block;
+        font-size: 11px;
         font-weight: 700;
-        border: 2px solid #fff;
+        letter-spacing: 0.08em;
+        color: var(--primary);
+        background: var(--primary-soft);
+        border-radius: var(--radius-full);
+        padding: 5px 10px;
+        margin-bottom: 8px;
       }
-      .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(6px);
-        z-index: 60;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
+
+      .dashboard-topbar h1 {
+        font-size: clamp(22px, 2vw, 30px);
+        margin: 0;
+        color: var(--text);
       }
-      .modal-overlay.active {
-        display: flex;
-      }
-      .modal-content {
-        background: var(--color-card);
-        border-radius: 20px;
-        width: 100%;
-        max-width: 400px;
-        max-height: 85vh;
-        overflow-y: auto;
-        animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .toast {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-120px);
-        background: var(--color-primary);
-        color: #fff;
-        padding: 14px 28px;
-        border-radius: 14px;
-        z-index: 100;
-        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-        font-weight: 600;
-        font-size: 14px;
-        pointer-events: none;
-        white-space: nowrap;
-      }
-      .toast.show {
-        transform: translateX(-50%) translateY(0);
-      }
-      .toast i {
-        margin-left: 10px;
-      }
-      input,
-      select,
-      textarea {
-        background: #f8f9fc;
-        border: 2px solid #eef0f4;
-        transition: all 0.2s;
-        border-radius: var(--radius-sm);
-        font-size: 15px;
-      }
-      input:focus,
-      select:focus,
-      textarea:focus {
-        border-color: var(--color-primary);
-        background: #fff;
-        outline: none;
-        box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
-      }
-      input::placeholder,
-      textarea::placeholder {
-        color: #b0b8c4;
-        font-weight: 300;
-      }
-      .section-card {
-        background: var(--color-card);
-        border-radius: var(--radius-md);
-        padding: 16px;
-        box-shadow: var(--color-shadow);
-      }
-      .section-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--color-text-muted);
-        letter-spacing: 0.3px;
-        display: flex;
+
+      .dashboard-date {
+        display: inline-flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 12px;
-      }
-      .section-title i {
-        color: #9ca3af;
-        font-size: 14px;
-      }
-      .invoice-paper {
-        background: #fff;
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 20px;
-        border-radius: var(--radius-md);
-        box-shadow: var(--color-shadow);
+        background: var(--surface-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        padding: 10px 14px;
+        color: var(--text-secondary);
         font-size: 13px;
-      }
-      .invoice-paper table {
-        font-size: 12px;
-      }
-      .invoice-paper .qr-container {
-        width: 80px;
-        height: 80px;
-        background: #fff;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        padding: 4px;
-        border: 1px solid #e5e7eb;
-      }
-      .invoice-editable-input {
-        width: 70px;
-        padding: 4px 6px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        text-align: center;
-        font-size: 13px;
-        background: #fff;
-      }
-      .invoice-editable-input:focus {
-        border-color: var(--color-primary);
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
-      }
-      #installBanner {
-        display: none;
-        background: var(--color-primary);
-        color: #fff;
-        padding: 12px 16px;
-        border-radius: var(--radius-md);
-        margin: 10px 16px;
-        box-shadow: var(--color-shadow);
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-      }
-      #installBanner.show {
-        display: flex;
-      }
-      #installBanner button {
-        background: #fff;
-        color: var(--color-primary);
-        border: none;
-        padding: 8px 20px;
-        border-radius: var(--radius-sm);
-        font-weight: 700;
-        font-size: 13px;
-      }
-      @media print {
-        body * {
-          visibility: hidden;
-        }
-        #invoicePrintArea,
-        #invoicePrintArea * {
-          visibility: visible;
-        }
-        #invoicePrintArea {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 80mm;
-          margin: 0;
-          padding: 10px;
-          border-radius: 0;
-          box-shadow: none;
-        }
-      }
-      /* AppBar Styles */
-      #appBar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 40;
-        min-height: 64px;
-        padding: 8px 20px;
-        background: var(--color-primary);
-        color: #fff;
-        border-radius: 0 0 28px 28px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        overflow: hidden;
-      }
-      #appBar .app-bar-start {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-        min-width: 0;
-      }
-      #appBar .app-bar-back {
-        display: none;
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        color: #fff;
-        font-size: 16px;
-        cursor: pointer;
-        flex-shrink: 0;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-      }
-      #appBar .app-bar-back:active {
-        background: rgba(255, 255, 255, 0.2);
-        transform: scale(0.92);
-      }
-      #appBar .app-bar-back.show {
-        display: flex;
-      }
-      #appBar .app-bar-title {
-        font-weight: 800;
-        font-size: 18px;
-        line-height: 1.3;
+        box-shadow: var(--shadow-sm);
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        letter-spacing: 0.3px;
       }
-      #appBar .app-bar-actions {
+
+      .dashboard-date i {
+        color: var(--primary);
+      }
+
+      .dashboard-col {
         display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-shrink: 0;
+        flex-direction: column;
+        gap: var(--space-4);
       }
-      #appBar .app-bar-btn {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        color: #fff;
+
+      .empty-state-compact {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 15px;
-        cursor: pointer;
-        transition: all 0.2s;
-        backdrop-filter: blur(4px);
-      }
-      #appBar .app-bar-btn:active {
-        background: rgba(255, 255, 255, 0.2);
-        transform: scale(0.92);
-      }
-      #appBar .app-bar-btn.danger {
-        background: rgba(239, 68, 68, 0.2);
-        border-color: rgba(239, 68, 68, 0.15);
-      }
-      #appBar .app-bar-btn.danger:active {
-        background: rgba(239, 68, 68, 0.4);
-      }
-      /* إضافة نمط للحقول المقفلة في الإعدادات */
-      .settings-field:disabled {
-        background: #f1f5f9;
-        color: #64748b;
-        cursor: not-allowed;
-        opacity: 0.7;
+        gap: 8px;
+        padding: 14px 12px;
+        color: var(--text-muted);
+        background: var(--surface);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-md);
+        font-size: 13px;
       }
 
-      /* !+++++++++++++++00 */
-      /* تحسين القائمة السفلية */
-      .bottom-nav {
-        background: #ffffff;
-        border-top: 1px solid rgba(0, 0, 0, 0.04);
-        box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.04);
-      }
-      .bottom-nav .nav-btn {
-        color: #9ca3af;
-        transition: all 0.25s ease;
-        position: relative;
-      }
-      .bottom-nav .nav-btn.active {
-        color: #0f172a;
-      }
-      .bottom-nav .nav-btn.active .nav-icon {
-        transform: scale(1.1);
-      }
-      .bottom-nav .nav-btn .nav-icon {
-        transition: transform 0.2s ease;
-      }
-      .bottom-nav .nav-btn span {
+      .card-link {
         font-weight: 700;
-        letter-spacing: 0.3px;
-      }
-      /* تلوين أيقونة النشاط (اختياري) */
-      .bottom-nav .nav-btn.active .nav-icon {
-        color: #b8860b;
-      }
-      /* زر الإضافة العائم (FAB) - تعديل اللون ليتناسب مع الأزرار الأخرى */
-      .fab-btn {
-        background: #0f172a; /* اللون الأسود/الداكن */
-        border: 2px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
-      }
-      .fab-btn:hover {
-        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.45);
-        transform: scale(1.05);
-      }
-      .fab-btn:active {
-        transform: scale(0.92);
       }
 
-      /* تنسيق الشارة (badge) */
-      .badge-count {
-        position: absolute;
-        top: -4px;
-        right: -6px;
-        background: #ef4444;
-        color: #fff;
-        font-size: 9px;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 800;
-        border: 2px solid #fff;
-        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+      @media (max-width: 767px) {
+        .dashboard-topbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .dashboard-date {
+          width: 100%;
+          justify-content: center;
+        }
       }
 
-      /* تحسين تجربة اللمس للجوال */
-      .nav-btn,
-      .fab-btn {
-        -webkit-tap-highlight-color: transparent;
-        user-select: none;
-      }
-
-      /* عند التمرير أو الضغط على الزر */
       @media (max-width: 480px) {
-        .fab-btn {
-          width: 56px;
-          height: 56px;
+        .dashboard-topbar {
+          gap: 10px;
+          margin-bottom: 16px;
+          padding-bottom: 8px;
         }
-        .fab-btn i {
+
+        .eyebrow {
+          padding: 4px 8px;
+          font-size: 10px;
+        }
+
+        .dashboard-topbar h1 {
           font-size: 22px;
+          line-height: 1.25;
         }
-        .bottom-nav .nav-btn i {
-          font-size: 18px;
+
+        .dashboard-date {
+          padding: 8px 12px;
+          font-size: 12px;
+          width: 100%;
         }
       }
     </style>
   </head>
   <body>
-    <div id="toast" class="toast">
-      <i class="fas fa-check-circle"></i><span id="toastText"></span>
-    </div>
-
-    <!-- شريط التثبيت -->
-    <div id="installBanner" class="show">
-      <div style="display: flex; align-items: center; gap: 10px">
-        <i class="fas fa-mobile-alt text-xl"></i>
-        <span style="font-weight: 600; font-size: 14px">ثبّت التطبيق</span>
-      </div>
-      <button id="installBtn">تثبيت</button>
-      <button
-        onclick="dismissInstallBanner()"
-        style="
-          background: transparent;
-          color: #aaa;
-          padding: 4px 8px;
-          font-size: 18px;
-        "
-      >
-        ✕
-      </button>
-    </div>
-
-    <!-- AppBar -->
-    <header id="appBar">
-      <div class="app-bar-start">
-        <button class="app-bar-back" id="backBtn" onclick="goBack()">
-          <i class="fas fa-arrow-right"></i>
-        </button>
-        <span class="app-bar-title" id="appBarTitle">شواطئ عدن</span>
-      </div>
-      <div class="app-bar-actions">
-        <button
-          class="app-bar-btn danger"
-          id="appBarLogout"
-          onclick="logout()"
-          title="تسجيل الخروج"
-          style="display: none"
-        >
-          <i class="fas fa-sign-out-alt"></i>
-        </button>
-        <button
-          class="app-bar-btn"
-          id="appBarSettings"
-          onclick="showScreen('screenSettings')"
-          title="الإعدادات"
-          style="display: none"
-        >
-          <i class="fas fa-sliders-h"></i>
-        </button>
-      </div>
-    </header>
-
-    <!-- شاشة البداية -->
-    <div id="screenSplash" class="screen active">
-      <div
-        class="w-28 h-28 rounded-3xl bg-white flex items-center justify-center mb-5 shadow-2xl"
-        style="animation: pulse 2s infinite"
-      >
-        <i class="fas fa-utensils text-5xl text-black"></i>
-      </div>
-      <h1 class="text-3xl font-black tracking-tight">شواطئ عدن</h1>
-      <p class="text-gray-400 text-sm font-medium mt-1">مطابخ ومطاعم</p>
-      <div class="mt-6 flex gap-1">
-        <span
-          class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
-          style="animation-delay: 0s"
-        ></span>
-        <span
-          class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
-          style="animation-delay: 0.2s"
-        ></span>
-        <span
-          class="w-2 h-2 rounded-full bg-white/20 animate-pulse"
-          style="animation-delay: 0.4s"
-        ></span>
+    <div id="loadingScreen" class="loading-screen">
+      <div class="loading-content">
+        <div class="loading-logo"><i class="fas fa-utensils"></i></div>
+        <h1 class="loading-title">شواطئ عدن</h1>
+        <p class="loading-subtitle">إدارة المطاعم والمناسبات</p>
+        <div class="loading-dots"><span></span><span></span><span></span></div>
       </div>
     </div>
 
-    <!-- شاشة تسجيل الدخول -->
-    <div id="screenLogin" class="screen">
-      <div
-        class="min-h-screen flex items-center justify-center p-6"
-        style="background: var(--color-primary)"
-      >
-        <div class="w-full max-w-md">
-          <div class="text-center mb-8">
-            <div
-              class="w-20 h-20 rounded-3xl bg-white flex items-center justify-center mx-auto mb-4 shadow-2xl"
-            >
-              <i class="fas fa-utensils text-4xl text-black"></i>
+    <div class="app">
+      <aside id="sidebar" class="sidebar"></aside>
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+      <div class="main-area">
+        <header id="header" class="header"></header>
+        <main class="content" id="pageContent">
+          <div class="dashboard-topbar">
+            <div>
+              <div class="eyebrow">OPERATIONS</div>
+              <h1>ملخص التشغيل اليوم</h1>
             </div>
-            <h1 class="text-2xl font-black text-white">شواطئ عدن</h1>
-            <p class="text-gray-400 text-sm">تسجيل الدخول لإدارة الولائم</p>
-          </div>
-          <div class="bg-white rounded-3xl p-6 shadow-2xl">
-            <div class="space-y-4">
-              <div>
-                <label class="text-sm font-semibold text-gray-700 block mb-1"
-                  >البريد الإلكتروني</label
-                >
-                <input
-                  type="email"
-                  id="loginEmail"
-                  placeholder="admin@shawati.com"
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition"
-                />
-              </div>
-              <div>
-                <label class="text-sm font-semibold text-gray-700 block mb-1"
-                  >كلمة المرور</label
-                >
-                <input
-                  type="password"
-                  id="loginPassword"
-                  placeholder="••••••••"
-                  class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-black outline-none transition"
-                  onkeydown="if (event.key === 'Enter') handleLogin();"
-                />
-              </div>
-              <button
-                onclick="handleLogin()"
-                class="w-full bg-black text-white rounded-2xl py-4 font-bold text-lg btn-press shadow-xl"
-              >
-                <i class="fas fa-sign-in-alt ml-2"></i> تسجيل الدخول
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- الصفحة الرئيسية -->
-    <div id="screenHome" class="screen">
-      <div class="min-h-screen pb-20" style="background: var(--color-bg)">
-        <div class="px-4 mt-6 relative z-10">
-          <!-- بطاقات الإحصائيات -->
-          <div class="grid grid-cols-3 gap-3">
-            <div
-              class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
-              style="background: var(--color-primary-light); color: #fff"
-            >
-              <p class="text-2xl font-black" id="statToday">0</p>
-              <p class="text-[10px] text-gray-400 font-medium mt-0.5">اليوم</p>
-            </div>
-            <div
-              class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
-              style="background: var(--color-primary-light); color: #fff"
-            >
-              <p class="text-2xl font-black text-yellow-400" id="statPending">
-                0
-              </p>
-              <p class="text-[10px] text-gray-400 font-medium mt-0.5">معلق</p>
-            </div>
-            <div
-              class="rounded-2xl p-3 text-center backdrop-blur-sm border border-white/10 shadow-md"
-              style="background: var(--color-primary-light); color: #fff"
-            >
-              <p class="text-2xl font-black" id="statTotal">0</p>
-              <p class="text-[10px] text-gray-400 font-medium mt-0.5">إجمالي</p>
+            <div class="dashboard-date">
+              <i class="fas fa-calendar-day"></i>
+              <span id="currentDateDisplay"></span>
             </div>
           </div>
 
-          <!-- المبالغ المحصلة -->
-          <div
-            class="mt-4 p-4 rounded-2xl shadow-md"
-            style="background: var(--color-card)"
-          >
-            <h3
-              class="text-sm font-bold flex items-center gap-2 mb-3"
-              style="color: var(--color-text-muted)"
-            >
-              <i
-                class="fas fa-chart-pie"
-                style="color: var(--color-text-muted)"
-              ></i>
-              المبالغ المحصلة
-            </h3>
-            <div class="grid grid-cols-3 gap-2">
-              <div
-                class="text-center p-2 rounded-xl"
-                style="background: var(--color-bg)"
-              >
-                <p
-                  class="text-[10px] font-semibold"
-                  style="color: var(--color-text-muted)"
-                >
-                  الإيرادات
-                </p>
-                <p
-                  class="text-sm font-black"
-                  style="color: var(--color-accent-green)"
-                  id="statTotalRevenue"
-                >
-                  0.00 ر.س
-                </p>
-              </div>
-              <div
-                class="text-center p-2 rounded-xl"
-                style="background: var(--color-bg)"
-              >
-                <p
-                  class="text-[10px] font-semibold"
-                  style="color: var(--color-text-muted)"
-                >
-                  العربونات
-                </p>
-                <p
-                  class="text-sm font-black"
-                  style="color: var(--color-accent-blue)"
-                  id="statTotalDeposits"
-                >
-                  0.00 ر.س
-                </p>
-              </div>
-              <div
-                class="text-center p-2 rounded-xl"
-                style="background: var(--color-bg)"
-              >
-                <p
-                  class="text-[10px] font-semibold"
-                  style="color: var(--color-text-muted)"
-                >
-                  المتبقي
-                </p>
-                <p
-                  class="text-sm font-black"
-                  style="color: var(--color-accent-red)"
-                  id="statTotalRemaining"
-                >
-                  0.00 ر.س
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- أزرار الإجراءات السريعة -->
-          <div class="grid grid-cols-2 gap-3 mt-8">
-            <button
-              onclick="showScreen('screenNewBooking')"
-              class="rounded-2xl p-5 text-center btn-press shadow-md border border-white/50 animate-slideUp"
-              style="background: var(--color-primary); color: #fff"
-            >
-              <div
-                class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-inner"
-                style="background: rgba(255, 255, 255, 0.1)"
-              >
-                <i class="fas fa-plus text-white text-2xl"></i>
-              </div>
-              <p class="text-sm font-bold">حجز جديد</p>
-            </button>
-            <button
-              onclick="showScreen('screenBookings')"
-              class="rounded-2xl p-5 text-center btn-press shadow-md border border-white/50 animate-slideUp"
-              style="
-                animation-delay: 0.08s;
-                background: var(--color-card);
-                color: var(--color-text);
-              "
-            >
-              <div
-                class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-2"
-                style="background: var(--color-bg)"
-              >
-                <i
-                  class="fas fa-calendar-check text-2xl"
-                  style="color: var(--color-text-muted)"
-                ></i>
-              </div>
-              <p class="text-sm font-bold" style="color: var(--color-text)">
-                كل الحجوزات
-              </p>
-            </button>
-          </div>
-
-          <!-- حجوزات اليوم -->
-          <div class="mt-6">
-            <div class="flex items-center justify-between mb-3">
-              <h2
-                class="font-bold text-base flex items-center gap-2"
-                style="color: var(--color-text)"
-              >
-                <i
-                  class="fas fa-calendar-day text-sm"
-                  style="color: var(--color-accent-blue)"
-                ></i>
-                حجوزات اليوم
-              </h2>
-              <button
-                onclick="showScreen('screenBookings')"
-                class="text-xs font-bold px-3 py-1.5 rounded-full btn-press"
-                style="background: var(--color-accent-blue); color: #fff"
-              >
-                عرض الكل
-              </button>
-            </div>
-            <div id="todayBookingsList" class="space-y-2.5"></div>
-          </div>
-
-          <!-- الحجوزات القادمة -->
-          <div class="mt-6 pb-6">
-            <h2
-              class="font-bold text-base flex items-center gap-2 mb-3"
-              style="color: var(--color-text)"
-            >
-              <i
-                class="fas fa-calendar-alt text-sm"
-                style="color: var(--color-accent-purple)"
-              ></i>
-              الحجوزات القادمة
-            </h2>
-            <div id="upcomingBookingsList" class="space-y-2.5"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- الحجوزات -->
-    <div id="screenBookings" class="screen">
-      <div class="min-h-screen pb-20" style="background: var(--color-bg)">
-        <div class="px-4 pt-6">
-          <div class="relative">
-            <i
-              class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
-            ></i>
-            <input
-              type="text"
-              id="searchBookings"
-              placeholder="ابحث بالاسم أو الجوال أو التاريخ..."
-              class="w-full bg-white rounded-2xl py-3.5 pr-11 pl-4 text-sm border-2 border-gray-200 focus:border-black outline-none transition"
-              oninput="filterBookings()"
-            />
-          </div>
-          <div
-            class="flex gap-2 mt-4 overflow-x-auto pb-1 no-scrollbar"
-            id="statusFilters"
-          >
-            <button
-              onclick="filterByStatus('all', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-black text-white whitespace-nowrap"
-            >
-              الكل
-            </button>
-            <button
-              onclick="filterByStatus('new', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
-            >
-              جديد
-            </button>
-            <button
-              onclick="filterByStatus('confirmed', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
-            >
-              مؤكد
-            </button>
-            <button
-              onclick="filterByStatus('completed', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
-            >
-              مكتمل
-            </button>
-            <button
-              onclick="filterByStatus('cancelled', this)"
-              class="status-filter px-4 py-1.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 whitespace-nowrap"
-            >
-              ملغي
-            </button>
-          </div>
-          <div class="pt-6" id="allBookingsList"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- مودال تأكيد الحجز -->
-    <div id="confirmBookingModal" class="modal-overlay">
-      <div class="modal-content p-6">
-        <div class="text-center mb-4">
-          <div
-            class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3"
-          >
-            <i class="fas fa-file-invoice text-3xl text-yellow-600"></i>
-          </div>
-          <h3 class="font-bold text-xl">📋 تأكيد الحجز</h3>
-          <p class="text-sm text-gray-500 mt-1">
-            يرجى مراجعة البيانات قبل الحفظ
-          </p>
-        </div>
-        <div class="bg-gray-50 rounded-2xl p-4 space-y-2.5 mb-4">
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">👤 العميل</span>
-            <span class="font-bold text-sm" id="confirmCustName">-</span>
-          </div>
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">📅 التاريخ</span>
-            <span class="font-bold text-sm" id="confirmBookingDate">-</span>
-          </div>
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">⏰ الوقت</span>
-            <span class="font-bold text-sm" id="confirmBookingTime">-</span>
-          </div>
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">📍 الموقع</span>
-            <span class="font-bold text-sm" id="confirmLocation">-</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-500">🏷️ العلامة</span>
-            <span class="font-bold text-sm" id="confirmMark">-</span>
-          </div>
-        </div>
-        <div class="bg-gray-50 rounded-2xl p-4 space-y-2.5 mb-4">
-          <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            📦 تفاصيل الطلبات
-          </p>
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">إجمالي الطلبات</span>
-            <span
-              class="font-bold text-sm text-blue-600"
-              id="confirmTotalOrders"
-              >-</span
-            >
-          </div>
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">🍽️ تأمين الصحون</span>
-            <span class="font-bold text-sm" id="confirmPlatesDeposit">-</span>
-          </div>
-          <div
-            class="flex justify-between items-center border-b border-gray-200 pb-2"
-          >
-            <span class="text-sm text-gray-500">💳 طريقة الدفع</span>
-            <span class="font-bold text-sm" id="confirmPaymentMethod">-</span>
-          </div>
-          <div class="flex justify-between items-center pt-1">
-            <span class="text-sm font-bold text-gray-700"
-              >📊 إجمالي الفاتورة</span
-            >
-            <span class="font-bold text-lg text-black" id="confirmGrandTotal"
-              >-</span
-            >
-          </div>
-        </div>
-        <div
-          class="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-4 space-y-3 mb-4 border-2 border-green-200"
-        >
-          <p
-            class="text-xs font-bold text-green-700 uppercase tracking-wider flex items-center gap-2"
-          >
-            <i class="fas fa-money-bill-wave"></i> المبالغ
-          </p>
-          <div
-            class="flex justify-between items-center border-b border-green-200 pb-2"
-          >
-            <span
-              class="text-sm font-bold text-green-700 flex items-center gap-1"
-            >
-              <i class="fas fa-hand-holding-usd"></i> المبلغ المدفوع
-            </span>
-            <span
-              class="font-bold text-lg text-green-700"
-              id="confirmPaidAmount"
-              >-</span
-            >
-          </div>
-          <div class="flex justify-between items-center pt-1">
-            <span
-              class="text-sm font-bold text-red-600 flex items-center gap-1"
-            >
-              <i class="fas fa-coins"></i> المبلغ المتبقي
-            </span>
-            <span class="font-bold text-2xl text-red-700" id="confirmRemaining"
-              >-</span
-            >
-          </div>
-        </div>
-        <div class="flex gap-3">
-          <button
-            onclick="closeConfirmModal()"
-            class="flex-1 bg-red-50 text-red-600 rounded-2xl py-3.5 font-bold btn-press border-2 border-red-200 flex items-center justify-center gap-2"
-          >
-            <i class="fas fa-times"></i> تعديل الحجز
-          </button>
-          <button
-            onclick="confirmAndSave()"
-            class="flex-1 bg-green-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 shadow-lg hover:bg-green-700 transition"
-          >
-            <i class="fas fa-check-circle"></i> تأكيد الحفظ
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- ===================== حجز جديد ===================== -->
-    <div id="screenNewBooking" class="screen">
-      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div class="px-4 pt-6 space-y-3.5">
-          <!-- ✅ إضافة عنوان النموذج -->
-          <h1 id="bookingFormTitle" class="font-bold text-lg mb-4">حجز جديد</h1>
-
-          <!-- بيانات العميل -->
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-user"></i> بيانات العميل
-            </div>
-            <input
-              type="text"
-              id="custName"
-              placeholder="اسم العميل"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <input
-              type="tel"
-              id="custPhone"
-              placeholder="رقم الجوال"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <input
-              type="text"
-              id="custLocation"
-              placeholder="الموقع"
-              class="w-full px-4 py-3.5 text-sm"
-            />
-          </div>
-
-          <!-- تفاصيل الحجز -->
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-calendar-alt"></i> تفاصيل الحجز
-            </div>
-            <input
-              type="date"
-              id="bookingDate"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <input
-              type="time"
-              id="bookingTime"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <input
-              type="text"
-              id="bookingMark"
-              placeholder="العلامة / رقم القاعة"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <select id="deliveryTime" class="w-full px-4 py-3.5 text-sm">
-              <option value="صباحاً">صباحاً</option>
-              <option value="ظهراً" selected>ظهراً</option>
-              <option value="مساءً">مساءً</option>
-            </select>
-          </div>
-
-          <!-- الطلبات الجانبية -->
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-shopping-basket"></i> الطلبات الجانبية (السعر
-              قابل للتعديل)
-            </div>
-            <div id="sideOrdersContainer" class="space-y-2 mb-3"></div>
-            <button
-              onclick="addSideOrderRow()"
-              class="w-full border-2 border-dashed border-gray-300 rounded-2xl py-3 text-sm text-gray-400 font-semibold btn-press hover:border-gray-400 transition-colors"
-            >
-              <i class="fas fa-plus ml-1.5"></i> إضافة صنف جانبي
-            </button>
-          </div>
-
-          <!-- ملاحظات -->
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-sticky-note"></i> ملاحظات (تفاصيل الوليمة)
-            </div>
-            <textarea
-              id="bookingNotes"
-              placeholder="اكتب هنا تفاصيل الوليمة بالكامل (الذبائح، نوع الطبخ، التفصيل، الصحون، إلخ)"
-              rows="4"
-              class="w-full px-4 py-3.5 text-sm resize-none"
-            ></textarea>
-          </div>
-
-          <!-- المالية -->
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-money-bill-wave"></i> المالية
-            </div>
-
-            <div
-              class="flex items-center justify-between bg-gray-50 rounded-2xl p-3.5 mb-3"
-            >
-              <span class="text-sm text-gray-500 font-semibold"
-                >إجمالي الطلبات</span
-              >
-              <span
-                class="font-black text-lg text-blue-600"
-                id="bookingTotalDisplay"
-                >0.00 ر.س</span
-              >
-            </div>
-
-            <input
-              type="number"
-              id="platesDeposit"
-              placeholder="تأمين الصحون (مبلغ ثابت)"
-              class="w-full px-4 py-3.5 mb-3 text-sm border-2 border-gray-200 rounded-xl focus:border-black focus:ring-0"
-              min="0"
-              step="0.5"
-              oninput="calcBookingTotal()"
-            />
-
-            <div
-              class="flex items-center justify-between bg-black rounded-2xl p-3.5 mb-3"
-            >
-              <span class="text-sm text-white font-semibold"
-                >إجمالي الفاتورة</span
-              >
-              <span
-                class="font-black text-lg text-yellow-400"
-                id="grandTotalDisplay"
-                >0.00 ر.س</span
-              >
-            </div>
-
-            <div
-              class="bg-green-50 rounded-2xl p-3.5 mb-3 border border-green-200"
-            >
-              <p
-                class="text-xs font-bold text-green-700 mb-2 flex items-center gap-1"
-              >
-                <i class="fas fa-check-circle"></i> المبلغ المدفوع
-              </p>
-              <input
-                type="number"
-                id="paidAmount"
-                placeholder="المبلغ المدفوع"
-                class="w-full px-4 py-3.5 text-sm border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0"
-                min="0"
-                step="0.5"
-                oninput="calcBookingTotal()"
-              />
-            </div>
-
-            <div
-              class="bg-blue-50 rounded-2xl p-3.5 mb-3 border border-blue-200"
-            >
-              <p
-                class="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1"
-              >
-                <i class="fas fa-credit-card"></i> طريقة الدفع
-              </p>
-              <select
-                id="paymentMethod"
-                class="w-full px-4 py-3.5 text-sm border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 bg-white"
-              >
-                <option value="نقدي">💰 نقدي</option>
-                <option value="تحويل بنكي">🏦 تحويل بنكي</option>
-                <option value="بطاقة ائتمان">💳 بطاقة ائتمان</option>
-                <option value="أجل">📅 أجل</option>
-              </select>
-            </div>
-
-            <div
-              class="flex items-center justify-between bg-red-50 rounded-2xl p-3.5 border-2 border-red-200"
-            >
-              <span
-                class="text-sm text-red-600 font-bold flex items-center gap-1"
-                ><i class="fas fa-coins"></i> المتبقي</span
-              >
-              <span
-                class="font-black text-xl text-red-700"
-                id="remainingDisplay"
-                >0.00 ر.س</span
-              >
-            </div>
-          </div>
-
-          <button
-            onclick="saveBooking()"
-            class="w-full rounded-2xl py-4.5 font-bold text-lg btn-press shadow-xl mb-4 flex items-center justify-center gap-2"
-            style="background: var(--color-primary); color: #fff"
-          >
-            <i class="fas fa-save"></i> حفظ الحجز
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- الأصناف -->
-    <div id="screenItems" class="screen">
-      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div class="px-4 pt-6">
-          <div class="section-card mb-4">
-            <h3
-              class="font-bold text-sm mb-3 flex items-center gap-2"
-              style="color: var(--color-text-muted)"
-            >
-              <i class="fas fa-plus-circle text-gray-400"></i> إضافة صنف جديد
-            </h3>
-            <input
-              type="text"
-              id="newItemName"
-              placeholder="اسم الصنف"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <input
-              type="number"
-              id="newItemPrice"
-              placeholder="السعر"
-              class="w-full px-4 py-3.5 mb-2.5 text-sm"
-            />
-            <button
-              onclick="addItem()"
-              class="w-full rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
-              style="background: var(--color-primary); color: #fff"
-            >
-              <i class="fas fa-plus"></i> إضافة
-            </button>
-          </div>
-          <div id="itemsList" class="space-y-2"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- الإعدادات (المعدلة) -->
-    <div id="screenSettings" class="screen">
-      <div class="min-h-screen pb-24" style="background: var(--color-bg)">
-        <div class="px-4 pt-6 space-y-3.5">
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-store"></i> بيانات المطعم
-            </div>
-
-            <!-- عرض الشعار -->
-            <div class="mb-4">
-              <label class="text-sm text-gray-500 font-semibold mb-2 block"
-                >شعار المطعم</label
-              >
-              <div class="flex items-center gap-3">
-                <img
-                  id="logoPreview"
-                  src=""
-                  alt="logo"
-                  class="w-16 h-16 rounded-xl object-cover bg-gray-100 hidden"
-                />
-                <div
-                  id="logoPlaceholder"
-                  class="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400 text-xs"
-                >
-                  لا يوجد
+          <div class="kpi-grid" id="kpiGrid">
+            <div class="kpi-card">
+              <div class="kpi-card-body">
+                <div class="kpi-icon kpi-icon-primary">
+                  <i class="fas fa-calendar-day"></i>
                 </div>
-                <label
-                  class="flex-1 bg-gray-100 text-black rounded-2xl py-3 font-bold flex items-center justify-center gap-2 cursor-pointer settings-action"
-                  style="display: none"
-                >
-                  <i class="fas fa-upload"></i> رفع شعار
-                  <input
-                    type="file"
-                    id="restLogo"
-                    accept="image/*"
-                    class="hidden"
-                    onchange="uploadLogo(this)"
-                  />
-                </label>
-                <button
-                  id="removeLogoBtn"
-                  onclick="removeLogo()"
-                  class="hidden bg-red-50 text-red-500 rounded-2xl px-4 py-3 font-bold settings-action"
-                >
-                  حذف
-                </button>
+                <div class="kpi-info">
+                  <div class="kpi-label">الحجوزات اليوم</div>
+                  <div class="kpi-value" id="todayCount">0</div>
+                  <div class="kpi-meta">
+                    إجمالي <span id="todayTotal">0</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- الحقول -->
-            <input
-              type="text"
-              id="restName"
-              placeholder="اسم المطعم"
-              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
-              disabled
-            />
-            <input
-              type="text"
-              id="restSubtitle"
-              placeholder="الوصف"
-              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
-              disabled
-            />
-            <input
-              type="tel"
-              id="restPhone"
-              placeholder="رقم الهاتف"
-              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
-              disabled
-            />
-            <input
-              type="tel"
-              id="restDelivery"
-              placeholder="رقم التوصيل"
-              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
-              disabled
-            />
-            <input
-              type="text"
-              id="restAddress"
-              placeholder="العنوان"
-              class="settings-field w-full px-4 py-3.5 mb-2.5 text-sm"
-              disabled
-            />
-            <input
-              type="text"
-              id="restSocial"
-              placeholder="حساب التواصل"
-              class="settings-field w-full px-4 py-3.5 text-sm"
-              disabled
-            />
+            <div class="kpi-card">
+              <div class="kpi-card-body">
+                <div class="kpi-icon kpi-icon-warning">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <div class="kpi-info">
+                  <div class="kpi-label">قادم خلال 7 أيام</div>
+                  <div class="kpi-value" id="upcomingCount">0</div>
+                  <div class="kpi-meta">
+                    <span id="upcomingGuests">0</span> ضيف
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <!-- أزرار التحكم -->
-            <div class="flex gap-3 mt-4">
-              <button
-                id="editSettingsBtn"
-                onclick="enableEditing()"
-                class="flex-1 bg-blue-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
-              >
-                <i class="fas fa-pen"></i> تعديل
-              </button>
-              <button
-                id="saveSettingsBtn"
-                onclick="saveSettings()"
-                class="flex-1 bg-green-600 text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
-                style="display: none"
-              >
-                <i class="fas fa-save"></i> حفظ
-              </button>
+            <div class="kpi-card">
+              <div class="kpi-card-body">
+                <div class="kpi-icon kpi-icon-danger">
+                  <i class="fas fa-circle-exclamation"></i>
+                </div>
+                <div class="kpi-info">
+                  <div class="kpi-label">المبالغ المستحقة</div>
+                  <div class="kpi-value" id="receivablesTotal">0 ر.س</div>
+                  <div class="kpi-meta">
+                    <span id="receivablesCount">0</span> حجز مستحق
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-card-body">
+                <div class="kpi-icon kpi-icon-success">
+                  <i class="fas fa-wallet"></i>
+                </div>
+                <div class="kpi-info">
+                  <div class="kpi-label">إيرادات اليوم</div>
+                  <div class="kpi-value" id="todayRevenue">0 ر.س</div>
+                  <div class="kpi-meta">تقدير أولي</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- النسخ الاحتياطي -->
-          <div class="section-card">
-            <div class="section-title">
-              <i class="fas fa-database"></i> النسخ الاحتياطي
+          <div class="content-grid">
+            <div class="dashboard-col">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i
+                      class="fas fa-calendar-check"
+                      style="color: var(--primary)"
+                    ></i>
+                    الحجوزات اليوم
+                  </h3>
+                  <a href="bookings.html" class="card-link">عرض الكل</a>
+                </div>
+                <div class="card-body" id="todayBookingsList">
+                  <div class="empty-state-compact">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>لا توجد حجوزات مسجلة اليوم</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i
+                      class="fas fa-calendar-week"
+                      style="color: var(--primary)"
+                    ></i>
+                    الحجوزات القادمة
+                  </h3>
+                  <span class="badge badge-neutral" id="upcomingBadge"
+                    >0 حجز</span
+                  >
+                </div>
+                <div class="card-body" id="upcomingBookingsList">
+                  <div class="empty-state-compact">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>لا توجد حجوزات قادمة</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              onclick="exportData()"
-              class="w-full bg-gray-100 text-black rounded-2xl py-3.5 font-bold mb-2.5 btn-press flex items-center justify-center gap-2"
-            >
-              <i class="fas fa-download"></i> تصدير البيانات
-            </button>
-            <label
-              class="w-full bg-gray-100 text-black rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <i class="fas fa-upload"></i> استيراد البيانات
-              <input
-                type="file"
-                id="importFile"
-                accept=".json"
-                class="hidden"
-                onchange="importData(this)"
-              />
-            </label>
-          </div>
-          <!-- قسم تثبيت التطبيق -->
-          <div class="section-card" id="installAppSection">
-            <div class="section-title">
-              <i class="fas fa-download"></i> تثبيت التطبيق
+
+            <div class="dashboard-col">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i
+                      class="fas fa-hand-holding-dollar"
+                      style="color: var(--danger)"
+                    ></i>
+                    تنبيهات المدفوعات
+                  </h3>
+                  <span class="badge badge-danger" id="alertBadge">0</span>
+                </div>
+                <div class="card-body" id="paymentAlertsList">
+                  <div class="empty-state-compact">
+                    <i class="fas fa-check-circle"></i>
+                    <span>لا توجد تنبيهات مالية</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">
+                    <i
+                      class="fas fa-chart-simple"
+                      style="color: var(--success)"
+                    ></i>
+                    النظرة السريعة
+                  </h3>
+                </div>
+                <div class="card-body">
+                  <div class="list-item">
+                    <div
+                      class="list-item-icon"
+                      style="
+                        background: var(--primary-soft);
+                        color: var(--primary);
+                      "
+                    >
+                      <i class="fas fa-users"></i>
+                    </div>
+                    <div class="list-item-content">
+                      <div class="list-item-title">عدد العملاء النشطين</div>
+                      <div class="list-item-subtitle">
+                        متوسط نشاط الأسبوع الحالي
+                      </div>
+                    </div>
+                    <div class="list-item-meta" id="activeCustomers">0</div>
+                  </div>
+                  <div class="list-item">
+                    <div
+                      class="list-item-icon"
+                      style="
+                        background: var(--success-soft);
+                        color: var(--success);
+                      "
+                    >
+                      <i class="fas fa-truck"></i>
+                    </div>
+                    <div class="list-item-content">
+                      <div class="list-item-title">الموردون اليوم</div>
+                      <div class="list-item-subtitle">تسليمات وتوريد</div>
+                    </div>
+                    <div class="list-item-meta" id="supplierCount">0</div>
+                  </div>
+                  <div class="list-item">
+                    <div
+                      class="list-item-icon"
+                      style="
+                        background: var(--warning-soft);
+                        color: var(--warning);
+                      "
+                    >
+                      <i class="fas fa-box-open"></i>
+                    </div>
+                    <div class="list-item-content">
+                      <div class="list-item-title">العناصر النشطة</div>
+                      <div class="list-item-subtitle">
+                        قائمة الأصناف الحالية
+                      </div>
+                    </div>
+                    <div class="list-item-meta" id="itemCount">0</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              id="installAppBtn"
-              onclick="installApp()"
-              class="w-full bg-black text-white rounded-2xl py-3.5 font-bold btn-press flex items-center justify-center gap-2"
-            >
-              <i class="fas fa-mobile-alt"></i> تثبيت التطبيق
-            </button>
-            <p
-              id="installAppStatus"
-              class="text-center text-sm text-gray-500 mt-2"
-              style="display: none"
-            ></p>
           </div>
-        </div>
+        </main>
       </div>
     </div>
 
-    <!-- ===== القائمة السفلية الأنيقة ===== -->
-    <div class="bottom-nav">
-      <div class="flex items-center justify-around py-2 px-2 max-w-md mx-auto">
-        <!-- الرئيسية -->
-        <button
-          onclick="showScreen('screenHome')"
-          class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1 active"
-          data-screen="screenHome"
-        >
-          <i class="fas fa-home nav-icon text-xl"></i>
-          <span class="text-[9px] font-bold">الرئيسية</span>
-        </button>
-
-        <!-- الحجوزات -->
-        <button
-          onclick="showScreen('screenBookings')"
-          class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1 relative"
-          data-screen="screenBookings"
-        >
-          <i class="fas fa-calendar-check nav-icon text-xl"></i>
-          <span class="text-[9px] font-bold">الحجوزات</span>
-          <span class="badge-count" id="navBadge" style="display: none">0</span>
-        </button>
-
-        <!-- العملاء الجدد -->
-        <button
-          onclick="window.location.href = 'customers.html'"
-          class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1"
-          data-screen="customers"
-        >
-          <i class="fas fa-users nav-icon text-xl"></i>
-          <span class="text-[9px] font-bold">العملاء</span>
-        </button>
-
-        <!-- التقارير -->
-        <button
-          onclick="window.location.href = 'report.html'"
-          class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1"
-          data-screen="reports"
-        >
-          <i class="fas fa-chart-pie nav-icon text-xl"></i>
-          <span class="text-[9px] font-bold">التقارير</span>
-        </button>
-
-        <!-- الإعدادات -->
-        <button
-          onclick="showScreen('screenSettings')"
-          class="nav-btn flex flex-col items-center gap-0.5 px-2 py-1"
-          data-screen="screenSettings"
-        >
-          <i class="fas fa-sliders-h nav-icon text-xl"></i>
-          <span class="text-[9px] font-bold">الإعدادات</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- ===== زر الإضافة العائم (FAB) أنيق ===== -->
-    <button
-      onclick="showScreen('screenNewBooking')"
-      class="fab-btn fixed bottom-24 left-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95"
-      title="إضافة حجز جديد"
-    >
-      <i class="fas fa-plus text-white text-2xl"></i>
+    <nav id="bottomNav" class="bottom-nav"></nav>
+    <button id="fab" class="fab" aria-label="حجز جديد">
+      <i class="fas fa-plus"></i>
     </button>
+    <div id="modalContainer"></div>
+    <div id="toastContainer" class="toast-container"></div>
 
-    <!-- المودالات العامة -->
-    <div id="confirmModal" class="modal-overlay">
-      <div class="modal-content p-6 text-center">
-        <div
-          class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3"
-        >
-          <i class="fas fa-exclamation-triangle text-2xl text-yellow-500"></i>
-        </div>
-        <h3 class="font-bold text-lg mb-1">تأكيد</h3>
-        <p class="text-gray-500 text-sm mb-5" id="confirmText"></p>
-        <div class="flex gap-3">
-          <button
-            onclick="closeModal()"
-            class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press"
-          >
-            إلغاء
-          </button>
-          <button
-            id="confirmBtn"
-            class="flex-1 bg-red-500 text-white rounded-2xl py-3.5 font-bold btn-press"
-          >
-            تأكيد
-          </button>
-        </div>
-      </div>
-    </div>
+    <script src="assets/js/core/utils.js"></script>
+    <script src="assets/js/components/layout.js"></script>
+    <script src="assets/js/pages/dashboard.js"></script>
 
-    <div id="statusModal" class="modal-overlay">
-      <div class="modal-content p-5">
-        <h3 class="font-bold text-lg mb-4 text-center">تغيير الحالة</h3>
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            onclick="changeStatus('new')"
-            class="bg-blue-500 text-white rounded-2xl py-3.5 font-bold btn-press"
-          >
-            جديد
-          </button>
-          <button
-            onclick="changeStatus('confirmed')"
-            class="bg-green-500 text-white rounded-2xl py-3.5 font-bold btn-press"
-          >
-            مؤكد
-          </button>
-          <button
-            onclick="changeStatus('completed')"
-            class="bg-purple-500 text-white rounded-2xl py-3.5 font-bold btn-press"
-          >
-            مكتمل
-          </button>
-          <button
-            onclick="changeStatus('cancelled')"
-            class="bg-red-500 text-white rounded-2xl py-3.5 font-bold btn-press"
-          >
-            ملغي
-          </button>
-        </div>
-        <button
-          onclick="closeModal()"
-          class="w-full mt-3 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press"
-        >
-          إلغاء
-        </button>
-      </div>
-    </div>
-
-    <div id="editItemModal" class="modal-overlay">
-      <div class="modal-content p-5">
-        <h3 class="font-bold text-lg mb-4 text-center">تعديل الصنف</h3>
-        <input type="hidden" id="editItemId" />
-        <input
-          type="text"
-          id="editItemName"
-          placeholder="اسم الصنف"
-          class="w-full px-4 py-3.5 mb-2.5 text-sm border-2 border-gray-200 rounded-xl"
-        />
-        <input
-          type="number"
-          id="editItemPrice"
-          placeholder="السعر"
-          class="w-full px-4 py-3.5 mb-3 text-sm border-2 border-gray-200 rounded-xl"
-        />
-        <div class="flex gap-3">
-          <button
-            onclick="closeModal()"
-            class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press"
-          >
-            إلغاء
-          </button>
-          <button
-            onclick="updateItem()"
-            class="flex-1 text-white rounded-2xl py-3.5 font-bold btn-press"
-            style="background: var(--color-primary)"
-          >
-            حفظ التعديل
-          </button>
-        </div>
-      </div>
-    </div>
-    
-
-<!-- مودال تسديد المتبقي -->
-<div id="paymentModal" class="modal-overlay">
-  <div class="modal-content p-6" style="max-width: 420px;">
-    <div class="text-center mb-4">
-      <div class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mx-auto mb-3">
-        <i class="fas fa-hand-holding-usd text-3xl text-yellow-600"></i>
-      </div>
-      <h3 class="font-bold text-xl">💰 تسديد المتبقي</h3>
-      <p class="text-sm text-gray-500 mt-1">أدخل المبلغ الذي سيدفعه العميل</p>
-    </div>
-
-    <div class="bg-gray-50 rounded-2xl p-4 space-y-3 mb-4">
-      <div class="flex justify-between items-center border-b border-gray-200 pb-2">
-        <span class="text-sm text-gray-500">👤 العميل</span>
-        <span class="font-bold text-sm" id="paymentCustName">-</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-sm text-gray-500">💰 المبلغ المتبقي</span>
-        <span class="font-bold text-lg text-red-600" id="paymentRemaining">0.00</span>
-      </div>
-    </div>
-
-    <div class="mb-4">
-      <label class="text-sm font-bold text-gray-700 block mb-2">المبلغ المدفوع الآن</label>
-      <div class="relative">
-        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">ر.س</span>
-        <input
-          type="number"
-          id="paymentInput"
-          step="0.5"
-          min="0.5"
-          class="w-full pl-4 pr-16 py-3.5 border-2 border-gray-200 rounded-xl text-center text-lg font-bold focus:border-yellow-500 focus:ring-0 outline-none transition"
-          placeholder="0.00"
-        />
-      </div>
-      <p class="text-xs text-gray-400 mt-1">القيمة القصوى: <span id="paymentMaxDisplay">0.00</span> ر.س</p>
-    </div>
-
-    <div class="flex gap-3">
-      <button
-        onclick="closePaymentModal()"
-        class="flex-1 bg-gray-100 text-gray-700 rounded-2xl py-3.5 font-bold btn-press border-2 border-gray-200 hover:bg-gray-200 transition"
-      >
-        إلغاء
-      </button>
-      <button
-        onclick="confirmPayment()"
-        class="flex-1 bg-yellow-600 text-white rounded-2xl py-3.5 font-bold btn-press shadow-lg hover:bg-yellow-700 transition flex items-center justify-center gap-2"
-      >
-        <i class="fas fa-check-circle"></i> تأكيد الدفعة
-      </button>
-    </div>
-  </div>
-</div>
-    <script src="script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const now = new Date();
+        const options = { year: "numeric", month: "long", day: "numeric" };
+        const dateStr = now.toLocaleDateString("ar-SA", options);
+        const el = document.getElementById("currentDateDisplay");
+        if (el) el.textContent = dateStr;
+      });
+    </script>
   </body>
 </html>

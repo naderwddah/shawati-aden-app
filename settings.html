@@ -1,0 +1,469 @@
+<!doctype html>
+<html dir="rtl" lang="ar" data-page="settings">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
+    />
+    <meta name="theme-color" content="#8F1720" />
+    <meta name="description" content="الإعدادات - شواطئ عدن" />
+    <title>الإعدادات - شواطئ عدن</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="assets/css/global.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" href="assets/images/logo.png" />
+  <style>
+  /* ===== تصميم بطاقة الملف الشخصي الجديدة ===== */
+  .profile-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease;
+  }
+  .profile-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--space-5);
+    align-items: center;
+  }
+
+  /* ===== الصورة ===== */
+  .profile-avatar-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .profile-avatar {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+    transition: border-color 0.2s;
+  }
+  .profile-avatar:hover {
+    border-color: var(--primary);
+  }
+  .profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .profile-avatar .placeholder {
+    font-size: 36px;
+    color: var(--text-muted);
+  }
+  .profile-avatar .change-logo-btn {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    border: none;
+    padding: 6px 0;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    transition: background 0.25s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    backdrop-filter: blur(4px);
+  }
+  .profile-avatar .change-logo-btn:hover {
+    background: rgba(0,0,0,0.85);
+  }
+  .profile-avatar .change-logo-btn:active {
+    transform: scale(0.96);
+  }
+
+  /* ===== المعلومات ===== */
+  .profile-info-section {
+    min-width: 0;
+  }
+  .profile-info-section h2 {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+  }
+  .profile-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    padding: 2px 0;
+  }
+  .detail-item i {
+    width: 18px;
+    color: var(--text-muted);
+    font-size: 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ===== الأزرار ===== */
+  .profile-actions-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+  .profile-action-btn {
+    white-space: nowrap;
+    justify-content: center;
+    min-width: 120px;
+  }
+  .profile-action-btn i {
+    margin-left: 6px;
+  }
+
+  /* ===== استجابة الجوال ===== */
+  @media (max-width: 767px) {
+    .profile-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-3);
+      justify-items: center;
+      text-align: center;
+    }
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+    }
+    .profile-avatar .placeholder {
+      font-size: 30px;
+    }
+    .profile-info-section {
+      text-align: center;
+    }
+    .profile-info-section h2 {
+      font-size: 18px;
+    }
+    .detail-item {
+      justify-content: center;
+      font-size: 13px;
+    }
+    .profile-actions-section {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+    .profile-action-btn {
+      min-width: 0;
+      flex: 1;
+      min-width: 100px;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .profile-grid {
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-4);
+    }
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+    }
+    .profile-info-section h2 {
+      font-size: 18px;
+    }
+    .profile-action-btn {
+      min-width: 100px;
+    }
+  }
+</style>
+  </head>
+  <body>
+    <div id="loadingScreen" class="loading-screen">
+      <div class="loading-content">
+        <div class="loading-logo"><i class="fas fa-utensils"></i></div>
+        <h1 class="loading-title">شواطئ عدن</h1>
+        <p class="loading-subtitle">مطابخ ومطاعم</p>
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="app">
+      <aside id="sidebar" class="sidebar"></aside>
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <div class="main-area">
+        <header id="header" class="header"></header>
+
+        <main class="content" id="pageContent">
+          <!-- ===== الملف الشخصي ===== -->
+        <!-- ===== الملف الشخصي – تصميم جديد أنيق ===== -->
+<div class="profile-card">
+  <div class="profile-grid">
+    <!-- العمود الأيمن: الصورة + تغيير الشعار -->
+    <div class="profile-avatar-section">
+      <div class="profile-avatar" id="profileAvatar">
+        <img id="logoImage" src="" alt="شعار المحل" style="display:none;" />
+        <span class="placeholder" id="logoPlaceholder"><i class="fas fa-store"></i></span>
+        <button class="change-logo-btn" id="changeLogoBtn">
+          <i class="fas fa-camera"></i> تغيير
+        </button>
+        <input type="file" id="logoInput" accept="image/*" style="display:none;" />
+      </div>
+    </div>
+
+    <!-- العمود الأوسط: المعلومات -->
+    <div class="profile-info-section">
+      <h2 id="businessName">اسم المحل</h2>
+      <div class="profile-details">
+        <div class="detail-item">
+          <i class="fas fa-phone"></i>
+          <span id="businessPhone">رقم الجوال</span>
+        </div>
+        <div class="detail-item">
+          <i class="fas fa-location-dot"></i>
+          <span id="businessAddress">العنوان</span>
+        </div>
+        <div class="detail-item">
+          <i class="fas fa-envelope"></i>
+          <span id="businessEmail">البريد الإلكتروني</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- العمود الأيسر: الأزرار -->
+    <div class="profile-actions-section">
+      <button class="btn btn-primary btn-sm profile-action-btn" id="editProfileBtn">
+        <i class="fas fa-pen"></i> تعديل
+      </button>
+      <button class="btn btn-secondary btn-sm profile-action-btn" id="changePasswordBtn">
+        <i class="fas fa-lock"></i> كلمة المرور
+      </button>
+    </div>
+  </div>
+</div>
+
+          <!-- ===== الإعدادات العامة ===== -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <i class="fas fa-sliders"></i>
+              <span>التفضيلات</span>
+            </div>
+            <div class="settings-list">
+              <div class="settings-item">
+                <div class="settings-item-icon">
+                  <i class="fas fa-bell"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title">تنبيهات الحجوزات</div>
+                  <div class="settings-item-desc">استلام إشعارات الحجوزات الجديدة</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" data-name="تنبيهات الحجوزات" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-item">
+                <div class="settings-item-icon">
+                  <i class="fas fa-volume-high"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title">المؤثرات الصوتية</div>
+                  <div class="settings-item-desc">أصوات الإشعارات والتنبيهات</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" data-name="المؤثرات الصوتية" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-item">
+                <div class="settings-item-icon">
+                  <i class="fas fa-moon"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title">الوضع الداكن</div>
+                  <div class="settings-item-desc">واجهة داكنة لتقليل إجهاد العين</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="themeToggle" data-name="الوضع الداكن" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== إدارة البيانات ===== -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <i class="fas fa-database"></i>
+              <span>إدارة البيانات</span>
+            </div>
+            <div class="settings-list">
+              <div class="settings-item" data-setting="export">
+                <div class="settings-item-icon">
+                  <i class="fas fa-file-export"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title">تصدير البيانات</div>
+                  <div class="settings-item-desc">تنزيل نسخة احتياطية من الحجوزات والعملاء</div>
+                </div>
+                <i class="settings-item-arrow fas fa-chevron-left"></i>
+              </div>
+
+              <div class="settings-item" style="cursor: pointer" id="clearDataBtn">
+                <div class="settings-item-icon" style="background: var(--danger-soft); color: var(--danger);">
+                  <i class="fas fa-trash-can"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title" style="color: var(--danger);">مسح جميع البيانات</div>
+                  <div class="settings-item-desc">إعادة تعيين النظام وحذف كل السجلات</div>
+                </div>
+                <i class="settings-item-arrow fas fa-chevron-left" style="color: var(--danger);"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== حول التطبيق ===== -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <i class="fas fa-circle-info"></i>
+              <span>حول التطبيق</span>
+            </div>
+            <div class="settings-list">
+              <div class="settings-item" data-setting="about">
+                <div class="settings-item-icon">
+                  <i class="fas fa-mobile-screen"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title">عن النظام</div>
+                  <div class="settings-item-desc">الإصدار 2.0.0</div>
+                </div>
+                <i class="settings-item-arrow fas fa-chevron-left"></i>
+              </div>
+
+              <div class="settings-item" data-setting="terms">
+                <div class="settings-item-icon">
+                  <i class="fas fa-file-contract"></i>
+                </div>
+                <div class="settings-item-content">
+                  <div class="settings-item-title">الشروط والأحكام</div>
+                  <div class="settings-item-desc">سياسات استخدام النظام</div>
+                </div>
+                <i class="settings-item-arrow fas fa-chevron-left"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center mt-6 mb-4">
+            <p class="text-muted" style="font-size: 12px;">© 2024 شواطئ عدن - مطابخ ومطاعم</p>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <nav id="bottomNav" class="bottom-nav"></nav>
+    <button id="fab" class="fab" aria-label="حجز جديد"><i class="fas fa-plus"></i></button>
+    <div id="modalContainer"></div>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- ===== مودال تعديل الملف الشخصي ===== -->
+    <div class="modal" id="editProfileModal" role="dialog" aria-modal="true">
+      <div class="modal-overlay" data-close="editProfileModal"></div>
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">تعديل الملف الشخصي</h3>
+          <button class="modal-close" data-close="editProfileModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="editBusinessName">اسم المحل <span class="req">*</span></label>
+            <input type="text" class="form-input" id="editBusinessName" placeholder="أدخل اسم المحل" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editBusinessPhone">رقم الجوال <span class="req">*</span></label>
+            <input type="tel" class="form-input" id="editBusinessPhone" placeholder="05xxxxxxxx" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editBusinessAddress">العنوان</label>
+            <input type="text" class="form-input" id="editBusinessAddress" placeholder="العنوان" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editBusinessEmail">البريد الإلكتروني</label>
+            <input type="email" class="form-input" id="editBusinessEmail" placeholder="example@domain.com" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close="editProfileModal">إلغاء</button>
+          <button class="btn btn-primary" id="saveProfileBtn">حفظ التغييرات</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== مودال تغيير كلمة المرور ===== -->
+    <div class="modal" id="changePasswordModal" role="dialog" aria-modal="true">
+      <div class="modal-overlay" data-close="changePasswordModal"></div>
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">تغيير كلمة المرور</h3>
+          <button class="modal-close" data-close="changePasswordModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="oldPassword">كلمة المرور الحالية <span class="req">*</span></label>
+            <input type="password" class="form-input" id="oldPassword" placeholder="أدخل كلمة المرور الحالية" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="newPassword">كلمة المرور الجديدة <span class="req">*</span></label>
+            <input type="password" class="form-input" id="newPassword" placeholder="أدخل كلمة المرور الجديدة" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">تأكيد كلمة المرور الجديدة <span class="req">*</span></label>
+            <input type="password" class="form-input" id="confirmPassword" placeholder="أعد كتابة كلمة المرور الجديدة" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-close="changePasswordModal">إلغاء</button>
+          <button class="btn btn-primary" id="savePasswordBtn">تغيير كلمة المرور</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="assets/js/core/utils.js"></script>
+    <script src="assets/js/core/api.js"></script>
+    <script src="assets/js/components/layout.js"></script>
+    <script src="assets/js/pages/settings.js"></script>
+  </body>
+</html>

@@ -1,0 +1,280 @@
+<!-- Confirmation Modal -->
+<div class="modal" id="confirmModal" role="dialog" aria-modal="true">
+  <div class="modal-overlay" data-close></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title" id="confirmTitle">تأكيد</h3>
+      <button class="modal-close" data-close aria-label="إغلاق">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-message" id="confirmMessage">هل أنت متأكد؟</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close>إلغاء</button>
+      <button class="btn btn-primary" id="confirmBtn">تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status Change Modal -->
+<div class="modal" id="statusModal" role="dialog" aria-modal="true">
+  <div class="modal-overlay" data-close></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">تغيير حالة الحجز</h3>
+      <button class="modal-close" data-close aria-label="إغلاق">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="status-options" id="statusOptions">
+        <label class="status-option" data-status="جديد">
+          <input type="radio" name="status" value="جديد">
+          <span class="status-option-dot" style="background:var(--primary)"></span>
+          <span class="status-option-text">جديد</span>
+        </label>
+        <label class="status-option" data-status="مؤكد">
+          <input type="radio" name="status" value="مؤكد">
+          <span class="status-option-dot" style="background:var(--success)"></span>
+          <span class="status-option-text">مؤكد</span>
+        </label>
+        <label class="status-option" data-status="مكتمل">
+          <input type="radio" name="status" value="مكتمل">
+          <span class="status-option-dot" style="background:var(--warning)"></span>
+          <span class="status-option-text">مكتمل</span>
+        </label>
+        <label class="status-option" data-status="ملغي">
+          <input type="radio" name="status" value="ملغي">
+          <span class="status-option-dot" style="background:var(--danger)"></span>
+          <span class="status-option-text">ملغي</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close>إلغاء</button>
+      <button class="btn btn-primary" id="statusConfirmBtn">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal (Global) -->
+<div class="modal" id="paymentModal" role="dialog" aria-modal="true">
+  <div class="modal-overlay" data-close></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title">تحصيل دفعة</h3>
+      <button class="modal-close" data-close aria-label="إغلاق">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="payment-info">
+        <div class="payment-row">
+          <span class="payment-label">العميل</span>
+          <span class="payment-value" id="paymentCustomer">—</span>
+        </div>
+        <div class="payment-row">
+          <span class="payment-label">المبلغ المتبقي</span>
+          <span class="payment-remaining" id="paymentRemaining">0 ريال</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">مبلغ الدفعة <span class="req">*</span></label>
+        <input type="number" class="form-input form-input-lg" id="paymentAmount" placeholder="0" min="0" inputmode="numeric">
+        <p class="form-hint">أدخل المبلغ المطلوب تحصيله</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close>إلغاء</button>
+      <button class="btn btn-primary" id="paymentConfirmBtn">تأكيد الدفعة</button>
+    </div>
+  </div>
+</div>
+<!-- ============================================================ -->
+<!-- مودال المعاملات الموحّد (حجز / دفعة)                        -->
+<!-- ============================================================ -->
+<div class="modal" id="transactionModal" role="dialog" aria-modal="true">
+  <div class="modal-overlay" data-close="transactionModal"></div>
+  <div class="modal-dialog" style="max-width: 780px;">
+    <!-- رأس المودال -->
+    <div class="modal-header">
+      <h3 class="modal-title" id="transactionModalTitle">حجز جديد</h3>
+      <button class="modal-close" data-close="transactionModal" aria-label="إغلاق">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- أزرار التبديل بين الوضعين (مشابهة للطلب العقاري) -->
+    <div class="switch-group" style="display:flex; gap:8px; padding:0 20px 12px 20px; border-bottom:1px solid var(--border);">
+      <button class="switch-btn active" data-mode="booking" onclick="setTransactionMode('booking')">
+        <i class="fas fa-calendar-plus"></i> حجز جديد
+      </button>
+      <button class="switch-btn" data-mode="payment" onclick="setTransactionMode('payment')">
+        <i class="fas fa-hand-holding-dollar"></i> تسجيل دفعة
+      </button>
+    </div>
+
+    <!-- محتوى المودال -->
+    <div class="modal-body" style="padding:20px;">
+
+      <!-- ===== وضع الحجز ===== -->
+      <div id="bookingMode" class="tab-content active">
+        <!-- بيانات العميل (للقراءة فقط) -->
+        <div class="section-card" style="background:var(--surface); padding:12px 16px; border-radius:var(--radius-md); margin-bottom:16px;">
+          <div class="section-title" style="font-weight:700; margin-bottom:8px; color:var(--text-secondary);">
+            <i class="fas fa-user"></i> بيانات العميل
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:12px;">
+            <div><span style="color:var(--text-muted);">الاسم:</span> <strong id="bookingCustomerName">—</strong></div>
+            <div><span style="color:var(--text-muted);">الجوال:</span> <strong id="bookingCustomerPhone">—</strong></div>
+            <div><span style="color:var(--text-muted);">الموقع:</span> <strong id="bookingCustomerAddress">—</strong></div>
+          </div>
+        </div>
+
+        <!-- تفاصيل الحجز -->
+        <div class="section-card" style="margin-bottom:16px;">
+          <div class="section-title" style="font-weight:700; margin-bottom:8px; color:var(--text-secondary);">
+            <i class="fas fa-calendar-alt"></i> تفاصيل الحجز
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <input type="date" id="bookingDate" class="form-input" />
+            <input type="time" id="bookingTime" class="form-input" />
+            <input type="text" id="bookingMark" class="form-input" placeholder="العلامة / رقم القاعة" />
+            <select id="deliveryTime" class="form-select">
+              <option value="صباحاً">صباحاً</option>
+              <option value="ظهراً" selected>ظهراً</option>
+              <option value="مساءً">مساءً</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- الطلبات الجانبية (الأصناف) -->
+        <div class="section-card" style="margin-bottom:16px;">
+          <div class="section-title" style="font-weight:700; margin-bottom:8px; color:var(--text-secondary);">
+            <i class="fas fa-shopping-basket"></i> الطلبات الجانبية (السعر قابل للتعديل)
+          </div>
+          <div id="bookingItemsContainer" style="margin-bottom:8px;">
+            <!-- سيتم تعبئتها بواسطة JavaScript -->
+          </div>
+          <button type="button" id="addBookingItemBtn" class="btn btn-secondary btn-sm" style="width:100%; border:2px dashed var(--border); background:transparent; padding:10px;">
+            <i class="fas fa-plus"></i> إضافة صنف جانبي
+          </button>
+        </div>
+
+        <!-- ملاحظات -->
+        <div class="section-card" style="margin-bottom:16px;">
+          <div class="section-title" style="font-weight:700; margin-bottom:8px; color:var(--text-secondary);">
+            <i class="fas fa-sticky-note"></i> ملاحظات (تفاصيل الوليمة)
+          </div>
+          <textarea id="bookingNotes" class="form-textarea" rows="3" placeholder="اكتب هنا تفاصيل الوليمة بالكامل (الذبائح، نوع الطبخ، التفصيل، الصحون، إلخ)"></textarea>
+        </div>
+
+        <!-- المالية -->
+        <div class="section-card" style="background:var(--surface); padding:16px; border-radius:var(--radius-md);">
+          <div class="section-title" style="font-weight:700; margin-bottom:12px; color:var(--text-secondary);">
+            <i class="fas fa-money-bill-wave"></i> المالية
+          </div>
+
+          <div style="display:flex; justify-content:space-between; background:var(--bg); padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:10px;">
+            <span style="color:var(--text-muted);">إجمالي الطلبات</span>
+            <span id="bookingItemsTotal" style="font-weight:700;">0.00 ر.س</span>
+          </div>
+
+          <input type="number" id="bookingPlatesDeposit" class="form-input" placeholder="تأمين الصحون (مبلغ ثابت)" min="0" step="0.5" style="margin-bottom:10px;" />
+
+          <div style="display:flex; justify-content:space-between; background:var(--primary); padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:10px; color:#fff;">
+            <span style="font-weight:600;">إجمالي الفاتورة</span>
+            <span id="bookingGrandTotal" style="font-weight:800;">0.00 ر.س</span>
+          </div>
+
+          <div style="background:var(--success-soft); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--success); margin-bottom:10px;">
+            <p style="font-size:12px; font-weight:700; color:var(--success); margin-bottom:4px;"><i class="fas fa-check-circle"></i> المبلغ المدفوع</p>
+            <input type="number" id="bookingPaid" class="form-input" placeholder="المبلغ المدفوع" min="0" step="0.5" />
+          </div>
+
+          <div style="background:var(--primary-soft); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--primary); margin-bottom:10px;">
+            <p style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:4px;"><i class="fas fa-credit-card"></i> طريقة الدفع</p>
+            <select id="bookingPaymentMethod" class="form-select">
+              <option value="نقدي">💰 نقدي</option>
+              <option value="تحويل بنكي">🏦 تحويل بنكي</option>
+              <option value="بطاقة ائتمان">💳 بطاقة ائتمان</option>
+              <option value="أجل">📅 أجل</option>
+            </select>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; background:var(--danger-soft); padding:10px 14px; border-radius:var(--radius-sm); border:2px solid var(--danger);">
+            <span style="font-weight:700; color:var(--danger);"><i class="fas fa-coins"></i> المتبقي</span>
+            <span id="bookingRemaining" style="font-weight:800; color:var(--danger);">0.00 ر.س</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== وضع الدفعة ===== -->
+      <div id="paymentMode" class="tab-content" style="display:none;">
+        <!-- بيانات العميل (للقراءة فقط) -->
+        <div class="section-card" style="background:var(--surface); padding:12px 16px; border-radius:var(--radius-md); margin-bottom:16px;">
+          <div style="display:flex; flex-wrap:wrap; gap:12px;">
+            <div><span style="color:var(--text-muted);">العميل:</span> <strong id="paymentCustomerName">—</strong></div>
+            <div><span style="color:var(--text-muted);">الجوال:</span> <strong id="paymentCustomerPhone">—</strong></div>
+          </div>
+        </div>
+
+        <!-- الرصيد الحالي -->
+        <div style="background:var(--surface); padding:12px 16px; border-radius:var(--radius-md); margin-bottom:16px; display:flex; justify-content:space-between;">
+          <span style="color:var(--text-muted);">الرصيد الحالي</span>
+          <span id="paymentCurrentBalance" style="font-weight:700; color:var(--danger);">0.00 ر.س</span>
+        </div>
+
+        <!-- المبلغ -->
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" for="paymentAmount">المبلغ المدفوع <span class="req">*</span></label>
+          <input type="number" id="paymentAmount" class="form-input form-input-lg" placeholder="0.00" min="0" step="0.01" />
+        </div>
+
+        <!-- طريقة الدفع -->
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label">طريقة الدفع <span class="req">*</span></label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <label class="payment-method-option">
+              <input type="radio" name="paymentMethod" value="نقدي" checked />
+              <span>نقدي</span>
+            </label>
+            <label class="payment-method-option">
+              <input type="radio" name="paymentMethod" value="تحويل بنكي" />
+              <span>تحويل بنكي</span>
+            </label>
+            <label class="payment-method-option">
+              <input type="radio" name="paymentMethod" value="شبكة" />
+              <span>شبكة</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ملاحظات الدفعة -->
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" for="paymentNotes">ملاحظات الدفعة</label>
+          <textarea id="paymentNotes" class="form-textarea" rows="2" placeholder="ملاحظات (اختياري)"></textarea>
+        </div>
+
+        <!-- معاينة الرصيد بعد الدفعة -->
+        <div style="background:var(--surface); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; padding:4px 0;">
+            <span style="color:var(--text-muted);">الرصيد بعد الدفعة</span>
+            <span id="paymentAfterBalance" style="font-weight:700; color:var(--danger);">0.00 ر.س</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- أزرار الإجراء -->
+    <div class="modal-footer" style="display:flex; gap:12px; justify-content:flex-end; padding:16px 20px 20px; border-top:1px solid var(--border);">
+      <button class="btn btn-secondary" data-close="transactionModal">إلغاء</button>
+      <button class="btn btn-primary" id="transactionSaveBtn">حفظ الحجز</button>
+    </div>
+  </div>
+</div>
+
+<!-- تنسيقات إضافية -->
