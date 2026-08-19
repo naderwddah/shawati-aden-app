@@ -23,8 +23,258 @@
     <link rel="stylesheet" href="assets/css/layout.css" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
+
+    <style>
+      /* ===== تحسينات لتقليل طول الصفحة (مدمجة) ===== */
+      .booking-compact .card {
+        padding: 14px 16px;
+      }
+      .booking-compact .form-group {
+        margin-bottom: 8px;
+      }
+      .booking-compact .form-section {
+        margin-bottom: 12px;
+      }
+      .booking-compact .form-section-title {
+        font-size: 14px;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+        border-bottom-width: 1px;
+      }
+      .booking-compact .form-input,
+      .booking-compact .form-select,
+      .booking-compact .form-textarea {
+        height: 40px;
+        font-size: 14px;
+        padding: 0 12px;
+        border-radius: var(--radius-sm);
+      }
+      .booking-compact .form-textarea {
+        height: 56px;
+        min-height: 56px;
+        padding: 6px 12px;
+      }
+
+      /* ===== شبكة الأصناف – صف واحد (عربي) ===== */
+      .item-grid {
+        display: grid;
+        grid-template-columns: 1.6fr 0.6fr 0.6fr 0.8fr 30px;
+        gap: 6px;
+        align-items: center;
+        background: var(--surface);
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        margin-bottom: 4px;
+        transition: border-color 0.2s;
+      }
+      .item-grid:hover {
+        border-color: var(--primary);
+      }
+
+      .item-grid .item-select {
+        height: 34px !important;
+        font-size: 13px;
+        padding: 0 6px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: #fff;
+        width: 100%;
+        min-width: 0;
+        font-weight: 500;
+      }
+      .item-grid .item-qty,
+      .item-grid .item-price {
+        height: 34px !important;
+        font-size: 13px;
+        padding: 0 2px;
+        text-align: center;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: #fff;
+        width: 100%;
+        min-width: 0;
+      }
+      .item-grid .item-total {
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--primary);
+        text-align: center;
+        white-space: nowrap;
+      }
+      .item-grid .remove-item-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        background: var(--danger-soft);
+        color: var(--danger);
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+        flex-shrink: 0;
+      }
+      .item-grid .remove-item-btn:hover {
+        background: var(--danger);
+        color: #fff;
+      }
+
+      /* ===== تجاوب ممتاز للجوال (صف واحد) ===== */
+      @media (max-width: 640px) {
+        .item-grid {
+          grid-template-columns: 1.2fr 0.6fr 0.6fr 0.7fr 28px;
+          gap: 4px;
+          padding: 3px 6px;
+        }
+        .item-grid .item-select {
+          height: 30px !important;
+          font-size: 12px;
+          padding: 0 4px;
+        }
+        .item-grid .item-qty,
+        .item-grid .item-price {
+          height: 30px !important;
+          font-size: 12px;
+          padding: 0 2px;
+        }
+        .item-grid .item-total {
+          font-size: 12px;
+        }
+        .item-grid .remove-item-btn {
+          width: 24px;
+          height: 24px;
+          font-size: 10px;
+        }
+        .booking-compact .form-grid-2 {
+          grid-template-columns: 1fr 1fr;
+          gap: 6px;
+        }
+        .booking-compact .form-input,
+        .booking-compact .form-select {
+          height: 36px;
+          font-size: 13px;
+        }
+        .booking-compact .form-textarea {
+          height: 48px;
+          min-height: 48px;
+          font-size: 13px;
+        }
+        .finance-summary {
+          padding: 4px 10px;
+          font-size: 13px;
+        }
+        .finance-summary .value {
+          font-size: 14px;
+        }
+        .payment-method-option {
+          font-size: 12px;
+          padding: 3px 8px;
+        }
+      }
+
+      /* ===== المالية ===== */
+      .finance-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--surface);
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        margin-bottom: 6px;
+      }
+      .finance-summary .label {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+      .finance-summary .value {
+        font-weight: 800;
+        font-size: 15px;
+      }
+      .finance-summary .value.primary {
+        color: var(--primary);
+      }
+      .finance-summary .value.danger {
+        color: var(--danger);
+      }
+      .finance-summary.total-box {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+      .finance-summary.total-box .label {
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .finance-summary.total-box .value {
+        color: #fff;
+      }
+
+      /* ===== أزرار اختيار طريقة الدفع ===== */
+      .payment-method-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg);
+        cursor: pointer;
+        font-size: 13px;
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
+      }
+      .payment-method-option:has(input:checked) {
+        border-color: var(--primary);
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+      .payment-method-option input {
+        display: none;
+      }
+
+      /* ===== زر إضافة صنف ===== */
+      .add-item-btn {
+        width: 100%;
+        border: 1.5px dashed var(--border);
+        background: transparent;
+        padding: 6px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 500;
+        transition: 0.2s;
+        margin-top: 2px;
+        cursor: pointer;
+      }
+      .add-item-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+
+      /* ===== مساعدات ===== */
+      .page-header {
+        margin-bottom: 10px;
+      }
+      .page-title {
+        font-size: 20px;
+      }
+      .page-subtitle {
+        font-size: 12px;
+      }
+      .flex.gap-3 {
+        gap: 8px;
+      }
+      .btn {
+        height: 40px;
+        font-size: 14px;
+      }
+    </style>
   </head>
   <body>
+    <!-- ===== شاشة التحميل ===== -->
     <div id="loadingScreen" class="loading-screen">
       <div class="loading-content">
         <div class="loading-logo"><i class="fas fa-utensils"></i></div>
@@ -34,197 +284,159 @@
       </div>
     </div>
 
+    <!-- ===== التطبيق ===== -->
     <div class="app">
       <aside id="sidebar" class="sidebar"></aside>
       <div id="sidebarOverlay" class="sidebar-overlay"></div>
       <div class="main-area">
         <header id="header" class="header"></header>
+
         <main class="content" id="pageContent">
           <div class="page-header">
             <div>
               <h1 class="page-title">حجز جديد</h1>
-              <p class="page-subtitle">أضف حجزاً جديداً لقاعات المناسبات</p>
+              <p class="page-subtitle">لعملاء جدد غير مسجلين</p>
             </div>
           </div>
 
-          <form id="bookingForm" class="card" style="max-width: 720px">
-            <!-- Customer Information -->
+          <!-- ===== نموذج الحجز (مدمج) ===== -->
+          <form id="bookingForm" class="card booking-compact" style="max-width: 820px;">
+
+            <!-- ========================================================= -->
+            <!-- 1. معلومات العميل (اسم + جوال في صف)                      -->
+            <!-- ========================================================= -->
             <div class="form-section">
               <h3 class="form-section-title">
-                <i class="fas fa-user"></i> معلومات العميل
+                <i class="fas fa-user-plus"></i> بيانات العميل
               </h3>
-              <div class="form-grid form-grid-2">
+              <div class="form-grid form-grid-2" style="gap: 8px;">
                 <div class="form-group">
-                  <label class="form-label"
-                    >اسم العميل <span class="req">*</span></label
-                  >
-                  <input
-                    type="text"
-                    class="form-input"
-                    id="customerName"
-                    placeholder="أدخل الاسم الكامل"
-                  />
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">الاسم <span class="req">*</span></label>
+                  <input type="text" class="form-input" id="custName" placeholder="اسم العميل" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label"
-                    >رقم الهاتف <span class="req">*</span></label
-                  >
-                  <input
-                    type="tel"
-                    class="form-input"
-                    id="customerPhone"
-                    placeholder="05XXXXXXXX"
-                    inputmode="tel"
-                    style="direction: ltr; text-align: end"
-                  />
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">الجوال <span class="req">*</span></label>
+                  <input type="tel" class="form-input" id="custPhone" placeholder="05XXXXXXXX" style="direction: ltr; text-align: end;" />
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">البريد الإلكتروني</label>
-                <input
-                  type="email"
-                  class="form-input"
-                  id="customerEmail"
-                  placeholder="example@email.com"
-                  style="direction: ltr; text-align: end"
-                />
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">الموقع (اختياري)</label>
+                <input type="text" class="form-input" id="custLocation" placeholder="أدخل موقع العميل" />
               </div>
             </div>
 
-            <!-- Reservation Information -->
-            <div class="form-section">
+            <!-- ========================================================= -->
+            <!-- 2. تفاصيل الحجز (تاريخ+وقت) و (علامة+توصيل) في صفوف      -->
+            <!-- ========================================================= -->
+            <div class="form-section" style="margin-bottom: 10px;">
               <h3 class="form-section-title">
-                <i class="fas fa-calendar"></i> معلومات الحجز
+                <i class="fas fa-calendar-alt"></i> تفاصيل الحجز
               </h3>
-              <div class="form-grid form-grid-2">
+              <div class="form-grid form-grid-2" style="gap: 8px; margin-bottom: 4px;">
                 <div class="form-group">
-                  <label class="form-label"
-                    >التاريخ <span class="req">*</span></label
-                  >
-                  <input type="date" class="form-input" id="date" />
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">التاريخ <span class="req">*</span></label>
+                  <input type="date" class="form-input" id="bookingDate" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label"
-                    >الوقت <span class="req">*</span></label
-                  >
-                  <input
-                    type="time"
-                    class="form-input"
-                    id="time"
-                    value="19:00"
-                  />
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">الوقت <span class="req">*</span></label>
+                  <input type="time" class="form-input" id="bookingTime" value="12:00" />
                 </div>
               </div>
-              <div class="form-grid form-grid-2">
+              <div class="form-grid form-grid-2" style="gap: 8px;">
                 <div class="form-group">
-                  <label class="form-label"
-                    >عدد الضيوف <span class="req">*</span></label
-                  >
-                  <input
-                    type="number"
-                    class="form-input"
-                    id="guests"
-                    placeholder="0"
-                    min="1"
-                    inputmode="numeric"
-                  />
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">العلامة / القاعة</label>
+                  <input type="text" class="form-input" id="bookingMark" placeholder="مثال: قاعة 3" />
                 </div>
                 <div class="form-group">
-                  <label class="form-label"
-                    >القاعة <span class="req">*</span></label
-                  >
-                  <select class="form-select" id="hall"></select>
+                  <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">وقت التوصيل</label>
+                  <select class="form-select" id="deliveryTime">
+                    <option value="صباحاً">صباحاً</option>
+                    <option value="ظهراً" selected>ظهراً</option>
+                    <option value="مساءً">مساءً</option>
+                  </select>
                 </div>
               </div>
             </div>
 
-            <!-- Event Details -->
-            <div class="form-section">
-              <h3 class="form-section-title">
-                <i class="fas fa-star"></i> تفاصيل المناسبة
-              </h3>
-              <div class="form-group">
-                <label class="form-label">نوع المناسبة</label>
-                <select class="form-select" id="eventType"></select>
+            <!-- ========================================================= -->
+            <!-- 3. الطلبات الجانبية (شبكة صف واحد: صنف، كمية، سعر، مجموع، حذف) -->
+            <!-- ========================================================= -->
+            <div class="form-section" style="margin-bottom: 10px;">
+              <div class="form-section-title" style="justify-content: space-between; flex-wrap: wrap;">
+                <span><i class="fas fa-shopping-basket"></i> الطلبات الجانبية</span>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 400;">(سعر قابل للتعديل)</span>
               </div>
-              <div class="form-group">
-                <label class="form-label">ملاحظات</label>
-                <textarea
-                  class="form-textarea"
-                  id="notes"
-                  placeholder="أي ملاحظات أو طلبات خاصة..."
-                ></textarea>
-              </div>
-            </div>
 
-            <!-- Financial Information -->
-            <div class="form-section">
-              <h3 class="form-section-title">
-                <i class="fas fa-money-bill"></i> المعلومات المالية
-              </h3>
-              <div class="form-grid form-grid-2">
-                <div class="form-group">
-                  <label class="form-label">المبلغ الإجمالي</label>
-                  <input
-                    type="number"
-                    class="form-input"
-                    id="total"
-                    placeholder="0"
-                    min="0"
-                    inputmode="numeric"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">الدفعة المقدمة</label>
-                  <input
-                    type="number"
-                    class="form-input"
-                    id="paid"
-                    placeholder="0"
-                    min="0"
-                    inputmode="numeric"
-                  />
-                </div>
+              <div id="sideOrdersContainer">
+                <!-- سيتم إضافة الصفوف بواسطة JavaScript -->
               </div>
-              <div class="form-group">
-                <label class="form-label">المبلغ المتبقي</label>
-                <input
-                  type="number"
-                  class="form-input"
-                  id="remaining"
-                  readonly
-                />
-                <p
-                  class="form-hint"
-                  id="remainingDisplay"
-                  style="
-                    font-weight: 700;
-                    color: var(--danger);
-                    font-size: 14px;
-                    margin-top: 8px;
-                  "
-                >
-                  0 ريال
-                </p>
-              </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="flex gap-3 mt-6">
-              <button
-                type="button"
-                class="btn btn-secondary btn-block"
-                id="cancelBtn"
-              >
-                إلغاء
+              <button type="button" class="add-item-btn" id="addItemBtn">
+                <i class="fas fa-plus"></i> إضافة صنف
               </button>
-              <button
-                type="submit"
-                class="btn btn-primary btn-block"
-                id="saveBtn"
-              >
-                <i class="fas fa-check"></i>
-                <span>حفظ الحجز</span>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- 4. ملاحظات                                                -->
+            <!-- ========================================================= -->
+            <div class="form-section" style="margin-bottom: 10px;">
+              <h3 class="form-section-title">
+                <i class="fas fa-sticky-note"></i> ملاحظات (تفاصيل الوليمة)
+              </h3>
+              <textarea class="form-textarea" id="bookingNotes" rows="2" placeholder="اكتب تفاصيل الوليمة (الذبائح، الطبخ، الصحون...)" style="height: 50px; min-height: 50px;"></textarea>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- 5. المالية (مدمجة)                                        -->
+            <!-- ========================================================= -->
+            <div class="form-section" style="margin-bottom: 10px;">
+              <h3 class="form-section-title">
+                <i class="fas fa-money-bill-wave"></i> المالية
+              </h3>
+
+              <div class="finance-summary">
+                <span class="label">إجمالي الطلبات</span>
+                <span class="value primary" id="totalOrdersDisplay">0.00 ر.س</span>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 4px;">
+                <label class="form-label" style="font-size: 12px; margin-bottom: 2px;">تأمين الصحون</label>
+                <input type="number" class="form-input" id="platesDeposit" placeholder="0.00" min="0" step="0.5" value="0" style="height: 36px;" />
+              </div>
+
+              <div class="finance-summary total-box">
+                <span class="label">إجمالي الفاتورة</span>
+                <span class="value" id="grandTotalDisplay">0.00 ر.س</span>
+              </div>
+
+              <div style="background: var(--success-soft); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--success); margin-bottom: 4px;">
+                <p style="font-size: 11px; font-weight: 700; color: var(--success); margin-bottom: 2px;"><i class="fas fa-check-circle"></i> المدفوع</p>
+                <input type="number" class="form-input" id="paidAmount" placeholder="المبلغ المدفوع" min="0" step="0.5" value="0" style="height: 36px;" />
+              </div>
+
+              <div style="background: var(--primary-soft); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--primary); margin-bottom: 4px;">
+                <p style="font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 2px;"><i class="fas fa-credit-card"></i> طريقة الدفع</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <label class="payment-method-option"><input type="radio" name="paymentMethod" value="نقدي" checked /> نقدي</label>
+                  <label class="payment-method-option"><input type="radio" name="paymentMethod" value="تحويل بنكي" /> تحويل</label>
+                  <label class="payment-method-option"><input type="radio" name="paymentMethod" value="بطاقة ائتمان" /> بطاقة</label>
+                  <label class="payment-method-option"><input type="radio" name="paymentMethod" value="أجل" /> أجل</label>
+                </div>
+              </div>
+
+              <div class="finance-summary" style="border: 2px solid var(--danger); background: var(--danger-soft);">
+                <span class="label" style="color: var(--danger); font-weight: 700;"><i class="fas fa-coins"></i> المتبقي</span>
+                <span class="value danger" id="remainingDisplay">0.00 ر.س</span>
+              </div>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- 6. أزرار الإجراء                                          -->
+            <!-- ========================================================= -->
+            <div class="flex gap-3 mt-2">
+              <button type="button" class="btn btn-secondary btn-block" id="cancelBtn" onclick="window.location.href='index.html'" style="height: 40px; font-size: 14px;">إلغاء</button>
+              <button type="submit" class="btn btn-primary btn-block" id="saveBtn" style="height: 40px; font-size: 14px;">
+                <i class="fas fa-save"></i> حفظ الحجز
               </button>
             </div>
           </form>
@@ -232,17 +444,201 @@
       </div>
     </div>
 
+    <!-- ===== المكونات العامة ===== -->
     <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="حجز جديد">
-      <i class="fas fa-plus"></i>
-    </button>
+    <button id="fab" class="fab" aria-label="حجز جديد"><i class="fas fa-plus"></i></button>
     <div id="modalContainer"></div>
     <div id="toastContainer" class="toast-container"></div>
 
+    <!-- ===== السكريبتات ===== -->
     <script src="assets/js/core/utils.js"></script>
     <script src="assets/js/core/state.js"></script>
     <script src="assets/js/core/api.js"></script>
     <script src="assets/js/components/layout.js"></script>
-    <script src="assets/js/pages/booking-form.js"></script>
+
+    <script>
+      (function() {
+        'use strict';
+
+        const container = document.getElementById('sideOrdersContainer');
+        const addBtn = document.getElementById('addItemBtn');
+        const totalOrdersDisplay = document.getElementById('totalOrdersDisplay');
+        const grandTotalDisplay = document.getElementById('grandTotalDisplay');
+        const remainingDisplay = document.getElementById('remainingDisplay');
+        const platesDepositInput = document.getElementById('platesDeposit');
+        const paidAmountInput = document.getElementById('paidAmount');
+
+        function getItems() {
+          return window.API ? window.API.getItems() : [
+            { id: 1, name: "أرز بسمتي", price: 25 },
+            { id: 2, name: "سلطة خضراء", price: 15 },
+            { id: 3, name: "تبولة", price: 12 },
+            { id: 4, name: "مشاوي مشكلة", price: 80 }
+          ];
+        }
+
+        function getItemName(id) {
+          const item = getItems().find(i => i.id == id);
+          return item ? item.name : 'صنف';
+        }
+
+        function buildItemRow(selectedId, qty, price) {
+          const items = getItems();
+          let opts = '<option value="">اختر صنف</option>';
+          items.forEach(it => {
+            opts += `<option value="${it.id}" data-price="${it.price}" ${it.id == selectedId ? 'selected' : ''}>${it.name}</option>`;
+          });
+
+          const row = document.createElement('div');
+          row.className = 'item-grid';
+          row.innerHTML = `
+            <select class="item-select">${opts}</select>
+            <input type="number" class="item-qty" placeholder="ك" min="1" value="${qty || 1}" />
+            <input type="number" class="item-price" placeholder="س" min="0" step="0.5" value="${price || 0}" />
+            <span class="item-total">${((qty || 1) * (price || 0)).toFixed(2)} ر.س</span>
+            <button type="button" class="remove-item-btn"><i class="fas fa-times"></i></button>
+          `;
+
+          const sel = row.querySelector('.item-select');
+          const qtyInp = row.querySelector('.item-qty');
+          const priceInp = row.querySelector('.item-price');
+          const remBtn = row.querySelector('.remove-item-btn');
+
+          sel.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt && opt.value) {
+              const defPrice = parseFloat(opt.dataset.price) || 0;
+              if (!priceInp.value || parseFloat(priceInp.value) === 0) priceInp.value = defPrice;
+            }
+            updateRow(row);
+            calcTotal();
+          });
+
+          qtyInp.addEventListener('input', function() { updateRow(row); calcTotal(); });
+          priceInp.addEventListener('input', function() { updateRow(row); calcTotal(); });
+
+          remBtn.addEventListener('click', function() {
+            if (container.querySelectorAll('.item-grid').length > 1) {
+              row.remove();
+              calcTotal();
+            } else {
+              showToast('يجب أن يكون هناك صنف واحد على الأقل', 'warning');
+            }
+          });
+
+          updateRow(row);
+          return row;
+        }
+
+        function updateRow(row) {
+          const qty = parseInt(row.querySelector('.item-qty').value) || 0;
+          const price = parseFloat(row.querySelector('.item-price').value) || 0;
+          row.querySelector('.item-total').textContent = (qty * price).toFixed(2) + ' ر.س';
+        }
+
+        function calcTotal() {
+          let total = 0;
+          container.querySelectorAll('.item-grid').forEach(row => {
+            const qty = parseInt(row.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            total += qty * price;
+          });
+          const deposit = parseFloat(platesDepositInput.value) || 0;
+          const grand = total + deposit;
+          const paid = parseFloat(paidAmountInput.value) || 0;
+          const remaining = Math.max(0, grand - paid);
+
+          totalOrdersDisplay.textContent = total.toFixed(2) + ' ر.س';
+          grandTotalDisplay.textContent = grand.toFixed(2) + ' ر.س';
+          remainingDisplay.textContent = remaining.toFixed(2) + ' ر.س';
+        }
+
+        function addRow() {
+          const row = buildItemRow(null, 1, 0);
+          container.appendChild(row);
+          const sel = row.querySelector('.item-select');
+          if (sel.options.length > 1) { sel.selectedIndex = 1; sel.dispatchEvent(new Event('change')); }
+          calcTotal();
+        }
+
+        async function saveBooking(e) {
+          e.preventDefault();
+          const name = document.getElementById('custName').value.trim();
+          const phone = document.getElementById('custPhone').value.trim();
+          const location = document.getElementById('custLocation').value.trim();
+          if (!name) return showToast('يرجى إدخال اسم العميل', 'warning');
+          if (!phone) return showToast('يرجى إدخال رقم الجوال', 'warning');
+
+          const items = [];
+          let totalOrders = 0;
+          container.querySelectorAll('.item-grid').forEach(row => {
+            const sel = row.querySelector('.item-select');
+            const qty = parseInt(row.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const id = parseInt(sel.value);
+            if (id && qty > 0 && price > 0) {
+              items.push({ item_id: id, quantity: qty, price, item_name: getItemName(id) });
+              totalOrders += qty * price;
+            }
+          });
+          if (items.length === 0) return showToast('أضف صنفاً واحداً على الأقل', 'warning');
+
+          const date = document.getElementById('bookingDate').value;
+          const time = document.getElementById('bookingTime').value;
+          const mark = document.getElementById('bookingMark').value.trim();
+          const delivery = document.getElementById('deliveryTime').value;
+          const notes = document.getElementById('bookingNotes').value.trim();
+          const deposit = parseFloat(platesDepositInput.value) || 0;
+          const paid = parseFloat(paidAmountInput.value) || 0;
+          const method = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'نقدي';
+          if (!date) return showToast('حدد تاريخ الحجز', 'warning');
+          if (!time) return showToast('حدد وقت الحجز', 'warning');
+
+          const grand = totalOrders + deposit;
+          const remaining = Math.max(0, grand - paid);
+
+          if (!window.API || typeof window.API.addCustomer !== 'function') {
+            showToast('⚠️ API غير جاهز (محاكاة)', 'warning');
+            console.log({ name, phone, location, items, date, time, mark, delivery, notes, deposit, paid, method, totalOrders, grand, remaining });
+            showToast('✅ تمت المحاكاة بنجاح', 'success');
+            return;
+          }
+
+          try {
+            const cust = window.API.addCustomer(name, phone, location || '');
+            if (!cust?.id) return showToast('فشل إنشاء العميل', 'error');
+            const booking = window.API.addBooking(cust.id, {
+              customer_id: cust.id, booking_date: date, booking_time: time,
+              pickup_date: date, pickup_time: time, mark, delivery_time: delivery,
+              notes, plates_deposit: deposit, paid_amount: paid,
+              payment_method: method, side_orders: items,
+              total_orders: totalOrders, total_amount: grand,
+              remaining, status: 'new'
+            });
+            if (booking) {
+              showToast(`✅ تم حفظ حجز "${name}"`, 'success');
+              document.getElementById('bookingForm').reset();
+              container.innerHTML = '';
+              addRow();
+              calcTotal();
+              setTimeout(() => window.location.href = 'bookings.html', 1200);
+            }
+          } catch (err) { showToast(err.message || 'خطأ في الحفظ', 'error'); }
+        }
+
+        function init() {
+          document.getElementById('bookingDate').value = new Date().toISOString().split('T')[0];
+          addRow();
+          document.getElementById('bookingForm').addEventListener('submit', saveBooking);
+          addBtn.addEventListener('click', addRow);
+          platesDepositInput.addEventListener('input', calcTotal);
+          paidAmountInput.addEventListener('input', calcTotal);
+          document.querySelectorAll('input[name="paymentMethod"]').forEach(el => el.addEventListener('change', calcTotal));
+          setTimeout(calcTotal, 100);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+      })();
+    </script>
   </body>
 </html>
