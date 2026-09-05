@@ -1414,6 +1414,17 @@
       booking
     );
 
+    const eventDateInput = document.getElementById('bookingEventDate');
+    const deliveryTimeInput = document.getElementById('bookingDeliveryTime');
+
+    if (eventDateInput && !eventDateInput.value) {
+      eventDateInput.value = nowDate();
+    }
+
+    if (deliveryTimeInput && !deliveryTimeInput.value) {
+      deliveryTimeInput.value = '14:00';
+    }
+
     const title =
       document.getElementById(
         'transactionModalTitle'
@@ -1464,7 +1475,7 @@
       '—';
 
     document.getElementById(
-      'paymentAmount'
+      'customerPaymentAmount'
     ).value = '';
 
     document.getElementById(
@@ -1513,9 +1524,9 @@
       );
 
     const amount =
-      Number(
-        document.getElementById(
-          'paymentAmount'
+        Number(
+          document.getElementById(
+            'customerPaymentAmount'
         )?.value
       ) || 0;
 
@@ -1788,7 +1799,7 @@
     const amount =
       Number(
         document.getElementById(
-          'paymentAmount'
+          'customerPaymentAmount'
         ).value
       ) || 0;
 
@@ -2605,7 +2616,7 @@
 
     document
       .getElementById(
-        'paymentAmount'
+        'customerPaymentAmount'
       )
       ?.addEventListener(
         'input',
@@ -2622,6 +2633,12 @@
           closeModal
         );
       });
+
+    document.addEventListener('fab:modal:opened', event => {
+      if (event.detail?.modalId === 'transactionModal') {
+        openBookingModal();
+      }
+    });
   }
 
   if (fab) {

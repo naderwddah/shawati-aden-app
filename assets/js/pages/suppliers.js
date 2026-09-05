@@ -102,11 +102,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return {
       totalInvoices: Number(
+          account.invoices_total ??
         account.total_invoices ??
         account.totalInvoices ??
         0
       ),
       totalPaid: Number(
+          account.payments_total ??
         account.total_paid ??
         account.totalPaid ??
         0
@@ -122,7 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function accountForSupplier(id) {
     const account = state.accounts.find(item => {
-      return Number(item.supplier_id ?? item.id) === Number(id);
+      return Number(
+        item.supplier_id ??
+        item.supplier?.id ??
+        item.id
+      ) === Number(id);
     });
 
     return normalizeAccount(account);

@@ -309,6 +309,107 @@
       gap:14px;
     }
 
+    #transactionModal .modal-dialog {
+      width: min(720px, calc(100vw - 32px));
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    #transactionModal .modal-header {
+      padding: 18px 22px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+    }
+
+    #transactionModal .modal-title {
+      color: #fff;
+      font-size: 18px;
+    }
+
+    #transactionModal .modal-close {
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    #transactionModal .modal-body {
+      padding: 22px;
+    }
+
+    #transactionModal .tabs {
+      width: min(100%, 360px);
+      margin: 0 auto 22px;
+      padding: 5px;
+      gap: 5px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      overflow: visible;
+    }
+
+    #transactionModal .tab {
+      flex: 1;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text-secondary);
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #transactionModal .tab.active {
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 4px 10px rgba(143, 23, 32, 0.22);
+    }
+
+    #transactionModal .tab i {
+      margin-inline-end: 6px;
+    }
+
+    #transactionModal .form-label {
+      margin-bottom: 7px;
+      font-weight: 700;
+    }
+
+    #transactionModal .form-input,
+    #transactionModal .form-textarea {
+      border-radius: 10px;
+    }
+
+    #transactionModal #invoiceDetails {
+      min-height: 118px;
+      resize: vertical;
+    }
+
+    #transactionModal #invoiceNotes,
+    #transactionModal #paymentNotes {
+      min-height: 78px;
+      resize: vertical;
+    }
+
+    #transactionModal .modal-footer {
+      padding: 16px 22px 20px;
+      gap: 10px;
+    }
+
+    @media(max-width:767px) {
+      #transactionModal .modal-dialog {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 24px);
+      }
+
+      #transactionModal .modal-body {
+        padding: 16px;
+      }
+
+      #transactionModal .tabs {
+        width: 100%;
+        margin-bottom: 18px;
+      }
+
+      #transactionModal .modal-footer {
+        padding: 14px 16px 16px;
+      }
+    }
+
     .full {
       grid-column:1 / -1;
     }
@@ -476,14 +577,14 @@
             >
           </div>
 
-          <div class="form-group">
+          <div class="form-group full">
             <label class="form-label">التفاصيل</label>
-            <input
-              type="text"
+            <textarea
               class="form-input"
               id="invoiceDetails"
-              placeholder="مثال: مواد غذائية"
-            >
+              rows="5"
+              placeholder="اكتب تفاصيل الفاتورة والمواد أو الخدمات"
+            ></textarea>
           </div>
 
           <div class="form-group full">

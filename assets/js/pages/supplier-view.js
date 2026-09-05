@@ -1012,6 +1012,12 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', closeModal);
       });
 
+    document.addEventListener('fab:modal:opened', event => {
+      if (event.detail?.modalId === 'transactionModal') {
+        openModal('invoice');
+      }
+    });
+
     document.addEventListener('keydown', event => {
       if (
         event.key === 'Escape' &&
