@@ -25,10 +25,27 @@
         border-radius: var(--radius-md);
         box-shadow: var(--shadow-sm);
       }
-      .summary-item { text-align: center; }
-      .summary-label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
-      .summary-value { font-size: 18px; font-weight: 800; color: var(--text); }
-      .summary-value.danger { color: var(--danger); }
+
+      .summary-item {
+        text-align: center;
+      }
+
+      .summary-label {
+        display: block;
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+      }
+
+      .summary-value {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .summary-value.danger {
+        color: var(--danger);
+      }
 
       .customer-card {
         display: flex;
@@ -43,7 +60,11 @@
         gap: var(--space-3);
         position: relative;
       }
-      .customer-card:last-child { margin-bottom: 0; }
+
+      .customer-card.inactive {
+        opacity: 0.7;
+      }
+
       .customer-card .click-area {
         flex: 1;
         display: flex;
@@ -52,7 +73,11 @@
         cursor: pointer;
         min-width: 0;
       }
-      .customer-card .click-area:active { transform: scale(0.99); }
+
+      .customer-card .click-area:active {
+        transform: scale(0.99);
+      }
+
       .customer-card .avatar {
         display: flex;
         align-items: center;
@@ -66,9 +91,29 @@
         font-weight: 700;
         flex-shrink: 0;
       }
-      .customer-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-      .customer-card .info .name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-      .customer-card .info .phone { font-size: 13px; color: var(--text-muted); direction: ltr; text-align: start; }
+
+      .customer-card .info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .customer-card .info .name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.3;
+      }
+
+      .customer-card .info .phone {
+        font-size: 13px;
+        color: var(--text-muted);
+        direction: ltr;
+        text-align: start;
+      }
+
       .customer-card .financial {
         display: flex;
         flex-wrap: wrap;
@@ -77,16 +122,32 @@
         font-size: 12px;
         color: var(--text-secondary);
       }
-      .customer-card .financial .label { color: var(--text-muted); margin-left: 2px; }
-      .customer-card .financial .amount { font-weight: 700; }
-      .customer-card .financial .remaining { color: var(--danger); font-weight: 800; }
-      .customer-card .financial .paid { color: var(--success); }
+
+      .customer-card .financial .label {
+        color: var(--text-muted);
+        margin-left: 2px;
+      }
+
+      .customer-card .financial .amount {
+        font-weight: 700;
+      }
+
+      .customer-card .financial .remaining {
+        color: var(--danger);
+        font-weight: 800;
+      }
+
+      .customer-card .financial .paid {
+        color: var(--success);
+      }
+
       .customer-card .actions {
         display: flex;
         align-items: center;
         gap: var(--space-1);
         flex-shrink: 0;
       }
+
       .customer-card .actions .arrow {
         display: flex;
         align-items: center;
@@ -94,36 +155,157 @@
         font-size: 14px;
       }
 
-      .empty-state { text-align: center; padding: var(--space-8) var(--space-4); color: var(--text-muted); }
-      .empty-state i { font-size: 36px; opacity: 0.3; margin-bottom: var(--space-3); display: block; }
-      .empty-state h4 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: var(--space-1); }
-      .empty-state p { font-size: 14px; }
+      .customer-status {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        margin-top: 4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+      }
 
-      .page-header .btn-sm { display: none; }
+      .customer-status.active {
+        color: var(--success);
+        background: color-mix(in srgb, var(--success) 10%, transparent);
+      }
+
+      .customer-status.inactive {
+        color: var(--danger);
+        background: color-mix(in srgb, var(--danger) 10%, transparent);
+      }
+
+      .customer-action {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+      }
+
+      .customer-action.edit {
+        color: var(--primary);
+        background: var(--primary-soft);
+      }
+
+      .customer-action.toggle {
+        color: var(--warning);
+        background: color-mix(in srgb, var(--warning) 10%, transparent);
+      }
+
+      .customer-action.activate {
+        color: var(--success);
+        background: color-mix(in srgb, var(--success) 10%, transparent);
+      }
+
+      .modal-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .modal-form-grid .full {
+        grid-column: 1 / -1;
+      }
+
+      .page-header .btn-sm {
+        display: none;
+      }
 
       @media (max-width: 767px) {
-        .customers-summary { grid-template-columns: repeat(3, 1fr); padding: 10px; gap: 6px; }
-        .summary-value { font-size: 16px; }
-        .customer-card { padding: 12px 14px; }
-        .customer-card .avatar { width: 38px; height: 38px; font-size: 15px; }
-        .customer-card .info .name { font-size: 14px; }
-        .customer-card .info .phone { font-size: 12px; }
-        .customer-card .financial { font-size: 11px; gap: var(--space-2); }
+        .customers-summary {
+          grid-template-columns: repeat(3, 1fr);
+          padding: 10px;
+          gap: 6px;
+        }
+
+        .summary-value {
+          font-size: 16px;
+        }
+
+        .customer-card {
+          padding: 12px 14px;
+        }
+
+        .customer-card .avatar {
+          width: 38px;
+          height: 38px;
+          font-size: 15px;
+        }
+
+        .customer-card .info .name {
+          font-size: 14px;
+        }
+
+        .customer-card .info .phone {
+          font-size: 12px;
+        }
+
+        .customer-card .financial {
+          font-size: 11px;
+          gap: var(--space-2);
+        }
+
+        .customer-action {
+          width: 31px;
+          height: 31px;
+        }
+
+        .modal-form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .modal-form-grid .full {
+          grid-column: auto;
+        }
       }
+
       @media (min-width: 768px) {
-        .page-header .btn-sm { display: inline-flex; }
-        .customers-summary { padding: 16px 20px; }
-        .summary-value { font-size: 22px; }
-        .customer-card { padding: 16px 20px; }
-        .customer-card .avatar { width: 50px; height: 50px; font-size: 20px; }
-        .customer-card .info .name { font-size: 17px; }
+        .page-header .btn-sm {
+          display: inline-flex;
+        }
+
+        .customers-summary {
+          padding: 16px 20px;
+        }
+
+        .summary-value {
+          font-size: 22px;
+        }
+
+        .customer-card {
+          padding: 16px 20px;
+        }
+
+        .customer-card .avatar {
+          width: 50px;
+          height: 50px;
+          font-size: 20px;
+        }
+
+        .customer-card .info .name {
+          font-size: 17px;
+        }
       }
+
       @media (min-width: 1024px) {
-        #customersList { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
-        .customer-card { margin-bottom: 0; }
+        #customersList {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: var(--space-3);
+        }
+
+        .customer-card {
+          margin-bottom: 0;
+        }
       }
     </style>
   </head>
+
   <body>
     <div id="loadingScreen" class="loading-screen">
       <div class="loading-content">
@@ -137,16 +319,20 @@
     <div class="app">
       <aside id="sidebar" class="sidebar"></aside>
       <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
       <div class="main-area">
         <header id="header" class="header"></header>
+
         <main class="content" id="pageContent">
           <div class="page-header">
             <div>
               <h1 class="page-title">العملاء</h1>
               <p class="page-subtitle">إدارة العملاء والحسابات المالية</p>
             </div>
+
             <button class="btn btn-primary btn-sm" id="addCustomerBtn">
-              <i class="fas fa-user-plus"></i> <span>عميل جديد</span>
+              <i class="fas fa-user-plus"></i>
+              <span>عميل جديد</span>
             </button>
           </div>
 
@@ -155,10 +341,12 @@
               <span class="summary-label">إجمالي العملاء</span>
               <span class="summary-value" id="customersCount">0</span>
             </div>
+
             <div class="summary-item">
               <span class="summary-label">إجمالي المستحقات</span>
               <span class="summary-value danger" id="customersReceivables">0 ر.س</span>
             </div>
+
             <div class="summary-item">
               <span class="summary-label">إجمالي المحصل</span>
               <span class="summary-value" id="customersCollected">0 ر.س</span>
@@ -167,7 +355,12 @@
 
           <div class="search-bar">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" id="customerSearch" placeholder="ابحث عن اسم العميل أو رقم الجوال" />
+            <input
+              type="text"
+              class="search-input"
+              id="customerSearch"
+              placeholder="ابحث عن اسم العميل أو رقم الجوال"
+            />
           </div>
 
           <div id="customersList"></div>
@@ -176,28 +369,65 @@
     </div>
 
     <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="إضافة عميل"><i class="fas fa-plus"></i></button>
+
+    <button id="fab" class="fab" aria-label="إضافة عميل">
+      <i class="fas fa-plus"></i>
+    </button>
+
     <div id="modalContainer"></div>
     <div id="toastContainer" class="toast-container"></div>
 
-    <!-- ===== مودال إضافة عميل جديد (حقلين فقط: الاسم + رقم الجوال) ===== -->
     <div class="modal" id="addCustomerModal" role="dialog" aria-modal="true">
       <div class="modal-overlay" data-close="addCustomerModal"></div>
+
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">إضافة عميل جديد</h3>
-          <button class="modal-close" data-close="addCustomerModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+          <button class="modal-close" data-close="addCustomerModal" aria-label="إغلاق">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
+
         <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="newCustomerName">الاسم <span class="req">*</span></label>
-            <input type="text" class="form-input" id="newCustomerName" placeholder="أدخل اسم العميل" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="newCustomerPhone">رقم الجوال <span class="req">*</span></label>
-            <input type="tel" class="form-input" id="newCustomerPhone" placeholder="05xxxxxxxx" />
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label" for="newCustomerName">
+                الاسم <span class="req">*</span>
+              </label>
+              <input
+                type="text"
+                class="form-input"
+                id="newCustomerName"
+                placeholder="أدخل اسم العميل"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="newCustomerPhone">
+                رقم الجوال <span class="req">*</span>
+              </label>
+              <input
+                type="tel"
+                class="form-input"
+                id="newCustomerPhone"
+                placeholder="05xxxxxxxx"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label" for="newCustomerNotes">ملاحظات</label>
+              <textarea
+                class="form-input"
+                id="newCustomerNotes"
+                placeholder="ملاحظات العميل"
+                rows="3"
+              ></textarea>
+            </div>
           </div>
         </div>
+
         <div class="modal-footer">
           <button class="btn btn-secondary" data-close="addCustomerModal">إلغاء</button>
           <button class="btn btn-primary" id="saveNewCustomer">حفظ العميل</button>
@@ -205,24 +435,57 @@
       </div>
     </div>
 
-    <!-- ===== مودال تعديل العميل (حقلين فقط: الاسم + رقم الجوال) ===== -->
     <div class="modal" id="editCustomerModal" role="dialog" aria-modal="true">
       <div class="modal-overlay" data-close="editCustomerModal"></div>
+
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title">تعديل العميل</h3>
-          <button class="modal-close" data-close="editCustomerModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+          <button class="modal-close" data-close="editCustomerModal" aria-label="إغلاق">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
+
         <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="editCustomerName">الاسم <span class="req">*</span></label>
-            <input type="text" class="form-input" id="editCustomerName" placeholder="اسم العميل" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="editCustomerPhone">رقم الجوال <span class="req">*</span></label>
-            <input type="tel" class="form-input" id="editCustomerPhone" placeholder="05xxxxxxxx" />
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label" for="editCustomerName">
+                الاسم <span class="req">*</span>
+              </label>
+              <input
+                type="text"
+                class="form-input"
+                id="editCustomerName"
+                placeholder="اسم العميل"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="editCustomerPhone">
+                رقم الجوال <span class="req">*</span>
+              </label>
+              <input
+                type="tel"
+                class="form-input"
+                id="editCustomerPhone"
+                placeholder="05xxxxxxxx"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label" for="editCustomerNotes">ملاحظات</label>
+              <textarea
+                class="form-input"
+                id="editCustomerNotes"
+                placeholder="ملاحظات العميل"
+                rows="3"
+              ></textarea>
+            </div>
           </div>
         </div>
+
         <div class="modal-footer">
           <button class="btn btn-secondary" data-close="editCustomerModal">إلغاء</button>
           <button class="btn btn-primary" id="saveEditCustomer">حفظ التغييرات</button>

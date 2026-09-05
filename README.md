@@ -29,7 +29,7 @@
 ```text
 shawati-aden-v2/
 ├── index.html
-├── booking-new.html
+├── booking-form.html
 ├── bookings.html
 ├── customer-view.html
 ├── customers.html

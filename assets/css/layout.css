@@ -295,7 +295,7 @@
 }
 
 /* ----- FAB ----- */
-.fab {
+button.fab {
   position: fixed;
   inset-inline-end: var(--space-5);
   bottom: 100px;
@@ -314,11 +314,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.fab:hover {
+button.fab:hover {
   background: var(--primary-dark);
   box-shadow: 0 8px 20px rgba(143, 23, 32, 0.4);
 }
-.fab:active {
+button.fab:active {
   transform: scale(0.92);
 }
 
@@ -415,7 +415,7 @@
   .bottom-nav {
     display: none;
   }
-  .fab {
+  button.fab {
     display: none;
   }
   .menu-toggle {
@@ -456,7 +456,7 @@
     height: 58px;
     padding: 0 var(--space-3);
     border-radius: 16px;
-    background: rgba(248, 248, 247, 0.96);
+    background: var(--surface);
     backdrop-filter: blur(8px);
   }
 
@@ -488,7 +488,7 @@
     font-size: 18px;
   }
 
-  .fab {
+  button.fab {
     width: 52px;
     height: 52px;
     bottom: 86px;
@@ -585,7 +585,7 @@
   .sidebar,
   .header,
   .bottom-nav,
-  .fab,
+  button.fab,
   .modal,
   .toast-container {
     display: none !important;

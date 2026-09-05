@@ -1,0 +1,1100 @@
+<!doctype html>
+<html dir="rtl" lang="ar" data-page="booking-new">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="theme-color" content="#8F1720">
+  <meta name="description" content="حجز جديد - شواطئ عدن">
+  <title>حجز جديد - شواطئ عدن</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+
+  <style>
+    .booking-page {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .booking-card {
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .section-title i {
+      color: var(--primary);
+    }
+
+    .customer-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .required {
+      color: var(--danger);
+    }
+
+    .customer-search {
+      position: relative;
+    }
+
+    .customer-results {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      left: 0;
+      z-index: 50;
+      display: none;
+      max-height: 240px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .customer-result {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 13px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .customer-result:last-child {
+      border-bottom: 0;
+    }
+
+    .customer-result:hover {
+      background: var(--primary-soft);
+    }
+
+    .customer-result-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .customer-result-phone {
+      direction: ltr;
+      text-align: right;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .selected-customer {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      margin-top: 8px;
+      background: var(--primary-soft);
+      border: 1px solid var(--primary);
+      border-radius: var(--radius-sm);
+    }
+
+    .selected-customer-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .customer-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .selected-customer-name {
+      font-weight: 800;
+    }
+
+    .selected-customer-phone {
+      direction: ltr;
+      text-align: right;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .change-customer {
+      border: 0;
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .details-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .items-header {
+      display: grid;
+      grid-template-columns: 2fr .7fr 1fr 1fr 42px;
+      gap: 8px;
+      padding: 0 8px 7px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 2fr .7fr 1fr 1fr 42px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      margin-bottom: 7px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .item-row select,
+    .item-row input {
+      width: 100%;
+      min-width: 0;
+      height: 40px;
+      padding: 0 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .item-total {
+      text-align: center;
+      font-weight: 800;
+      color: var(--primary);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .remove-item {
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: var(--danger-soft);
+      color: var(--danger);
+      cursor: pointer;
+    }
+
+    .remove-item:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .add-item {
+      width: 100%;
+      height: 42px;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+    }
+
+    .add-item:hover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+
+    .financial-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .financial-box {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
+    .financial-box.total {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .financial-box.remaining {
+      background: var(--danger-soft);
+      border-color: var(--danger);
+    }
+
+    .financial-label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .financial-box.total .financial-label {
+      color: rgba(255,255,255,.8);
+    }
+
+    .financial-value {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .financial-box.total .financial-value {
+      color: #fff;
+    }
+
+    .payment-section {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
+    .payment-methods {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .payment-method {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .payment-method:has(input:checked) {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .payment-method input {
+      accent-color: var(--primary);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .actions .btn {
+      flex: 1;
+    }
+
+    .page-header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .customer-mode {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .customer-mode button {
+      flex: 1;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .customer-mode button.active {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .new-customer-fields {
+      display: none;
+    }
+
+    .new-customer-fields.active {
+      display: block;
+    }
+
+    .existing-customer-fields {
+      display: block;
+    }
+
+    .existing-customer-fields.hidden {
+      display: none;
+    }
+
+    .alert-box {
+      display: none;
+      padding: 11px 13px;
+      margin-bottom: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 700px) {
+      .booking-card {
+        padding: 14px;
+      }
+
+      .customer-box,
+      .details-grid,
+      .financial-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .details-grid .full {
+        grid-column: auto;
+      }
+
+      .items-header {
+        display: none;
+      }
+
+      .item-row {
+        grid-template-columns: 1.7fr .7fr .9fr 1fr 34px;
+        gap: 5px;
+        padding: 6px;
+      }
+
+      .item-row select,
+      .item-row input {
+        height: 36px;
+        font-size: 12px;
+        padding: 0 5px;
+      }
+
+      .item-total {
+        font-size: 11px;
+      }
+
+      .remove-item {
+        width: 30px;
+        height: 30px;
+      }
+
+      .actions {
+        position: sticky;
+        bottom: 65px;
+        z-index: 20;
+        padding: 8px;
+        margin: 0 -8px 20px;
+        background: rgba(255,255,255,.96);
+        backdrop-filter: blur(8px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-logo">
+        <i class="fas fa-utensils"></i>
+      </div>
+      <h1 class="loading-title">شواطئ عدن</h1>
+      <p class="loading-subtitle">مطابخ ومطاعم</p>
+      <div class="loading-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+
+    <aside id="sidebar" class="sidebar"></aside>
+
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <div class="main-area">
+
+      <header id="header" class="header"></header>
+
+      <main class="content">
+
+        <div class="booking-page">
+
+          <div class="page-header-actions">
+            <div>
+              <h1 class="page-title" id="pageTitle">
+                حجز جديد
+              </h1>
+              <p class="page-subtitle">
+                إنشاء فاتورة وحجز جديد
+              </p>
+            </div>
+
+            <a
+              href="bookings.html"
+              class="btn btn-secondary back-btn"
+            >
+              <i class="fas fa-arrow-right"></i>
+              الحجوزات
+            </a>
+          </div>
+
+          <div
+            id="formAlert"
+            class="alert-box"
+          ></div>
+
+          <form id="bookingForm">
+
+            <section class="card booking-card">
+
+              <h2 class="section-title">
+                <i class="fas fa-user"></i>
+                بيانات العميل
+              </h2>
+
+              <div class="customer-mode">
+
+                <button
+                  type="button"
+                  id="existingCustomerBtn"
+                  class="active"
+                >
+                  <i class="fas fa-users"></i>
+                  عميل موجود
+                </button>
+
+                <button
+                  type="button"
+                  id="newCustomerBtn"
+                >
+                  <i class="fas fa-user-plus"></i>
+                  عميل جديد
+                </button>
+
+              </div>
+
+              <div
+                id="existingCustomerFields"
+                class="existing-customer-fields"
+              >
+
+                <div class="form-group customer-search">
+
+                  <label class="form-label">
+                    البحث عن العميل
+                    <span class="required">*</span>
+                  </label>
+
+                  <input
+                    type="text"
+                    id="customerSearch"
+                    class="form-input"
+                    autocomplete="off"
+                    placeholder="اكتب اسم العميل أو رقم الجوال"
+                  >
+
+                  <div
+                    id="customerResults"
+                    class="customer-results"
+                  ></div>
+
+                </div>
+
+                <div
+                  id="selectedCustomer"
+                  class="selected-customer"
+                >
+
+                  <div class="selected-customer-info">
+
+                    <div
+                      id="selectedCustomerAvatar"
+                      class="customer-avatar"
+                    >
+                      ع
+                    </div>
+
+                    <div>
+                      <div
+                        id="selectedCustomerName"
+                        class="selected-customer-name"
+                      >
+                        —
+                      </div>
+
+                      <div
+                        id="selectedCustomerPhone"
+                        class="selected-customer-phone"
+                      >
+                        —
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    id="changeCustomerBtn"
+                    class="change-customer"
+                  >
+                    تغيير
+                  </button>
+
+                </div>
+
+              </div>
+
+              <div
+                id="newCustomerFields"
+                class="new-customer-fields"
+              >
+
+                <div class="customer-box">
+
+                  <div class="form-group">
+
+                    <label
+                      for="customerName"
+                      class="form-label"
+                    >
+                      اسم العميل
+                      <span class="required">*</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      id="customerName"
+                      class="form-input"
+                      maxlength="150"
+                      placeholder="اسم العميل"
+                    >
+
+                  </div>
+
+                  <div class="form-group">
+
+                    <label
+                      for="customerPhone"
+                      class="form-label"
+                    >
+                      رقم الجوال
+                      <span class="required">*</span>
+                    </label>
+
+                    <input
+                      type="tel"
+                      id="customerPhone"
+                      class="form-input"
+                      maxlength="30"
+                      dir="ltr"
+                      placeholder="05XXXXXXXX"
+                    >
+
+                  </div>
+
+                </div>
+
+                <div class="form-group">
+
+                  <label
+                    for="customerNotes"
+                    class="form-label"
+                  >
+                    ملاحظات العميل
+                  </label>
+
+                  <textarea
+                    id="customerNotes"
+                    class="form-textarea"
+                    rows="2"
+                    placeholder="ملاحظات خاصة بالعميل"
+                  ></textarea>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            <section class="card booking-card">
+
+              <h2 class="section-title">
+                <i class="fas fa-calendar-alt"></i>
+                تفاصيل الحجز
+              </h2>
+
+              <div class="details-grid">
+
+                <div class="form-group">
+
+                  <label
+                    for="invoiceDate"
+                    class="form-label"
+                  >
+                    تاريخ الفاتورة
+                  </label>
+
+                  <input
+                    type="date"
+                    id="invoiceDate"
+                    class="form-input"
+                  >
+
+                </div>
+
+                <div class="form-group">
+
+                  <label
+                    for="eventDate"
+                    class="form-label"
+                  >
+                    تاريخ المناسبة
+                    <span class="required">*</span>
+                  </label>
+
+                  <input
+                    type="date"
+                    id="eventDate"
+                    class="form-input"
+                  >
+
+                </div>
+
+                <div class="form-group">
+
+                  <label
+                    for="deliveryTime"
+                    class="form-label"
+                  >
+                    وقت المناسبة / التوصيل
+                  </label>
+
+                  <input
+                    type="time"
+                    id="deliveryTime"
+                    class="form-input"
+                  >
+
+                </div>
+
+                <div class="form-group">
+
+                  <label
+                    for="deliveryPeriod"
+                    class="form-label"
+                  >
+                    الفترة
+                  </label>
+
+                  <select
+                    id="deliveryPeriod"
+                    class="form-select"
+                  >
+                    <option value="">اختر الفترة</option>
+                    <option value="صباحًا">صباحًا</option>
+                    <option value="ظهرًا">ظهرًا</option>
+                    <option value="مساءً">مساءً</option>
+                    <option value="ليلًا">ليلًا</option>
+                  </select>
+
+                </div>
+
+                <div class="form-group full">
+
+                  <label
+                    for="deliveryAddress"
+                    class="form-label"
+                  >
+                    عنوان التوصيل
+                  </label>
+
+                  <input
+                    type="text"
+                    id="deliveryAddress"
+                    class="form-input"
+                    maxlength="255"
+                    placeholder="عنوان أو موقع التوصيل"
+                  >
+
+                </div>
+
+                <div class="form-group">
+
+                  <label
+                    for="mark"
+                    class="form-label"
+                  >
+                    العلامة
+                  </label>
+
+                  <input
+                    type="text"
+                    id="mark"
+                    class="form-input"
+                    maxlength="255"
+                    placeholder="مثال: اسم القاعة أو المناسبة"
+                  >
+
+                </div>
+
+                <div class="form-group">
+
+                  <label
+                    for="status"
+                    class="form-label"
+                  >
+                    حالة الحجز
+                  </label>
+
+                  <select
+                    id="status"
+                    class="form-select"
+                  >
+                    <option value="new">جديد</option>
+                    <option value="confirmed">مؤكد</option>
+                    <option value="completed">مكتمل</option>
+                    <option value="cancelled">ملغي</option>
+                  </select>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            <section class="card booking-card">
+
+              <h2 class="section-title">
+                <i class="fas fa-utensils"></i>
+                أصناف الحجز
+              </h2>
+
+              <div class="items-header">
+                <span>الصنف</span>
+                <span>الكمية</span>
+                <span>سعر الوحدة</span>
+                <span>الإجمالي</span>
+                <span></span>
+              </div>
+
+              <div id="itemsContainer"></div>
+
+              <button
+                type="button"
+                id="addItemBtn"
+                class="add-item"
+              >
+                <i class="fas fa-plus"></i>
+                إضافة صنف
+              </button>
+
+            </section>
+
+            <section class="card booking-card">
+
+              <h2 class="section-title">
+                <i class="fas fa-money-bill-wave"></i>
+                المالية
+              </h2>
+
+              <div class="financial-grid">
+
+                <div class="financial-box">
+
+                  <span class="financial-label">
+                    إجمالي الأصناف
+                  </span>
+
+                  <span
+                    id="itemsTotal"
+                    class="financial-value"
+                  >
+                    0 ر.س
+                  </span>
+
+                </div>
+
+                <div class="financial-box">
+
+                  <span class="financial-label">
+                    تأمين الصحون
+                  </span>
+
+                  <input
+                    type="number"
+                    id="plateDeposit"
+                    class="form-input"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                    placeholder="0"
+                  >
+
+                </div>
+
+                <div class="financial-box total">
+
+                  <span class="financial-label">
+                    إجمالي الفاتورة
+                  </span>
+
+                  <span
+                    id="grandTotal"
+                    class="financial-value"
+                  >
+                    0 ر.س
+                  </span>
+
+                </div>
+
+                <div class="financial-box">
+
+                  <span class="financial-label">
+                    الدفعة الأولى
+                  </span>
+
+                  <input
+                    type="number"
+                    id="initialPayment"
+                    class="form-input"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                    placeholder="0"
+                  >
+
+                </div>
+
+                <div class="financial-box remaining">
+
+                  <span
+                    class="financial-label"
+                    style="color:var(--danger);"
+                  >
+                    المتبقي
+                  </span>
+
+                  <span
+                    id="remainingAmount"
+                    class="financial-value"
+                    style="color:var(--danger);"
+                  >
+                    0 ر.س
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div class="payment-section">
+
+                <label class="form-label">
+                  طريقة الدفع
+                </label>
+
+                <div
+                  id="paymentMethods"
+                  class="payment-methods"
+                >
+                  <label class="payment-method">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="1"
+                      checked
+                    >
+                    نقدي
+                  </label>
+
+                  <label class="payment-method">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="2"
+                    >
+                    تحويل بنكي
+                  </label>
+
+                  <label class="payment-method">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="3"
+                    >
+                    شبكة
+                  </label>
+                </div>
+
+              </div>
+
+              <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+
+                <label
+                  for="paymentNotes"
+                  class="form-label"
+                >
+                  ملاحظات الدفعة
+                </label>
+
+                <input
+                  type="text"
+                  id="paymentNotes"
+                  class="form-input"
+                  maxlength="255"
+                  placeholder="مثال: دفعة أولى"
+                >
+
+              </div>
+
+            </section>
+
+            <section class="card booking-card">
+
+              <h2 class="section-title">
+                <i class="fas fa-sticky-note"></i>
+                ملاحظات الحجز
+              </h2>
+
+              <textarea
+                id="bookingNotes"
+                class="form-textarea"
+                rows="4"
+                placeholder="تفاصيل الوليمة أو أي ملاحظات خاصة بهذا الحجز"
+              ></textarea>
+
+            </section>
+
+            <div class="actions">
+
+              <a
+                href="bookings.html"
+                class="btn btn-secondary"
+              >
+                <i class="fas fa-times"></i>
+                إلغاء
+              </a>
+
+              <button
+                type="submit"
+                id="saveBookingBtn"
+                class="btn btn-primary"
+              >
+                <i class="fas fa-save"></i>
+                حفظ الحجز
+              </button>
+
+            </div>
+
+          </form>
+
+        </div>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <nav
+    id="bottomNav"
+    class="bottom-nav"
+  ></nav>
+
+  <button
+    id="fab"
+    class="fab"
+    aria-label="حجز جديد"
+  >
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <div id="modalContainer"></div>
+
+  <div
+    id="toastContainer"
+    class="toast-container"
+  ></div>
+
+  <script src="assets/js/core/utils.js"></script>
+  <script src="assets/js/core/api.js"></script>
+  <script src="assets/js/components/layout.js"></script>
+  <script src="assets/js/pages/booking-form.js"></script>
+
+</body>
+</html>

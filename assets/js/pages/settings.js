@@ -1,281 +1,687 @@
-// ============================================================
-// assets/js/pages/settings.js
-// صفحة الإعدادات – إدارة الملف الشخصي، كلمة المرور، التفضيلات
-// ============================================================
+'use strict';
 
-document.addEventListener('DOMContentLoaded', function() {
-  'use strict';
+document.addEventListener('DOMContentLoaded', () => {
 
-  // ============================================================
-  // 1. تحميل بيانات الملف الشخصي من localStorage
-  // ============================================================
-  const PROFILE_KEY = 'app_profile';
+    const $ = selector => document.querySelector(selector);
 
-  function getDefaultProfile() {
-    return {
-      name: 'شواطئ عدن',
-      phone: '0500000000',
-      address: 'الرياض - المملكة العربية السعودية',
-      email: 'info@shawaetaden.com',
-      logo: '' // base64 data URL
-    };
-  }
+    const businessName = $('#businessName');
+    const businessDescription = $('#businessDescription');
+    const businessDescriptionInfo = $('#businessDescriptionInfo');
+    const businessPhone = $('#businessPhone');
+    const businessWhatsapp = $('#businessWhatsapp');
+    const businessFacebook = $('#businessFacebook');
+    const businessInstagram = $('#businessInstagram');
+    const businessAddress = $('#businessAddress');
 
-  function loadProfile() {
-    let profile = localStorage.getItem(PROFILE_KEY);
-    if (profile) {
-      try {
-        return JSON.parse(profile);
-      } catch (e) {
-        return getDefaultProfile();
-      }
-    }
-    return getDefaultProfile();
-  }
+    const logoImage = $('#logoImage');
+    const logoPlaceholder = $('#logoPlaceholder');
+    const logoInput = $('#logoInput');
+    const changeLogoBtn = $('#changeLogoBtn');
 
-  function saveProfile(profile) {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-  }
+    const editProfileBtn = $('#editProfileBtn');
+    const editProfileModal = $('#editProfileModal');
+    const editProfileForm = $('#editProfileForm');
+    const saveProfileBtn = $('#saveProfileBtn');
 
-  function applyProfileToUI(profile) {
-    document.getElementById('businessName').textContent = profile.name || 'اسم المحل';
-    document.getElementById('businessPhone').textContent = profile.phone || 'رقم الجوال';
-    document.getElementById('businessAddress').textContent = profile.address || 'العنوان';
-    document.getElementById('businessEmail').textContent = profile.email || 'البريد الإلكتروني';
+    const editName = $('#editBusinessNameInput');
+    const editDescription = $('#editBusinessDescriptionInput');
+    const editPhone = $('#editBusinessPhoneInput');
+    const editWhatsapp = $('#editBusinessWhatsappInput');
+    const editFacebook = $('#editBusinessFacebookInput');
+    const editInstagram = $('#editBusinessInstagramInput');
+    const editAddress = $('#editBusinessAddressInput');
 
-    const logoImg = document.getElementById('logoImage');
-    const logoPlaceholder = document.getElementById('logoPlaceholder');
-    if (profile.logo && profile.logo.startsWith('data:image')) {
-      logoImg.src = profile.logo;
-      logoImg.style.display = 'block';
-      logoPlaceholder.style.display = 'none';
-    } else {
-      logoImg.style.display = 'none';
-      logoPlaceholder.style.display = 'block';
-    }
-  }
+    const changePasswordBtn = $('#changePasswordBtn');
+    const changePasswordSetting = $('#changePasswordSetting');
+    const changePasswordModal = $('#changePasswordModal');
+    const changePasswordForm = $('#changePasswordForm');
 
-  // ============================================================
-  // 2. تهيئة الصفحة
-  // ============================================================
-  let profile = loadProfile();
-  applyProfileToUI(profile);
+    const oldPassword = $('#oldPasswordInput');
+    const newPassword = $('#newPasswordInput');
+    const confirmPassword = $('#confirmPasswordInput');
+    const savePasswordBtn = $('#savePasswordBtn');
 
-  // ============================================================
-  // 3. تعديل الملف الشخصي (فتح المودال)
-  // ============================================================
-  const editProfileBtn = document.getElementById('editProfileBtn');
-  const editProfileModal = document.getElementById('editProfileModal');
-  const editName = document.getElementById('editBusinessName');
-  const editPhone = document.getElementById('editBusinessPhone');
-  const editAddress = document.getElementById('editBusinessAddress');
-  const editEmail = document.getElementById('editBusinessEmail');
-  const saveProfileBtn = document.getElementById('saveProfileBtn');
+    const logoutBtn = $('#logoutBtn');
 
-  editProfileBtn.addEventListener('click', function() {
-    // تعبئة الحقول بالقيم الحالية
-    editName.value = profile.name || '';
-    editPhone.value = profile.phone || '';
-    editAddress.value = profile.address || '';
-    editEmail.value = profile.email || '';
-    editProfileModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  });
+    const bookingNotificationsToggle =
+        $('#bookingNotificationsToggle');
 
-  // إغلاق المودال
-  document.querySelectorAll('[data-close="editProfileModal"]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      editProfileModal.classList.remove('active');
-      document.body.style.overflow = '';
-    });
-  });
+    const soundEffectsToggle =
+        $('#soundEffectsToggle');
 
-  // حفظ التغييرات
-  saveProfileBtn.addEventListener('click', function() {
-    const name = editName.value.trim();
-    const phone = editPhone.value.trim();
-    const address = editAddress.value.trim();
-    const email = editEmail.value.trim();
+    const themeToggle =
+        $('#themeToggle');
 
-    if (!name) {
-      showToast('يرجى إدخال اسم المحل', 'warning');
-      return;
-    }
-    if (!phone) {
-      showToast('يرجى إدخال رقم الجوال', 'warning');
-      return;
-    }
+    let restaurant = null;
 
-    profile.name = name;
-    profile.phone = phone;
-    profile.address = address;
-    profile.email = email;
-    saveProfile(profile);
-    applyProfileToUI(profile);
-    editProfileModal.classList.remove('active');
-    document.body.style.overflow = '';
-    showToast('تم تحديث الملف الشخصي بنجاح', 'success');
-  });
-
-  // ============================================================
-  // 4. تغيير كلمة المرور (مودال)
-  // ============================================================
-  const changePasswordBtn = document.getElementById('changePasswordBtn');
-  const changePasswordModal = document.getElementById('changePasswordModal');
-  const oldPasswordInput = document.getElementById('oldPassword');
-  const newPasswordInput = document.getElementById('newPassword');
-  const confirmPasswordInput = document.getElementById('confirmPassword');
-  const savePasswordBtn = document.getElementById('savePasswordBtn');
-
-  changePasswordBtn.addEventListener('click', function() {
-    // تفريغ الحقول
-    oldPasswordInput.value = '';
-    newPasswordInput.value = '';
-    confirmPasswordInput.value = '';
-    changePasswordModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => oldPasswordInput.focus(), 100);
-  });
-
-  document.querySelectorAll('[data-close="changePasswordModal"]').forEach(btn => {
-    btn.addEventListener('click', function() {
-      changePasswordModal.classList.remove('active');
-      document.body.style.overflow = '';
-    });
-  });
-
-  savePasswordBtn.addEventListener('click', function() {
-    const old = oldPasswordInput.value.trim();
-    const newPass = newPasswordInput.value.trim();
-    const confirm = confirmPasswordInput.value.trim();
-
-    if (!old) {
-      showToast('يرجى إدخال كلمة المرور الحالية', 'warning');
-      oldPasswordInput.focus();
-      return;
-    }
-    if (!newPass || newPass.length < 6) {
-      showToast('كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل', 'warning');
-      newPasswordInput.focus();
-      return;
-    }
-    if (newPass !== confirm) {
-      showToast('كلمة المرور الجديدة وتأكيدها غير متطابقين', 'warning');
-      confirmPasswordInput.focus();
-      return;
-    }
-
-    // في الواقع هنا يجب التحقق من كلمة المرور الحالية مع الخادم، لكننا نستخدم localStorage وهمي
-    const storedPassword = localStorage.getItem('app_password') || '123456'; // كلمة مرور افتراضية
-    if (old !== storedPassword) {
-      showToast('كلمة المرور الحالية غير صحيحة', 'error');
-      oldPasswordInput.focus();
-      return;
-    }
-
-    // حفظ كلمة المرور الجديدة
-    localStorage.setItem('app_password', newPass);
-    changePasswordModal.classList.remove('active');
-    document.body.style.overflow = '';
-    showToast('تم تغيير كلمة المرور بنجاح', 'success');
-  });
-
-  // ============================================================
-  // 5. تغيير الشعار (رفع صورة)
-  // ============================================================
-  const changeLogoBtn = document.getElementById('changeLogoBtn');
-  const logoInput = document.getElementById('logoInput');
-
-  changeLogoBtn.addEventListener('click', function() {
-    logoInput.click();
-  });
-
-  logoInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // التحقق من نوع الملف
-    if (!file.type.startsWith('image/')) {
-      showToast('يرجى اختيار ملف صورة صالح', 'warning');
-      logoInput.value = '';
-      return;
-    }
-
-    // قراءة الملف كـ Data URL
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      const dataUrl = event.target.result;
-      profile.logo = dataUrl;
-      saveProfile(profile);
-      applyProfileToUI(profile);
-      showToast('تم تحديث الشعار بنجاح', 'success');
-      logoInput.value = '';
-    };
-    reader.onerror = function() {
-      showToast('حدث خطأ أثناء قراءة الصورة', 'error');
-    };
-    reader.readAsDataURL(file);
-  });
-
-  // ============================================================
-  // 6. إدارة التفضيلات (toggles)
-  // ============================================================
-  document.querySelectorAll('.toggle input:not(#themeToggle)').forEach(toggle => {
-    const key = toggle.dataset.name || toggle.id;
-    const saved = localStorage.getItem('setting_' + key);
-    if (saved !== null) {
-      toggle.checked = saved === 'true';
-    }
-    toggle.addEventListener('change', function() {
-      localStorage.setItem('setting_' + key, this.checked);
-    });
-  });
-
-  // ============================================================
-  // 7. مسح البيانات
-  // ============================================================
-  const clearBtn = document.getElementById('clearDataBtn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      showConfirm({
-        title: 'مسح جميع البيانات',
-        message: 'هل أنت متأكد من رغبتك في مسح جميع البيانات؟ هذا الإجراء لا يمكن التراجع عنه.',
-        confirmText: 'مسح',
-        danger: true,
-        onConfirm: function() {
-          // مسح كل شيء من localStorage ما عدا الإعدادات والملف الشخصي
-          const keysToKeep = ['app_profile', 'theme', 'setting_تنبيهات الحجوزات', 'setting_المؤثرات الصوتية'];
-          for (let key in localStorage) {
-            if (!keysToKeep.includes(key) && localStorage.hasOwnProperty(key)) {
-              localStorage.removeItem(key);
-            }
-          }
-          showToast('تم مسح جميع البيانات بنجاح', 'success');
-          // إعادة تحميل الصفحة لتحديث الواجهة
-          setTimeout(() => window.location.reload(), 500);
+    function showToast(message, type = 'info') {
+        if (
+            window.Layout &&
+            typeof Layout.showToast === 'function'
+        ) {
+            Layout.showToast(message, type);
+            return;
         }
-      });
-    });
-  }
 
-  // ============================================================
-  // 8. عناصر الإعدادات الأخرى (export, about, terms) – توجيهات بسيطة
-  // ============================================================
-  document.querySelectorAll('.settings-item[data-setting]').forEach(item => {
-    item.addEventListener('click', function() {
-      const setting = this.dataset.setting;
-      if (setting === 'export') {
-        showToast('سيتم فتح نافذة تصدير البيانات قريباً', 'info');
-      } else if (setting === 'about') {
-        showToast('شواطئ عدن – الإصدار 2.0.0', 'info');
-      } else if (setting === 'terms') {
-        showToast('سيتم عرض الشروط والأحكام', 'info');
-      }
-    });
-  });
+        if (
+            window.Utils &&
+            typeof Utils.notify === 'function'
+        ) {
+            Utils.notify(message, type);
+            return;
+        }
 
-  // ============================================================
-  // 9. إغلاق المودالات بالضغط على ESC (تم التعامل معها في layout.js)
-  // ============================================================
-  // لا حاجة لإضافة مستمع إضافي، layout.js يتولى ذلك.
+        if (type === 'error') {
+            console.error(message);
+        } else {
+            console.log(message);
+        }
+    }
+
+    function confirmAction(message) {
+        if (
+            window.Layout &&
+            typeof Layout.showConfirm === 'function'
+        ) {
+            return new Promise(resolve => {
+                Layout.showConfirm({
+                    title: 'تأكيد',
+                    message,
+                    confirmText: 'تأكيد',
+                    cancelText: 'إلغاء',
+                    danger: true,
+                    onConfirm: () => resolve(true),
+                    onCancel: () => resolve(false)
+                });
+            });
+        }
+
+        return Promise.resolve(
+            window.confirm(message)
+        );
+    }
+
+    function setText(element, value) {
+        if (!element) return;
+
+        element.textContent =
+            value === null ||
+            value === undefined ||
+            value === ''
+                ? '—'
+                : String(value);
+    }
+
+    function getLogoUrl(value) {
+        if (!value) return '';
+
+        const url = String(value);
+
+        if (
+            url.startsWith('http://') ||
+            url.startsWith('https://') ||
+            url.startsWith('data:')
+        ) {
+            return url;
+        }
+
+        if (url.startsWith('/')) {
+            return `http://127.0.0.1:8000${url}`;
+        }
+
+        return `http://127.0.0.1:8000/storage/${url}`;
+    }
+
+    function renderLogo(value) {
+        const url = getLogoUrl(value);
+
+        if (!logoImage || !logoPlaceholder) {
+            return;
+        }
+
+        if (!url) {
+            logoImage.removeAttribute('src');
+            logoImage.style.display = 'none';
+            logoPlaceholder.style.display = 'flex';
+            return;
+        }
+
+        logoImage.onload = () => {
+            logoImage.style.display = 'block';
+            logoPlaceholder.style.display = 'none';
+        };
+
+        logoImage.onerror = () => {
+            logoImage.removeAttribute('src');
+            logoImage.style.display = 'none';
+            logoPlaceholder.style.display = 'flex';
+        };
+
+        logoImage.src = url;
+    }
+
+    function renderRestaurant(data) {
+        if (!data) return;
+
+        restaurant = { ...data };
+
+        setText(businessName, data.name);
+        setText(businessDescription, data.description);
+        setText(businessDescriptionInfo, data.description);
+        setText(businessPhone, data.phone);
+        setText(businessWhatsapp, data.whatsapp);
+        setText(businessFacebook, data.facebook);
+        setText(businessInstagram, data.instagram);
+        setText(businessAddress, data.address);
+
+        renderLogo(data.logo);
+    }
+
+    async function loadRestaurant() {
+        try {
+            const data = await API.getRestaurant();
+
+            renderRestaurant(data);
+        } catch (error) {
+            console.error(
+                'Failed to load restaurant:',
+                error
+            );
+
+            showToast(
+                Utils.getErrorText(error),
+                'error'
+            );
+        }
+    }
+
+    function openModal(modal) {
+        if (!modal) return;
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modal) {
+        if (!modal) return;
+
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function openEditProfile() {
+        if (!restaurant) {
+            showToast(
+                'بيانات المطعم غير محملة بعد',
+                'warning'
+            );
+            return;
+        }
+
+        editName.value = restaurant.name || '';
+        editDescription.value = restaurant.description || '';
+        editPhone.value = restaurant.phone || '';
+        editWhatsapp.value = restaurant.whatsapp || '';
+        editFacebook.value = restaurant.facebook || '';
+        editInstagram.value = restaurant.instagram || '';
+        editAddress.value = restaurant.address || '';
+
+        openModal(editProfileModal);
+
+        setTimeout(() => {
+            editName.focus();
+        }, 100);
+    }
+
+    async function saveProfile() {
+        if (!editProfileForm.checkValidity()) {
+            editProfileForm.reportValidity();
+            return;
+        }
+
+        const payload = {
+            name: editName.value.trim(),
+            description: editDescription.value.trim() || null,
+            phone: editPhone.value.trim() || null,
+            whatsapp: editWhatsapp.value.trim() || null,
+            facebook: editFacebook.value.trim() || null,
+            instagram: editInstagram.value.trim() || null,
+            address: editAddress.value.trim() || null
+        };
+
+        if (!payload.name) {
+            showToast(
+                'اسم المطعم مطلوب',
+                'warning'
+            );
+            editName.focus();
+            return;
+        }
+
+        Utils.setLoadingButton(
+            saveProfileBtn,
+            true,
+            'جاري الحفظ...'
+        );
+
+        try {
+            const updated = await API.updateRestaurant(
+                payload
+            );
+
+            renderRestaurant(updated);
+
+            closeModal(editProfileModal);
+
+            showToast(
+                'تم حفظ بيانات المطعم بنجاح',
+                'success'
+            );
+        } catch (error) {
+            console.error(
+                'Failed to update restaurant:',
+                error
+            );
+
+            showToast(
+                Utils.getErrorText(error),
+                'error'
+            );
+        } finally {
+            Utils.setLoadingButton(
+                saveProfileBtn,
+                false
+            );
+        }
+    }
+
+    async function uploadLogo(file) {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showToast(
+                'يرجى اختيار ملف صورة صالح',
+                'warning'
+            );
+
+            logoInput.value = '';
+            return;
+        }
+
+        const maxSize = 5 * 1024 * 1024;
+
+        if (file.size > maxSize) {
+            showToast(
+                'حجم الشعار يجب ألا يتجاوز 5 ميجابايت',
+                'warning'
+            );
+
+            logoInput.value = '';
+            return;
+        }
+
+        try {
+            changeLogoBtn.disabled = true;
+            changeLogoBtn.innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> جاري الرفع...';
+
+            const updated = await API.uploadRestaurantLogo(
+                file
+            );
+
+            renderRestaurant(updated);
+
+            showToast(
+                'تم تحديث شعار المطعم بنجاح',
+                'success'
+            );
+        } catch (error) {
+            console.error(
+                'Failed to upload logo:',
+                error
+            );
+
+            showToast(
+                Utils.getErrorText(error),
+                'error'
+            );
+        } finally {
+            changeLogoBtn.disabled = false;
+            changeLogoBtn.innerHTML =
+                '<i class="fas fa-camera"></i> تغيير';
+
+            logoInput.value = '';
+        }
+    }
+
+    function loadLocalPreferences() {
+        const notifications =
+            localStorage.getItem(
+                'banquet_booking_notifications'
+            );
+
+        const sounds =
+            localStorage.getItem(
+                'banquet_sound_effects'
+            );
+
+        const darkMode =
+            localStorage.getItem(
+                'banquet_dark_mode'
+            );
+
+        if (notifications !== null) {
+            bookingNotificationsToggle.checked =
+                notifications === 'true';
+        }
+
+        if (sounds !== null) {
+            soundEffectsToggle.checked =
+                sounds === 'true';
+        }
+
+        if (darkMode !== null) {
+            themeToggle.checked =
+                darkMode === 'true';
+        }
+
+        applyTheme(themeToggle.checked);
+    }
+
+    function applyTheme(dark) {
+        document.documentElement.classList.toggle(
+            'dark',
+            Boolean(dark)
+        );
+
+        document.body.classList.toggle(
+            'dark',
+            Boolean(dark)
+        );
+    }
+
+    function savePreference(key, value) {
+        localStorage.setItem(
+            key,
+            String(Boolean(value))
+        );
+    }
+
+    function handlePreferences() {
+        bookingNotificationsToggle?.addEventListener(
+            'change',
+            () => {
+                savePreference(
+                    'banquet_booking_notifications',
+                    bookingNotificationsToggle.checked
+                );
+            }
+        );
+
+        soundEffectsToggle?.addEventListener(
+            'change',
+            () => {
+                savePreference(
+                    'banquet_sound_effects',
+                    soundEffectsToggle.checked
+                );
+            }
+        );
+
+        themeToggle?.addEventListener(
+            'change',
+            () => {
+                applyTheme(themeToggle.checked);
+
+                savePreference(
+                    'banquet_dark_mode',
+                    themeToggle.checked
+                );
+            }
+        );
+    }
+
+    function openChangePassword() {
+        changePasswordForm.reset();
+
+        openModal(changePasswordModal);
+
+        setTimeout(() => {
+            oldPassword.focus();
+        }, 100);
+    }
+
+    async function saveNewPassword() {
+        if (!changePasswordForm.checkValidity()) {
+            changePasswordForm.reportValidity();
+            return;
+        }
+
+        const current = oldPassword.value;
+        const password = newPassword.value;
+        const confirmation = confirmPassword.value;
+
+        if (password.length < 8) {
+            showToast(
+                'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل',
+                'warning'
+            );
+            newPassword.focus();
+            return;
+        }
+
+        if (password !== confirmation) {
+            showToast(
+                'تأكيد كلمة المرور غير مطابق',
+                'warning'
+            );
+            confirmPassword.focus();
+            return;
+        }
+
+        if (current === password) {
+            showToast(
+                'كلمة المرور الجديدة يجب أن تختلف عن الحالية',
+                'warning'
+            );
+            newPassword.focus();
+            return;
+        }
+
+        if (
+            !API ||
+            typeof API.changePassword !== 'function'
+        ) {
+            showToast(
+                'خدمة تغيير كلمة المرور غير متاحة حاليًا',
+                'error'
+            );
+            return;
+        }
+
+        Utils.setLoadingButton(
+            savePasswordBtn,
+            true,
+            'جاري التغيير...'
+        );
+
+        try {
+            await API.changePassword(
+                current,
+                password,
+                confirmation
+            );
+
+            closeModal(changePasswordModal);
+
+            showToast(
+                'تم تغيير كلمة المرور بنجاح',
+                'success'
+            );
+        } catch (error) {
+            console.error(
+                'Failed to change password:',
+                error
+            );
+
+            showToast(
+                Utils.getErrorText(error),
+                'error'
+            );
+        } finally {
+            Utils.setLoadingButton(
+                savePasswordBtn,
+                false
+            );
+        }
+    }
+
+    async function logout() {
+        const confirmed = await confirmAction(
+            'هل تريد تسجيل الخروج من النظام؟'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await API.logout();
+        } catch (error) {
+            console.error(
+                'Logout error:',
+                error
+            );
+        } finally {
+            if (typeof API.clearToken === 'function') {
+                API.clearToken();
+            }
+
+            localStorage.removeItem(
+                'banquet_kitchen_user'
+            );
+
+            sessionStorage.removeItem(
+                'banquet_kitchen_user'
+            );
+
+            window.location.replace(
+                'login.html'
+            );
+        }
+    }
+
+    function bindModalCloseEvents() {
+        document
+            .querySelectorAll(
+                '[data-close="editProfileModal"]'
+            )
+            .forEach(element => {
+                element.addEventListener(
+                    'click',
+                    () => closeModal(editProfileModal)
+                );
+            });
+
+        document
+            .querySelectorAll(
+                '[data-close="changePasswordModal"]'
+            )
+            .forEach(element => {
+                element.addEventListener(
+                    'click',
+                    () => closeModal(changePasswordModal)
+                );
+            });
+
+        document.addEventListener(
+            'keydown',
+            event => {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+
+                closeModal(editProfileModal);
+                closeModal(changePasswordModal);
+            }
+        );
+    }
+
+    function bindEvents() {
+        editProfileBtn?.addEventListener(
+            'click',
+            openEditProfile
+        );
+
+        saveProfileBtn?.addEventListener(
+            'click',
+            saveProfile
+        );
+
+        editProfileForm?.addEventListener(
+            'submit',
+            event => {
+                event.preventDefault();
+                saveProfile();
+            }
+        );
+
+        changeLogoBtn?.addEventListener(
+            'click',
+            () => logoInput?.click()
+        );
+
+        logoInput?.addEventListener(
+            'change',
+            event => {
+                const file = event.target.files?.[0];
+
+                if (file) {
+                    uploadLogo(file);
+                }
+            }
+        );
+
+        changePasswordBtn?.addEventListener(
+            'click',
+            openChangePassword
+        );
+
+        changePasswordSetting?.addEventListener(
+            'click',
+            openChangePassword
+        );
+
+        savePasswordBtn?.addEventListener(
+            'click',
+            saveNewPassword
+        );
+
+        changePasswordForm?.addEventListener(
+            'submit',
+            event => {
+                event.preventDefault();
+                saveNewPassword();
+            }
+        );
+
+        logoutBtn?.addEventListener(
+            'click',
+            logout
+        );
+
+        bindModalCloseEvents();
+        handlePreferences();
+    }
+
+    async function init() {
+        if (!window.API || !window.Utils) {
+            setTimeout(init, 100);
+            return;
+        }
+
+        loadLocalPreferences();
+        bindEvents();
+        await loadRestaurant();
+    }
+
+    init();
 });

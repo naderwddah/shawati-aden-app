@@ -38,7 +38,7 @@ const Layout = (function () {
   // ============================================================
   const FAB_CONFIG = {
     dashboard: { type: "link", url: "hidden" },
-    bookings: { type: "link", url: "booking-new.html" },
+    bookings: { type: "link", url: "booking-form.html" },
     "booking-new": { type: "hidden" },
     customers: { type: "modal", modalId: "addCustomerModal" },
     "customer-view": { type: "modal", modalId: "transactionModal" },
@@ -48,7 +48,7 @@ const Layout = (function () {
     invoices: { type: "link", url: "invoices.html" },
     reports: { type: "hidden" },
     settings: { type: "hidden" },
-    default: { type: "link", url: "booking-new.html" },
+    default: { type: "link", url: "booking-form.html" },
   };
 
   // ----- Theme Management (Global) -----

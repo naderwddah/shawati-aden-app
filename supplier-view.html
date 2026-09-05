@@ -1,513 +1,568 @@
 <!doctype html>
 <html dir="rtl" lang="ar" data-page="supplier-view">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
-    />
-    <meta name="theme-color" content="#8F1720" />
-    <meta name="description" content="ملف المورد - شواطئ عدن" />
-    <title>ملف المورد - شواطئ عدن</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css"
-    />
-    <link rel="stylesheet" href="assets/css/global.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" href="assets/images/logo.png" />
-    <style>
-      /* نفس تنسيقات customer-view مع تعديل بسيط */
-      .supplier-profile-header {
-        display: flex;
-        align-items: center;
-        gap: var(--space-4);
-        padding: var(--space-4);
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-4);
-        box-shadow: var(--shadow-sm);
-      }
-      .supplier-profile-header .avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: var(--radius-md);
-        background: var(--primary-soft);
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        font-weight: 700;
-        flex-shrink: 0;
-      }
-      .supplier-profile-header .info {
-        flex: 1;
-      }
-      .supplier-profile-header .info .name {
-        font-size: 18px;
-        font-weight: 800;
-        color: var(--text);
-      }
-      .supplier-profile-header .info .phone {
-        font-size: 14px;
-        color: var(--text-muted);
-        direction: ltr;
-        text-align: start;
-      }
-      .supplier-profile-header .info .category {
-        font-size: 13px;
-        color: var(--text-secondary);
-        margin-top: 2px;
-      }
-      .supplier-profile-header .status-badge {
-        flex-shrink: 0;
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="theme-color" content="#8F1720">
+  <meta name="description" content="ملف المورد">
+  <title>ملف المورد</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+
+  <style>
+    .supplier-header {
+      display:flex;
+      align-items:center;
+      gap:15px;
+      padding:18px;
+      margin-bottom:16px;
+      background:var(--surface-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      box-shadow:var(--shadow-sm);
+    }
+
+    .supplier-avatar {
+      width:58px;
+      height:58px;
+      flex-shrink:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:var(--radius-md);
+      background:var(--primary-soft);
+      color:var(--primary);
+      font-size:22px;
+      font-weight:800;
+    }
+
+    .supplier-info {
+      flex:1;
+      min-width:0;
+    }
+
+    .supplier-name {
+      font-size:19px;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    .supplier-phone {
+      margin-top:4px;
+      color:var(--text-muted);
+      font-size:13px;
+      direction:ltr;
+      text-align:right;
+    }
+
+    .supplier-notes {
+      margin-top:4px;
+      color:var(--text-secondary);
+      font-size:12px;
+    }
+
+    .balance-badge {
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .balance-badge.due {
+      background:rgba(220,38,38,.1);
+      color:var(--danger);
+    }
+
+    .balance-badge.clear {
+      background:rgba(22,163,74,.1);
+      color:var(--success);
+    }
+
+    .summary-grid {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin-bottom:18px;
+    }
+
+    .summary-card {
+      background:var(--surface-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      padding:13px;
+      text-align:center;
+      box-shadow:var(--shadow-sm);
+    }
+
+    .summary-card .label {
+      display:block;
+      color:var(--text-muted);
+      font-size:11px;
+      margin-bottom:4px;
+    }
+
+    .summary-card .value {
+      display:block;
+      color:var(--text);
+      font-size:18px;
+      font-weight:800;
+    }
+
+    .summary-card .value.danger {
+      color:var(--danger);
+    }
+
+    .summary-card .value.success {
+      color:var(--success);
+    }
+
+    .tabs {
+      display:flex;
+      gap:4px;
+      overflow-x:auto;
+      border-bottom:1px solid var(--border);
+      margin-bottom:15px;
+    }
+
+    .tab {
+      border:0;
+      background:transparent;
+      color:var(--text-muted);
+      padding:10px 16px;
+      font-family:inherit;
+      font-size:14px;
+      font-weight:700;
+      cursor:pointer;
+      border-bottom:2px solid transparent;
+      white-space:nowrap;
+    }
+
+    .tab.active {
+      color:var(--primary);
+      border-bottom-color:var(--primary);
+    }
+
+    .tab-content {
+      display:none;
+    }
+
+    .tab-content.active {
+      display:block;
+    }
+
+    .section-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:12px;
+    }
+
+    .section-title {
+      font-size:16px;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    .transaction-card {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:13px;
+      margin-bottom:9px;
+      background:var(--surface-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-sm);
+      box-shadow:var(--shadow-sm);
+    }
+
+    .transaction-icon {
+      width:40px;
+      height:40px;
+      flex-shrink:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:var(--radius-sm);
+      background:var(--surface-soft);
+      color:var(--primary);
+    }
+
+    .transaction-info {
+      flex:1;
+      min-width:0;
+    }
+
+    .transaction-title {
+      color:var(--text);
+      font-size:14px;
+      font-weight:800;
+    }
+
+    .transaction-meta {
+      margin-top:3px;
+      color:var(--text-muted);
+      font-size:11px;
+    }
+
+    .transaction-amount {
+      font-size:14px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .transaction-amount.invoice {
+      color:var(--danger);
+    }
+
+    .transaction-amount.payment {
+      color:var(--success);
+    }
+
+    .transaction-actions {
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+
+    .statement {
+      background:var(--surface-card);
+      border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      padding:8px 14px;
+      box-shadow:var(--shadow-sm);
+    }
+
+    .statement-row {
+      display:grid;
+      grid-template-columns:1fr 100px 100px 100px;
+      gap:10px;
+      align-items:center;
+      padding:11px 0;
+      border-bottom:1px solid var(--border);
+      font-size:12px;
+    }
+
+    .statement-row:last-child {
+      border-bottom:0;
+    }
+
+    .statement-head {
+      color:var(--text-muted);
+      font-weight:700;
+    }
+
+    .statement-debit {
+      color:var(--danger);
+      font-weight:800;
+      text-align:center;
+    }
+
+    .statement-credit {
+      color:var(--success);
+      font-weight:800;
+      text-align:center;
+    }
+
+    .statement-balance {
+      color:var(--text);
+      font-weight:800;
+      text-align:center;
+    }
+
+    .empty-state {
+      padding:55px 20px;
+      text-align:center;
+      color:var(--text-muted);
+    }
+
+    .empty-state i {
+      display:block;
+      font-size:45px;
+      opacity:.25;
+      margin-bottom:12px;
+    }
+
+    .empty-state h4 {
+      margin:0 0 5px;
+      color:var(--text);
+      font-size:17px;
+      font-weight:800;
+    }
+
+    .empty-state p {
+      margin:0;
+      font-size:13px;
+    }
+
+    .form-grid {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+
+    .full {
+      grid-column:1 / -1;
+    }
+
+    @media(max-width:767px) {
+      .supplier-header {
+        padding:13px;
       }
 
-      .profile-summary {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-bottom: var(--space-4);
-      }
-      .profile-summary .stat {
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 12px;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-      }
-      .profile-summary .stat .label {
-        font-size: 11px;
-        color: var(--text-muted);
-        display: block;
-      }
-      .profile-summary .stat .value {
-        font-size: 18px;
-        font-weight: 800;
-        color: var(--text);
-      }
-      .profile-summary .stat .value.danger {
-        color: var(--danger);
-      }
-      .profile-summary .stat .value.success {
-        color: var(--success);
+      .supplier-avatar {
+        width:44px;
+        height:44px;
+        font-size:17px;
       }
 
-      .tabs {
-        display: flex;
-        gap: var(--space-2);
-        border-bottom: 1px solid var(--border);
-        margin-bottom: var(--space-4);
-        overflow-x: auto;
-      }
-      .tabs .tab {
-        padding: 8px 16px;
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        transition: all 0.15s ease;
-        white-space: nowrap;
-      }
-      .tabs .tab:hover {
-        color: var(--text);
-      }
-      .tabs .tab.active {
-        color: var(--primary);
-        border-bottom-color: var(--primary);
+      .supplier-name {
+        font-size:16px;
       }
 
-      .tab-content {
-        display: none;
-      }
-      .tab-content.active {
-        display: block;
+      .balance-badge {
+        font-size:10px;
+        padding:6px 7px;
       }
 
-      .invoice-item,
-      .payment-item {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-        padding: 10px 12px;
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        margin-bottom: var(--space-2);
-        box-shadow: var(--shadow-sm);
-      }
-      .invoice-item .info,
-      .payment-item .info {
-        flex: 1;
-      }
-      .invoice-item .info .title,
-      .payment-item .info .title {
-        font-weight: 700;
-        color: var(--text);
-      }
-      .invoice-item .info .sub,
-      .payment-item .info .sub {
-        font-size: 12px;
-        color: var(--text-muted);
-      }
-      .invoice-item .amount,
-      .payment-item .amount {
-        font-weight: 700;
-        font-size: 14px;
-      }
-      .invoice-item .amount.positive {
-        color: var(--success);
-      }
-      .invoice-item .amount.negative {
-        color: var(--danger);
+      .summary-card {
+        padding:9px 5px;
       }
 
-      .statement-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border);
-        font-size: 14px;
-      }
-      .statement-item:last-child {
-        border-bottom: none;
-      }
-      .statement-item .desc {
-        flex: 1;
-      }
-      .statement-item .debit {
-        color: var(--danger);
-        font-weight: 700;
-        margin-left: 12px;
-        min-width: 70px;
-        text-align: end;
-      }
-      .statement-item .credit {
-        color: var(--success);
-        font-weight: 700;
-        margin-left: 12px;
-        min-width: 70px;
-        text-align: end;
-      }
-      .statement-item .balance {
-        font-weight: 700;
-        min-width: 80px;
-        text-align: end;
+      .summary-card .label {
+        font-size:9px;
       }
 
-      @media (max-width: 767px) {
-        .profile-summary {
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 6px;
-        }
-        .profile-summary .stat {
-          padding: 8px;
-        }
-        .profile-summary .stat .value {
-          font-size: 15px;
-        }
-        .supplier-profile-header .avatar {
-          width: 44px;
-          height: 44px;
-          font-size: 18px;
-        }
-        .supplier-profile-header .info .name {
-          font-size: 16px;
-        }
+      .summary-card .value {
+        font-size:14px;
       }
-    </style>
-  </head>
-  <body>
-    <div id="loadingScreen" class="loading-screen">...</div>
-    <div class="app">
-      <aside id="sidebar" class="sidebar"></aside>
-      <div id="sidebarOverlay" class="sidebar-overlay"></div>
-      <div class="main-area">
-        <header id="header" class="header"></header>
-        <main class="content" id="pageContent">
-          <div id="supplierViewContent">
-            <!-- سيتم تعبئتها بواسطة JavaScript -->
-          </div>
-        </main>
-      </div>
+
+      .transaction-card {
+        padding:10px;
+        gap:8px;
+        flex-wrap:wrap;
+      }
+
+      .transaction-icon {
+        width:35px;
+        height:35px;
+      }
+
+      .transaction-actions {
+        width:100%;
+        justify-content:flex-end;
+      }
+
+      .statement {
+        padding:5px 8px;
+        overflow-x:auto;
+      }
+
+      .statement-row {
+        min-width:560px;
+      }
+
+      .form-grid {
+        grid-template-columns:1fr;
+      }
+
+      .full {
+        grid-column:auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="loadingScreen" class="loading-screen">
+  <div class="loading-content">
+    <div class="loading-logo"><i class="fas fa-utensils"></i></div>
+    <h1 class="loading-title">شواطئ عدن</h1>
+    <p class="loading-subtitle">مطابخ ومطاعم</p>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<div class="app">
+  <aside id="sidebar" class="sidebar"></aside>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <div class="main-area">
+    <header id="header" class="header"></header>
+
+    <main class="content">
+      <div id="supplierViewContent"></div>
+    </main>
+  </div>
+</div>
+
+<nav id="bottomNav" class="bottom-nav"></nav>
+
+<button id="fab" class="fab" aria-label="إضافة">
+  <i class="fas fa-plus"></i>
+</button>
+
+<div id="modalContainer"></div>
+<div id="toastContainer" class="toast-container"></div>
+
+<div class="modal" id="transactionModal" role="dialog" aria-modal="true">
+  <div class="modal-overlay" data-close="transactionModal"></div>
+
+  <div class="modal-dialog" style="max-width:720px">
+
+    <div class="modal-header">
+      <h3 class="modal-title" id="transactionModalTitle">فاتورة جديدة</h3>
+
+      <button class="modal-close" data-close="transactionModal">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
 
-    <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="تسديد دفعة">
-      <i class="fas fa-plus"></i>
-    </button>
-    <div id="modalContainer"></div>
-    <div id="toastContainer" class="toast-container"></div>
+    <div class="modal-body">
 
-    <div
-      class="modal"
-      id="supplierTransactionModal"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="modal-overlay" data-close="supplierTransactionModal"></div>
-      <div class="modal-dialog" style="max-width: 780px">
-        <div class="modal-header">
-          <h3 class="modal-title" id="supplierTransactionModalTitle">
-            فاتورة جديدة
-          </h3>
-          <button
-            class="modal-close"
-            data-close="supplierTransactionModal"
-            aria-label="إغلاق"
-          >
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
+      <div class="tabs">
+        <button class="tab active" type="button" data-mode="invoice">
+          <i class="fas fa-file-invoice"></i>
+          فاتورة
+        </button>
 
-        <div
-          class="switch-group"
-          style="
-            display: flex;
-            gap: 8px;
-            padding: 0 20px 12px 20px;
-            border-bottom: 1px solid var(--border);
-          "
-        >
-          <button type="button" class="switch-btn active" data-mode="invoice">
-            <i class="fas fa-file-invoice"></i> فاتورة جديدة
-          </button>
-          <button type="button" class="switch-btn" data-mode="payment">
-            <i class="fas fa-hand-holding-dollar"></i> تسجيل دفعة
-          </button>
-        </div>
-
-        <div class="modal-body" style="padding: 20px">
-          <div id="supplierInvoiceMode" class="tab-content active">
-            <div
-              class="section-card"
-              style="
-                background: var(--surface);
-                padding: 12px 16px;
-                border-radius: var(--radius-md);
-                margin-bottom: 16px;
-              "
-            >
-              <div class="section-title">
-                <i class="fas fa-user"></i> بيانات المورد
-              </div>
-              <div style="display: flex; flex-wrap: wrap; gap: 12px">
-                <div>
-                  <span style="color: var(--text-muted)">الاسم:</span>
-                  <strong id="supplierInvoiceCustomerName">—</strong>
-                </div>
-                <div>
-                  <span style="color: var(--text-muted)">الجوال:</span>
-                  <strong id="supplierInvoiceCustomerPhone">—</strong>
-                </div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="supplierInvoiceDate"
-                >تاريخ الفاتورة <span class="req">*</span></label
-              >
-              <input type="date" class="form-input" id="supplierInvoiceDate" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="supplierInvoiceTotal"
-                >إجمالي الفاتورة <span class="req">*</span></label
-              >
-              <input
-                type="number"
-                class="form-input"
-                id="supplierInvoiceTotal"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="supplierInvoicePaid"
-                >المبلغ المدفوع</label
-              >
-              <input
-                type="number"
-                class="form-input"
-                id="supplierInvoicePaid"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="supplierInvoiceNotes"
-                >ملاحظات</label
-              >
-              <textarea
-                class="form-textarea"
-                id="supplierInvoiceNotes"
-                rows="3"
-                placeholder="ملاحظات الفاتورة"
-              ></textarea>
-            </div>
-          </div>
-
-          <div
-            id="supplierPaymentMode"
-            class="tab-content"
-            style="display: none"
-          >
-            <div
-              class="section-card"
-              style="
-                background: var(--surface);
-                padding: 12px 16px;
-                border-radius: var(--radius-md);
-                margin-bottom: 16px;
-              "
-            >
-              <div style="display: flex; flex-wrap: wrap; gap: 12px">
-                <div>
-                  <span style="color: var(--text-muted)">المورد:</span>
-                  <strong id="supplierPaymentCustomerName">—</strong>
-                </div>
-                <div>
-                  <span style="color: var(--text-muted)">الجوال:</span>
-                  <strong id="supplierPaymentCustomerPhone">—</strong>
-                </div>
-              </div>
-            </div>
-
-            <div
-              style="
-                background: var(--surface);
-                padding: 12px 16px;
-                border-radius: var(--radius-md);
-                margin-bottom: 16px;
-                display: flex;
-                justify-content: space-between;
-              "
-            >
-              <span style="color: var(--text-muted)">المستحق الحالي</span>
-              <span
-                id="supplierPaymentCurrentBalance"
-                style="font-weight: 700; color: var(--danger)"
-                >0.00 ر.س</span
-              >
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="supplierPaymentAmount"
-                >المبلغ المدفوع <span class="req">*</span></label
-              >
-              <input
-                type="number"
-                class="form-input form-input-lg"
-                id="supplierPaymentAmount"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label"
-                >طريقة الدفع <span class="req">*</span></label
-              >
-              <div style="display: flex; gap: 12px; flex-wrap: wrap">
-                <label class="payment-method-option"
-                  ><input
-                    type="radio"
-                    name="supplierPaymentMethod"
-                    value="نقدي"
-                    checked
-                  /><span>نقدي</span></label
-                >
-                <label class="payment-method-option"
-                  ><input
-                    type="radio"
-                    name="supplierPaymentMethod"
-                    value="تحويل بنكي"
-                  /><span>تحويل بنكي</span></label
-                >
-                <label class="payment-method-option"
-                  ><input
-                    type="radio"
-                    name="supplierPaymentMethod"
-                    value="شبكة"
-                  /><span>شبكة</span></label
-                >
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="supplierPaymentNotes"
-                >ملاحظات الدفعة</label
-              >
-              <textarea
-                class="form-textarea"
-                id="supplierPaymentNotes"
-                rows="2"
-                placeholder="ملاحظات (اختياري)"
-              ></textarea>
-            </div>
-
-            <div
-              style="
-                background: var(--surface);
-                padding: 12px 16px;
-                border-radius: var(--radius-md);
-                border: 1px solid var(--border);
-              "
-            >
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  padding: 4px 0;
-                "
-              >
-                <span style="color: var(--text-muted)">المستحق بعد الدفعة</span>
-                <span
-                  id="supplierPaymentAfterBalance"
-                  style="font-weight: 700; color: var(--danger)"
-                  >0.00 ر.س</span
-                >
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            padding: 16px 20px 20px;
-            border-top: 1px solid var(--border);
-          "
-        >
-          <button
-            class="btn btn-secondary"
-            data-close="supplierTransactionModal"
-          >
-            إلغاء
-          </button>
-          <button class="btn btn-primary" id="supplierTransactionSaveBtn">
-            حفظ الفاتورة
-          </button>
-        </div>
+        <button class="tab" type="button" data-mode="payment">
+          <i class="fas fa-money-bill-wave"></i>
+          دفعة
+        </button>
       </div>
+
+      <div id="invoiceForm">
+
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label class="form-label">رقم الفاتورة</label>
+            <input
+              type="text"
+              class="form-input"
+              id="invoiceNumber"
+              placeholder="اختياري"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">تاريخ الفاتورة <span class="req">*</span></label>
+            <input
+              type="date"
+              class="form-input"
+              id="invoiceDate"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">إجمالي الفاتورة <span class="req">*</span></label>
+            <input
+              type="number"
+              class="form-input"
+              id="invoiceTotal"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">التفاصيل</label>
+            <input
+              type="text"
+              class="form-input"
+              id="invoiceDetails"
+              placeholder="مثال: مواد غذائية"
+            >
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">ملاحظات</label>
+            <textarea
+              class="form-textarea"
+              id="invoiceNotes"
+              rows="3"
+              placeholder="ملاحظات الفاتورة"
+            ></textarea>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div id="paymentForm" style="display:none">
+
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label class="form-label">تاريخ الدفعة <span class="req">*</span></label>
+            <input
+              type="datetime-local"
+              class="form-input"
+              id="paymentDate"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">المبلغ <span class="req">*</span></label>
+            <input
+              type="number"
+              class="form-input"
+              id="paymentAmount"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+            >
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">طريقة الدفع <span class="req">*</span></label>
+            <select class="form-input" id="paymentMethod"></select>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">ملاحظات</label>
+            <textarea
+              class="form-textarea"
+              id="paymentNotes"
+              rows="3"
+              placeholder="ملاحظات الدفعة"
+            ></textarea>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
 
-    <script src="assets/js/core/utils.js"></script>
-    <script src="assets/js/core/api.js"></script>
-    <script src="assets/js/components/layout.js"></script>
-    <script src="assets/js/pages/supplier-view.js"></script>
-  </body>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="transactionModal">
+        إلغاء
+      </button>
+
+      <button class="btn btn-primary" id="saveTransaction">
+        حفظ الفاتورة
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="assets/js/core/utils.js"></script>
+<script src="assets/js/core/api.js"></script>
+<script src="assets/js/components/layout.js"></script>
+<script src="assets/js/pages/supplier-view.js"></script>
+
+</body>
 </html>

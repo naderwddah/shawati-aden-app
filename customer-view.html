@@ -1,471 +1,281 @@
 <!doctype html>
 <html dir="rtl" lang="ar" data-page="customer-view">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="theme-color" content="#8F1720" />
-    <meta name="description" content="ملف العميل - شواطئ عدن" />
-    <title>ملف العميل - شواطئ عدن</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="assets/css/global.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" href="assets/images/logo.png" />
-    <style>
-      /* تنسيقات حصرية لصفحة عرض العميل */
-      .customer-profile-header {
-        display: flex;
-        align-items: center;
-        gap: var(--space-4);
-        padding: var(--space-4);
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-4);
-        box-shadow: var(--shadow-sm);
-      }
-      .customer-profile-header .avatar {
-        width: 56px;
-        height: 56px;
-        border-radius: var(--radius-md);
-        background: var(--primary-soft);
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        font-weight: 700;
-        flex-shrink: 0;
-      }
-      .customer-profile-header .info {
-        flex: 1;
-      }
-      .customer-profile-header .info .name {
-        font-size: 18px;
-        font-weight: 800;
-        color: var(--text);
-      }
-      .customer-profile-header .info .phone {
-        font-size: 14px;
-        color: var(--text-muted);
-        direction: ltr;
-        text-align: start;
-      }
-      .customer-profile-header .info .address {
-        font-size: 13px;
-        color: var(--text-secondary);
-        margin-top: 2px;
-      }
-      .customer-profile-header .status-badge {
-        flex-shrink: 0;
-      }
-
-      .profile-summary {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-bottom: var(--space-4);
-      }
-      .profile-summary .stat {
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 12px;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-      }
-      .profile-summary .stat .label {
-        font-size: 11px;
-        color: var(--text-muted);
-        display: block;
-      }
-      .profile-summary .stat .value {
-        font-size: 18px;
-        font-weight: 800;
-        color: var(--text);
-      }
-      .profile-summary .stat .value.danger {
-        color: var(--danger);
-      }
-      .profile-summary .stat .value.success {
-        color: var(--success);
-      }
-
-      .tabs {
-        display: flex;
-        gap: var(--space-2);
-        border-bottom: 1px solid var(--border);
-        margin-bottom: var(--space-4);
-        overflow-x: auto;
-      }
-      .tabs .tab {
-        padding: 8px 16px;
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        transition: all 0.15s ease;
-        white-space: nowrap;
-      }
-      .tabs .tab:hover {
-        color: var(--text);
-      }
-      .tabs .tab.active {
-        color: var(--primary);
-        border-bottom-color: var(--primary);
-      }
-
-      .tab-content {
-        display: none;
-      }
-      .tab-content.active {
-        display: block;
-      }
-
-      .invoice-item {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--space-2);
-        padding: 12px 14px;
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        margin-bottom: var(--space-2);
-        box-shadow: var(--shadow-sm);
-        transition: all 0.15s ease;
-      }
-      .invoice-item:hover {
-        border-color: var(--border-strong);
-      }
-      .invoice-item .info {
-        flex: 1;
-        min-width: 120px;
-      }
-      .invoice-item .info .title {
-        font-weight: 700;
-        color: var(--text);
-        font-size: 14px;
-      }
-      .invoice-item .info .sub {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 2px;
-      }
-      .invoice-item .info .sub span {
-        margin-left: 8px;
-      }
-      .invoice-item .amount-section {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--space-2);
-      }
-      .invoice-item .amount-section .total {
-        font-weight: 700;
-        font-size: 14px;
-        color: var(--danger);
-      }
-      .invoice-item .amount-section .paid {
-        font-size: 12px;
-        color: var(--text-muted);
-      }
-      .invoice-item .amount-section .remaining {
-        font-size: 12px;
-        color: var(--danger);
-        font-weight: 700;
-      }
-      .invoice-item .actions {
-        display: flex;
-        gap: 2px;
-        flex-shrink: 0;
-      }
-
-      .payment-item {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--space-2);
-        padding: 12px 14px;
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        margin-bottom: var(--space-2);
-        box-shadow: var(--shadow-sm);
-        transition: all 0.15s ease;
-      }
-      .payment-item:hover {
-        border-color: var(--border-strong);
-      }
-      .payment-item .info {
-        flex: 1;
-        min-width: 120px;
-      }
-      .payment-item .info .title {
-        font-weight: 700;
-        color: var(--text);
-        font-size: 14px;
-      }
-      .payment-item .info .sub {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 2px;
-      }
-      .payment-item .amount {
-        font-weight: 700;
-        font-size: 14px;
-        color: var(--success);
-      }
-      .payment-item .actions {
-        display: flex;
-        gap: 2px;
-        flex-shrink: 0;
-      }
-
-      .statement-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border);
-        font-size: 14px;
-        align-items: center;
-      }
-      .statement-item:last-child {
-        border-bottom: none;
-      }
-      .statement-item .desc {
-        flex: 1;
-        min-width: 100px;
-      }
-      .statement-item .desc .date {
-        color: var(--text-muted);
-        font-size: 12px;
-        margin-right: 8px;
-      }
-      .statement-item .debit {
-        color: var(--danger);
-        font-weight: 700;
-        margin-left: 12px;
-        min-width: 70px;
-        text-align: end;
-      }
-      .statement-item .credit {
-        color: var(--success);
-        font-weight: 700;
-        margin-left: 12px;
-        min-width: 70px;
-        text-align: end;
-      }
-      .statement-item .balance {
-        font-weight: 700;
-        min-width: 80px;
-        text-align: end;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: var(--space-8) var(--space-4);
-        color: var(--text-muted);
-      }
-      .empty-state i {
-        font-size: 36px;
-        opacity: 0.3;
-        margin-bottom: var(--space-3);
-        display: block;
-      }
-      .empty-state h4 {
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--text);
-        margin-bottom: var(--space-1);
-      }
-      .empty-state p {
-        font-size: 14px;
-      }
-
-      @media (max-width: 767px) {
-        .profile-summary {
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 6px;
-        }
-        .profile-summary .stat {
-          padding: 8px;
-        }
-        .profile-summary .stat .value {
-          font-size: 15px;
-        }
-        .customer-profile-header .avatar {
-          width: 44px;
-          height: 44px;
-          font-size: 18px;
-        }
-        .customer-profile-header .info .name {
-          font-size: 16px;
-        }
-        .invoice-item {
-          padding: 10px 12px;
-        }
-        .payment-item {
-          padding: 10px 12px;
-        }
-        .statement-item {
-          font-size: 13px;
-          flex-wrap: wrap;
-          gap: 4px;
-        }
-        .statement-item .desc {
-          width: 100%;
-        }
-        .statement-item .debit,
-        .statement-item .credit,
-        .statement-item .balance {
-          min-width: 50px;
-          font-size: 13px;
-        }
-      }
-    </style>
-    <style>
-  .switch-group .switch-btn {
-    padding: 8px 16px;
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
-    font-weight: 500;
-    border-radius: var(--radius-full);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .switch-group .switch-btn:hover {
-    background: var(--surface);
-    color: var(--text);
-  }
-  .switch-group .switch-btn.active {
-    background: var(--primary);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(143,23,32,0.25);
-  }
-  .switch-group .switch-btn i {
-    font-size: 14px;
-  }
-  .payment-method-option {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--bg);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    font-size: 14px;
-    color: var(--text-secondary);
-  }
-  .payment-method-option:has(input:checked) {
-    border-color: var(--primary);
-    background: var(--primary-soft);
-    color: var(--primary);
-  }
-  .payment-method-option input {
-    display: none;
-  }
-  .section-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 12px 14px;
-  }
-  .section-title {
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  @media (max-width: 600px) {
-    .modal-dialog {
-      max-width: 95vw;
-    }
-    .switch-group .switch-btn {
-      font-size: 13px;
-      padding: 6px 12px;
-    }
-    .modal-body {
-      padding: 12px !important;
-    }
-    .section-card {
-      padding: 10px;
-    }
-    .form-grid-2 {
-      grid-template-columns: 1fr;
-    }
-  }
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="theme-color" content="#8F1720">
+<meta name="description" content="ملف العميل - شواطئ عدن">
+<title>ملف العميل - شواطئ عدن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
+<link rel="stylesheet" href="assets/css/global.css">
+<link rel="stylesheet" href="assets/css/layout.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="assets/images/logo.png">
+<style>
+.customer-profile-header{display:flex;align-items:center;gap:16px;padding:16px;background:var(--surface-card);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.customer-profile-header .avatar{width:56px;height:56px;border-radius:var(--radius-md);background:var(--primary-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex-shrink:0}
+.customer-profile-header .info{flex:1;min-width:0}
+.customer-profile-header .name{font-size:18px;font-weight:800;color:var(--text)}
+.customer-profile-header .phone{font-size:14px;color:var(--text-muted);direction:ltr;text-align:start;margin-top:3px}
+.customer-profile-header .notes{font-size:12px;color:var(--text-muted);margin-top:5px}
+.customer-profile-header .status-badge{flex-shrink:0}
+.profile-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.profile-summary .stat{background:var(--surface-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;text-align:center;box-shadow:var(--shadow-sm)}
+.profile-summary .label{display:block;font-size:11px;color:var(--text-muted)}
+.profile-summary .value{display:block;font-size:18px;font-weight:800;color:var(--text);margin-top:3px}
+.profile-summary .value.danger{color:var(--danger)}
+.profile-summary .value.success{color:var(--success)}
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.tabs .tab{padding:9px 16px;font-size:14px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.invoice-item,.payment-item{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:13px 14px;background:var(--surface-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;box-shadow:var(--shadow-sm)}
+.invoice-item .info,.payment-item .info{flex:1;min-width:180px}
+.invoice-item .title,.payment-item .title{font-size:14px;font-weight:700;color:var(--text)}
+.invoice-item .sub,.payment-item .sub{font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.8}
+.invoice-meta{display:flex;flex-wrap:wrap;gap:8px}
+.invoice-item .amount-section{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.invoice-item .total{font-weight:800;font-size:14px;color:var(--danger)}
+.invoice-item .paid{font-size:12px;color:var(--text-muted)}
+.invoice-item .remaining{font-size:12px;color:var(--danger);font-weight:700}
+.invoice-item .actions,.payment-item .actions{display:flex;gap:4px;flex-shrink:0}
+.payment-item .amount{font-weight:800;font-size:14px;color:var(--success)}
+.statement-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.statement-item:last-child{border-bottom:0}
+.statement-item .desc{flex:1;min-width:120px}
+.statement-item .date{color:var(--text-muted);font-size:12px;margin-right:8px}
+.statement-item .debit,.statement-item .credit{font-weight:700;min-width:85px;text-align:end}
+.statement-item .debit{color:var(--danger)}
+.statement-item .credit{color:var(--success)}
+.statement-item .balance{font-weight:700;min-width:90px;text-align:end}
+.empty-state{text-align:center;padding:48px 16px;color:var(--text-muted)}
+.empty-state i{display:block;font-size:36px;opacity:.3;margin-bottom:12px}
+.empty-state h4{font-size:16px;font-weight:700;color:var(--text);margin-bottom:5px}
+.empty-state p{font-size:14px}
+.switch-group{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px}
+.switch-btn{padding:8px 16px;border:0;background:transparent;color:var(--text-muted);font-weight:600;border-radius:999px;cursor:pointer;font-family:inherit;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+.switch-btn.active{background:var(--primary);color:#fff}
+.section-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px}
+.section-title{font-weight:700;margin-bottom:10px;color:var(--text-secondary);display:flex;align-items:center;gap:7px}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.item-row{display:grid;grid-template-columns:minmax(150px,1fr) 100px 120px 110px 38px;gap:8px;align-items:center;margin-bottom:8px}
+.item-total{font-weight:700;text-align:center}
+.payment-method-option{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);cursor:pointer;font-size:14px;color:var(--text-secondary)}
+.payment-method-option:has(input:checked){border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+.payment-method-option input{display:none}
+@media(max-width:767px){
+.customer-profile-header{padding:12px;gap:10px}
+.customer-profile-header .avatar{width:46px;height:46px;font-size:19px}
+.customer-profile-header .name{font-size:16px}
+.profile-summary{gap:6px}
+.profile-summary .stat{padding:9px 5px}
+.profile-summary .value{font-size:14px}
+.invoice-item,.payment-item{padding:10px}
+.invoice-item .info,.payment-item .info{min-width:130px;width:100%}
+.invoice-item .amount-section{width:100%;justify-content:flex-start}
+.invoice-item .actions,.payment-item .actions{margin-inline-start:auto}
+.form-grid-2{grid-template-columns:1fr}
+.item-row{grid-template-columns:1fr 75px 90px 90px 36px}
+.modal-dialog{max-width:95vw}
+}
 </style>
-  </head>
-  <body>
-    <div id="loadingScreen" class="loading-screen">
-      <div class="loading-content">
-        <div class="loading-logo"><i class="fas fa-utensils"></i></div>
-        <h1 class="loading-title">شواطئ عدن</h1>
-        <p class="loading-subtitle">مطابخ ومطاعم</p>
-        <div class="loading-dots"><span></span><span></span><span></span></div>
-      </div>
-    </div>
+</head>
+<body>
+<div class="app">
+<aside id="sidebar" class="sidebar"></aside>
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
+<div class="main-area">
+<header id="header" class="header"></header>
+<main class="content" id="pageContent">
+<div id="customerViewContent"></div>
+</main>
+</div>
+</div>
 
-    <div class="app">
-      <aside id="sidebar" class="sidebar"></aside>
-      <div id="sidebarOverlay" class="sidebar-overlay"></div>
-      <div class="main-area">
-        <header id="header" class="header"></header>
-        <main class="content" id="pageContent">
-          <div id="customerViewContent">
-            <!-- سيتم تعبئتها بواسطة JavaScript -->
-          </div>
-        </main>
-      </div>
-    </div>
+<nav id="bottomNav" class="bottom-nav"></nav>
+<button id="fab" class="fab" type="button" aria-label="إضافة"><i class="fas fa-plus"></i></button>
+<div id="modalContainer"></div>
+<div id="toastContainer" class="toast-container"></div>
 
-    <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="إضافة حجز/دفعة"><i class="fas fa-plus"></i></button>
-    <div id="modalContainer"></div>
-    <div id="toastContainer" class="toast-container"></div>
+<div class="modal" id="transactionModal" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
+<div class="modal-overlay" data-close="transactionModal"></div>
+<div class="modal-dialog modal-lg">
+<div class="modal-header">
+<h3 class="modal-title" id="transactionModalTitle">حجز جديد</h3>
+<button type="button" class="modal-close" data-close="transactionModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+</div>
 
-    <!-- تم إزالة customerPaymentModal – استخدام transactionModal فقط -->
+<div class="modal-body">
+<div class="switch-group">
+<button type="button" class="switch-btn active" data-mode="booking" onclick="setTransactionMode('booking')"><i class="fas fa-calendar-plus"></i> حجز</button>
+<button type="button" class="switch-btn" data-mode="payment" onclick="setTransactionMode('payment')"><i class="fas fa-money-bill-wave"></i> دفعة</button>
+</div>
 
+<div id="bookingMode">
+<div class="section-card" style="margin-bottom:12px">
+<div class="section-title"><i class="fas fa-user"></i> بيانات العميل</div>
+<div style="display:flex;gap:14px;flex-wrap:wrap">
+<span><strong>الاسم:</strong> <span id="bookingCustomerName">—</span></span>
+<span><strong>الجوال:</strong> <span id="bookingCustomerPhone">—</span></span>
+</div>
+</div>
 
-<!-- سكريبت التبديل بين الوضعين -->
+<div class="form-grid-2">
+<div class="form-group">
+<label class="form-label" for="bookingEventDate">تاريخ المناسبة <span class="req">*</span></label>
+<input type="date" class="form-input" id="bookingEventDate">
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingDeliveryTime">وقت التسليم <span class="req">*</span></label>
+<input type="time" class="form-input" id="bookingDeliveryTime">
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingDeliveryPeriod">الفترة <span class="req">*</span></label>
+<select class="form-input" id="bookingDeliveryPeriod">
+<option value="صباحاً">صباحاً</option>
+<option value="ظهراً" selected>ظهراً</option>
+<option value="مساءً">مساءً</option>
+</select>
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingMark">العلامة</label>
+<input type="text" class="form-input" id="bookingMark" placeholder="علامة أو وصف مختصر">
+</div>
+<div class="form-group" style="grid-column:1/-1">
+<label class="form-label" for="bookingAddress">موقع / عنوان التوصيل <span class="req">*</span></label>
+<input type="text" class="form-input" id="bookingAddress" placeholder="أدخل موقع أو عنوان التوصيل">
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingPlateDeposit">تأمين الصحون</label>
+<input type="number" class="form-input" id="bookingPlateDeposit" min="0" step="0.01" placeholder="0">
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingPlateReturned">المبلغ المرتجع من التأمين</label>
+<input type="number" class="form-input" id="bookingPlateReturned" min="0" step="0.01" placeholder="0">
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingStatus">حالة الفاتورة</label>
+<select class="form-input" id="bookingStatus">
+<option value="new">جديد</option>
+<option value="confirmed">مؤكد</option>
+<option value="completed">مكتمل</option>
+<option value="cancelled">ملغي</option>
+</select>
+</div>
+<div class="form-group">
+<label class="form-label" for="bookingPaymentMethod">طريقة الدفع للدفعة الأولى</label>
+<select class="form-input" id="bookingPaymentMethod"></select>
+</div>
+</div>
+
+<div class="section-card" style="margin-top:12px">
+<div class="section-title"><i class="fas fa-utensils"></i> الأصناف</div>
+<div id="bookingItemsContainer"></div>
+<button type="button" class="btn btn-sm btn-secondary" id="addBookingItemBtn"><i class="fas fa-plus"></i> إضافة صنف</button>
+</div>
+
+<div class="form-grid-2" style="margin-top:12px">
+<div class="form-group">
+<label class="form-label" for="bookingNotes">ملاحظات</label>
+<textarea class="form-input" id="bookingNotes" rows="3" placeholder="ملاحظات الحجز"></textarea>
+</div>
+<div>
+<div class="form-group" id="initialPaymentGroup">
+<label class="form-label" for="bookingInitialPayment">الدفعة الأولى</label>
+<input type="number" class="form-input" id="bookingInitialPayment" min="0" step="0.01" placeholder="0">
+</div>
+<div class="form-group" id="initialPaymentMethodGroup">
+<label class="form-label">طريقة الدفع</label>
+<select class="form-input" id="bookingPaymentMethod"></select>
+</div>
+</div>
+</div>
+
+<div class="section-card" style="margin-top:12px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+<div><span style="font-size:12px;color:var(--text-muted)">إجمالي الأصناف</span><br><span id="bookingItemsTotal" style="font-weight:800">0 ر.س</span></div>
+<div><span style="font-size:12px;color:var(--text-muted)">تأمين الصحون</span><br><span id="bookingPlateDisplay" style="font-weight:800">0 ر.س</span></div>
+<div><span style="font-size:12px;color:var(--text-muted)">إجمالي الفاتورة</span><br><span id="bookingGrandTotal" style="font-weight:800;color:var(--danger)">0 ر.س</span></div>
+<div><span style="font-size:12px;color:var(--text-muted)">المتبقي</span><br><span id="bookingRemainingPreview" style="font-weight:800;color:var(--danger)">المتبقي بعد الدفعة: 0 ر.س</span></div>
+</div>
+</div>
+</div>
+
+<div id="paymentMode" style="display:none">
+<div class="section-card" style="margin-bottom:12px">
+<div class="section-title"><i class="fas fa-user"></i> بيانات العميل</div>
+<div style="display:flex;gap:14px;flex-wrap:wrap">
+<span><strong>الاسم:</strong> <span id="paymentCustomerName">—</span></span>
+<span><strong>الجوال:</strong> <span id="paymentCustomerPhone">—</span></span>
+</div>
+</div>
+
+<div class="section-card" style="margin-bottom:12px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+<div><span style="font-size:12px;color:var(--text-muted)">الرصيد الحالي</span><br><span id="paymentCurrentBalance" style="font-weight:800;font-size:18px">0 ر.س</span></div>
+<div><span style="font-size:12px;color:var(--text-muted)">الرصيد بعد الدفع</span><br><span id="paymentAfterBalance" style="font-weight:800;font-size:18px;color:var(--success)">0 ر.س</span></div>
+</div>
+</div>
+
+<div class="form-grid-2">
+<div class="form-group">
+<label class="form-label" for="paymentAmount">المبلغ <span class="req">*</span></label>
+<input type="number" class="form-input" id="paymentAmount" min="0.01" step="0.01" placeholder="0">
+</div>
+<div class="form-group">
+<label class="form-label" for="paymentDate">تاريخ ووقت الدفع <span class="req">*</span></label>
+<input type="datetime-local" class="form-input" id="paymentDate">
+</div>
+<div class="form-group" style="grid-column:1/-1">
+<label class="form-label" for="paymentBooking">ربط الدفعة بفاتورة</label>
+<select class="form-input" id="paymentBooking"></select>
+</div>
+</div>
+
+<div class="form-group">
+<label class="form-label">طريقة الدفع</label>
+<div id="paymentMethodsContainer" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+</div>
+
+<div class="form-group">
+<label class="form-label" for="paymentNotes">ملاحظات</label>
+<textarea class="form-input" id="paymentNotes" rows="3" placeholder="ملاحظات الدفعة"></textarea>
+</div>
+</div>
+</div>
+
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-close="transactionModal">إلغاء</button>
+<button type="button" class="btn btn-primary" id="transactionSaveBtn">حفظ الحجز</button>
+</div>
+</div>
+</div>
+
 <script>
-  function setTransactionMode(mode) {
-    // تحديث أزرار التبديل
-    document.querySelectorAll('.switch-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.mode === mode);
-    });
-    // إظهار/إخفاء المحتوى
-    document.getElementById('bookingMode').style.display = (mode === 'booking') ? 'block' : 'none';
-    document.getElementById('paymentMode').style.display = (mode === 'payment') ? 'block' : 'none';
-    // تحديث عنوان المودال
-    const title = document.getElementById('transactionModalTitle');
-    if (mode === 'booking') {
-      title.textContent = 'حجز جديد';
-      document.getElementById('transactionSaveBtn').textContent = 'حفظ الحجز';
-    } else {
-      title.textContent = 'تسجيل دفعة';
-      document.getElementById('transactionSaveBtn').textContent = 'تسجيل الدفعة';
-    }
-  }
+function setTransactionMode(mode){
+document.querySelectorAll('.switch-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===mode));
+const booking=document.getElementById('bookingMode');
+const payment=document.getElementById('paymentMode');
+if(booking) booking.style.display=mode==='booking'?'block':'none';
+if(payment) payment.style.display=mode==='payment'?'block':'none';
+const title=document.getElementById('transactionModalTitle');
+const save=document.getElementById('transactionSaveBtn');
+if(mode==='booking'){
+if(title) title.textContent='حجز جديد';
+if(save) save.textContent='حفظ الحجز';
+}else{
+if(title) title.textContent='تسجيل دفعة';
+if(save) save.textContent='تسجيل الدفعة';
+}
+}
 </script>
-    <script src="assets/js/core/utils.js"></script>
-    <script src="assets/js/core/api.js"></script>
-    <script src="assets/js/components/layout.js"></script>
-    <script src="assets/js/pages/customer-view.js"></script>
-  </body>
+<script src="assets/js/core/utils.js"></script>
+<script src="assets/js/core/api.js"></script>
+<script src="assets/js/components/layout.js"></script>
+<script src="assets/js/pages/customer-view.js"></script>
+</body>
 </html>

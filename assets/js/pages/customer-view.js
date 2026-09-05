@@ -1,87 +1,366 @@
-// ============================================================
-// assets/js/pages/customer-view.js
-// ملف العميل – عرض الفواتير والمدفوعات، إضافة/تعديل/حذف، تصدير
-// يتحكم بالكامل بـ transactionModal (تبويبات: حجز / دفعة)
-// ============================================================
+(function () {
+  'use strict';
 
-document.addEventListener("DOMContentLoaded", function () {
-  "use strict";
-
+  let customerId = 0;
   let currentCustomer = null;
   let currentBookings = [];
   let currentPayments = [];
+  let paymentMethods = [];
   let allItems = [];
   let editingBookingId = null;
-  let editingPaymentId = null;
-  let isEditMode = false;
+  let saving = false;
 
-  // ============================================================
-  // 1. تحميل البيانات وعرضها
-  // ============================================================
-  function loadCustomerData() {
-    const params = new URLSearchParams(window.location.search);
-    const customerId = parseInt(params.get("id"));
+  const container = document.getElementById('customerViewContent');
+  const fab = document.getElementById('fab');
 
-    if (!customerId) {
-      showEmptyState(
-        "معرف العميل غير صحيح",
-        "يرجى العودة إلى صفحة العملاء واختيار عميل صحيح.",
-      );
-      return;
+  function toast(message, type = 'info') {
+    if (window.Layout && typeof Layout.showToast === 'function') {
+      Layout.showToast(message, type);
+    } else {
+      alert(message);
+    }
+  }
+
+  function confirmAction(options) {
+    if (window.Layout && typeof Layout.showConfirm === 'function') {
+      Layout.showConfirm(options);
+    } else if (confirm(options.message || 'هل أنت متأكد؟')) {
+      options.onConfirm && options.onConfirm();
+    }
+  }
+
+  function money(value) {
+    const amount = Number(value) || 0;
+
+    if (window.API && typeof API.formatCurrency === 'function') {
+      return API.formatCurrency(amount);
     }
 
+    return amount.toLocaleString('ar-SA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + ' ر.س';
+  }
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function initials(name) {
+    return String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(word => word[0])
+      .join('')
+      .slice(0, 2) || 'ع';
+  }
+
+  function dateOnly(value) {
+    if (!value) return '';
+    return String(value).slice(0, 10);
+  }
+
+  function nowDate() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function nowDateTime() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function normalizeResponse(value) {
+    if (
+      value &&
+      typeof value === 'object' &&
+      Object.prototype.hasOwnProperty.call(value, 'data')
+    ) {
+      return value.data;
+    }
+
+    return value;
+  }
+
+  async function apiCall(names, ...args) {
+    for (const name of names) {
+      if (window.API && typeof window.API[name] === 'function') {
+        return normalizeResponse(await window.API[name](...args));
+      }
+    }
+
+    throw new Error('دالة API المطلوبة غير موجودة');
+  }
+
+  function accountData() {
+    const account = currentCustomer?.account || {};
+
+    return {
+      totalInvoices: Number(
+        account.total_invoices ??
+        account.totalInvoices ??
+        0
+      ),
+      totalPaid: Number(
+        account.total_paid ??
+        account.totalPaid ??
+        0
+      ),
+      balance: Number(
+        account.balance ??
+        account.total_remaining ??
+        account.totalRemaining ??
+        0
+      ),
+      balanceType:
+        account.balance_type ??
+        account.balanceType ??
+        ''
+    };
+  }
+
+  function statusText(status) {
+    return {
+      new: 'جديد',
+      confirmed: 'مؤكد',
+      completed: 'مكتمل',
+      cancelled: 'ملغي'
+    }[status] || status || 'جديد';
+  }
+
+  function statusClass(status) {
+    return `badge-status badge-${
+      ['new', 'confirmed', 'completed', 'cancelled'].includes(status)
+        ? status
+        : 'new'
+    }`;
+  }
+
+  function openModal() {
+    const modal = document.getElementById('transactionModal');
+
+    if (!modal) return;
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('transactionModal');
+
+    if (modal) {
+      modal.classList.remove('active');
+    }
+
+    document.body.style.overflow = '';
+  }
+
+  function empty(title, message = '') {
+    return `
+      <div class="empty-state">
+        <i class="fas fa-folder-open"></i>
+        <h4>${esc(title)}</h4>
+        ${message ? `<p>${esc(message)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  async function loadData() {
     if (!window.API) {
-      setTimeout(loadCustomerData, 200);
+      setTimeout(loadData, 200);
       return;
     }
 
-    currentCustomer = window.API.getCustomer(customerId);
-    if (!currentCustomer) {
-      showEmptyState("العميل غير موجود", "لم يتم العثور على عميل بهذا المعرف.");
-      return;
+    try {
+      const customer = await apiCall(['getCustomer'], customerId);
+
+      if (!customer) {
+        renderFailure(
+          'العميل غير موجود',
+          'لم يتم العثور على العميل.'
+        );
+        return;
+      }
+
+      currentCustomer = customer;
+
+      const results = await Promise.allSettled([
+        apiCall(['getBookings'], { customer_id: customerId }),
+        apiCall(['getCustomerPayments'], { customer_id: customerId }),
+        apiCall(['getCustomerAccount'], customerId),
+        apiCall(['getCustomerStatement'], customerId),
+        apiCall(['getItems']),
+        apiCall(['getPaymentMethods'])
+      ]);
+
+      const bookingsResult =
+        results[0].status === 'fulfilled'
+          ? results[0].value
+          : null;
+
+      const paymentsResult =
+        results[1].status === 'fulfilled'
+          ? results[1].value
+          : null;
+
+      const accountResult =
+        results[2].status === 'fulfilled'
+          ? results[2].value
+          : null;
+
+      const statementResult =
+        results[3].status === 'fulfilled'
+          ? results[3].value
+          : null;
+
+      const itemsResult =
+        results[4].status === 'fulfilled'
+          ? results[4].value
+          : null;
+
+      const methodsResult =
+        results[5].status === 'fulfilled'
+          ? results[5].value
+          : null;
+
+      if (itemsResult) {
+        allItems = Array.isArray(itemsResult)
+          ? itemsResult
+          : itemsResult?.data || [];
+      }
+
+      if (methodsResult) {
+        paymentMethods = Array.isArray(methodsResult)
+          ? methodsResult
+          : methodsResult?.data || [];
+      }
+
+      const customerBookings = Array.isArray(customer.bookings)
+        ? customer.bookings
+        : [];
+
+      const customerPayments = Array.isArray(customer.payments)
+        ? customer.payments
+        : [];
+
+      currentBookings = Array.isArray(bookingsResult)
+        ? bookingsResult
+        : bookingsResult?.data || customerBookings;
+
+      currentPayments = Array.isArray(paymentsResult)
+        ? paymentsResult
+        : paymentsResult?.data || customerPayments;
+
+      if (!currentBookings.length && customerBookings.length) {
+        currentBookings = customerBookings;
+      }
+
+      if (!currentPayments.length && customerPayments.length) {
+        currentPayments = customerPayments;
+      }
+
+      if (accountResult) {
+        currentCustomer.account = accountResult;
+      }
+
+      if (!currentCustomer.account && customer.account) {
+        currentCustomer.account = customer.account;
+      }
+
+      if (statementResult) {
+        currentCustomer.statement = statementResult;
+      }
+
+      render();
+    } catch (error) {
+      renderFailure(
+        'فشل تحميل بيانات العميل',
+        error.message || 'تعذر الاتصال بالخادم'
+      );
+
+      toast(
+        error.message || 'فشل تحميل بيانات العميل',
+        'error'
+      );
     }
-
-    currentBookings = window.API.getCustomerInvoices(customerId) || [];
-    currentPayments = window.API.getCustomerPayments(customerId) || [];
-    allItems = window.API.getItems() || [];
-
-    renderCustomerProfile();
   }
 
-  function showEmptyState(title, message) {
-    const container = document.getElementById("customerViewContent");
-    if (container) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-user-slash"></i>
-          <h4>${title}</h4>
-          <p>${message}</p>
-          <button class="btn btn-primary" onclick="window.location.href='customers.html'">العودة للعملاء</button>
-        </div>
-      `;
-    }
+  function renderFailure(title, message) {
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-user-slash"></i>
+        <h4>${esc(title)}</h4>
+        <p>${esc(message)}</p>
+        <button
+          class="btn btn-primary"
+          onclick="location.href='customers.html'"
+        >
+          العودة للعملاء
+        </button>
+      </div>
+    `;
   }
 
-  // ============================================================
-  // 2. عرض ملف العميل
-  // ============================================================
-  function renderCustomerProfile() {
-    const container = document.getElementById("customerViewContent");
+  function render() {
     if (!container || !currentCustomer) return;
 
-    const statement = buildStatement(currentBookings, currentPayments);
+    const account = accountData();
+    const balance = Math.max(0, account.balance);
 
     container.innerHTML = `
       <div class="customer-profile-header">
-        <div class="avatar">${getInitials(currentCustomer.name)}</div>
-        <div class="info">
-          <div class="name">${currentCustomer.name}</div>
-          <div class="phone">${currentCustomer.phone}</div>
-          <div class="address"><i class="fas fa-location-dot" style="margin-left:4px;"></i> ${currentCustomer.address || "لا يوجد عنوان"}</div>
+        <div class="avatar">
+          ${esc(initials(currentCustomer.name))}
         </div>
+
+        <div class="info">
+          <div class="name">
+            ${esc(currentCustomer.name || 'بدون اسم')}
+          </div>
+
+          <div class="phone">
+            ${esc(currentCustomer.phone || '—')}
+          </div>
+
+          ${
+            currentCustomer.notes
+              ? `
+                <div class="notes">
+                  ${esc(currentCustomer.notes)}
+                </div>
+              `
+              : ''
+          }
+        </div>
+
         <div class="status-badge">
-          <span class="badge ${currentCustomer.balance > 0 ? "badge-danger" : "badge-success"}">
-            ${currentCustomer.balance > 0 ? `متبقي ${window.API.formatCurrency(currentCustomer.balance)}` : "مسدد بالكامل"}
+          <span class="badge ${
+            currentCustomer.is_active === false
+              ? 'badge-danger'
+              : balance > 0
+                ? 'badge-danger'
+                : 'badge-success'
+          }">
+            ${
+              currentCustomer.is_active === false
+                ? 'غير نشط'
+                : balance > 0
+                  ? `متبقي ${money(balance)}`
+                  : 'مسدد'
+            }
           </span>
         </div>
       </div>
@@ -89,965 +368,2308 @@ document.addEventListener("DOMContentLoaded", function () {
       <div class="profile-summary">
         <div class="stat">
           <span class="label">إجمالي الفواتير</span>
-          <span class="value">${window.API.formatCurrency(currentCustomer.totalInvoices)}</span>
+          <span class="value">
+            ${money(account.totalInvoices)}
+          </span>
         </div>
+
         <div class="stat">
           <span class="label">إجمالي المدفوع</span>
-          <span class="value success">${window.API.formatCurrency(currentCustomer.totalPaid)}</span>
+          <span class="value success">
+            ${money(account.totalPaid)}
+          </span>
         </div>
+
         <div class="stat">
-          <span class="label">المتبقي</span>
-          <span class="value ${currentCustomer.balance > 0 ? "danger" : "success"}">${window.API.formatCurrency(currentCustomer.balance)}</span>
+          <span class="label">الرصيد المستحق</span>
+          <span class="value ${
+            balance > 0 ? 'danger' : 'success'
+          }">
+            ${money(balance)}
+          </span>
         </div>
       </div>
 
       <div class="tabs" id="profileTabs">
-        <div class="tab active" data-tab="invoices">الفواتير</div>
-        <div class="tab" data-tab="payments">المدفوعات</div>
-        <div class="tab" data-tab="statement">كشف الحساب</div>
+        <div class="tab active" data-tab="invoices">
+          الفواتير
+        </div>
+
+        <div class="tab" data-tab="payments">
+          المدفوعات
+        </div>
+
+        <div class="tab" data-tab="statement">
+          كشف الحساب
+        </div>
       </div>
 
       <div class="tab-content active" id="tab-invoices">
         ${renderInvoices()}
       </div>
+
       <div class="tab-content" id="tab-payments">
         ${renderPayments()}
       </div>
+
       <div class="tab-content" id="tab-statement">
-        ${renderStatement(statement)}
+        ${renderStatement()}
       </div>
     `;
 
-    // تفعيل التبويبات
-    document.querySelectorAll(".tab").forEach((tab) => {
-      tab.addEventListener("click", function () {
-        document
-          .querySelectorAll(".tab")
-          .forEach((t) => t.classList.remove("active"));
-        document
-          .querySelectorAll(".tab-content")
-          .forEach((tc) => tc.classList.remove("active"));
-        this.classList.add("active");
-        const target = document.getElementById("tab-" + this.dataset.tab);
-        if (target) target.classList.add("active");
+    bindTabs();
+  }
+
+  function bindTabs() {
+    document
+      .querySelectorAll('#profileTabs .tab')
+      .forEach(tab => {
+        tab.addEventListener('click', () => {
+          document
+            .querySelectorAll('#profileTabs .tab')
+            .forEach(item => item.classList.remove('active'));
+
+          document
+            .querySelectorAll('.tab-content')
+            .forEach(item => item.classList.remove('active'));
+
+          tab.classList.add('active');
+
+          document
+            .getElementById(`tab-${tab.dataset.tab}`)
+            ?.classList.add('active');
+        });
       });
-    });
-
-    attachEventListeners();
   }
 
-  // ============================================================
-  // 3. دوال مساعدة
-  // ============================================================
-  function getInitials(name) {
-    return name
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .slice(0, 2);
-  }
-
-  function buildStatement(bookings, payments) {
-    const statement = [];
-    bookings.forEach((inv) => {
-      statement.push({
-        date: inv.eventDate || inv.date,
-        description: `فاتورة #${inv.id} - ${inv.notes || "وليمة"}`,
-        debit: inv.total,
-        credit: 0,
-        id: inv.id,
-        type: "booking",
-      });
-    });
-    payments.forEach((p) => {
-      statement.push({
-        date: p.date,
-        description: `دفعة (${p.method}) - ${p.notes || ""}`,
-        debit: 0,
-        credit: p.amount,
-        id: p.id,
-        type: "payment",
-      });
-    });
-    statement.sort((a, b) => new Date(a.date) - new Date(b.date));
-    let runningBalance = 0;
-    return statement.map((row) => {
-      runningBalance += (row.debit || 0) - (row.credit || 0);
-      return { ...row, balance: runningBalance };
-    });
-  }
-
-  // ============================================================
-  // 4. عرض الفواتير (محسّن)
-  // ============================================================
-  function renderInvoices() {
-    if (!currentBookings || currentBookings.length === 0) {
-      return `<div class="empty-state"><i class="fas fa-file-invoice"></i><h4>لا توجد فواتير</h4></div>`;
-    }
-    return currentBookings
-      .map(
-        (inv) => `
-      <div class="invoice-item" data-id="${inv.id}">
-        <div class="info">
-          <div class="title">${inv.notes || "وليمة"}</div>
-          <div class="sub">
-            <span>📅 ${inv.eventDate}</span>
-            <span>👥 ${inv.guests || 0} ضيف</span>
-            <span>📌 ${inv.status || "جديد"}</span>
-          </div>
-          ${inv.items ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${inv.items.map((i) => i.name + " (x" + i.qty + ")").join(" • ")}</div>` : ""}
-        </div>
-        <div class="amount-section">
-          <span class="total">${window.API.formatCurrency(inv.total)}</span>
-          <span class="paid">مدفوع ${window.API.formatCurrency(inv.paid)}</span>
-          ${inv.remaining > 0 ? `<span class="remaining">متبقي ${window.API.formatCurrency(inv.remaining)}</span>` : ""}
-        </div>
-        <div class="actions">
-          <button class="btn-icon-sm btn-icon-primary" data-action="editBooking" title="تعديل"><i class="fas fa-pen"></i></button>
-          <button class="btn-icon-sm btn-icon-danger" data-action="deleteBooking" title="حذف"><i class="fas fa-trash"></i></button>
-          <button class="btn-icon-sm" data-action="exportBooking" title="تصدير"><i class="fas fa-file-pdf"></i></button>
-        </div>
-      </div>
-    `,
-      )
-      .join("");
-  }
-
-  // ============================================================
-  // 5. عرض المدفوعات (محسّن)
-  // ============================================================
-  function renderPayments() {
-    if (!currentPayments || currentPayments.length === 0) {
-      return `<div class="empty-state"><i class="fas fa-hand-holding-dollar"></i><h4>لا توجد مدفوعات</h4></div>`;
-    }
+  function bookingPaid(booking) {
     return currentPayments
-      .map(
-        (p) => `
-      <div class="payment-item" data-id="${p.id}">
-        <div class="info">
-          <div class="title">دفعة (${p.method})</div>
-          <div class="sub">📅 ${p.date} ${p.notes ? `• ${p.notes}` : ""}</div>
-        </div>
-        <div class="amount">+${window.API.formatCurrency(p.amount)}</div>
-        <div class="actions">
-          <button class="btn-icon-sm btn-icon-primary" data-action="editPayment" title="تعديل"><i class="fas fa-pen"></i></button>
-          <button class="btn-icon-sm btn-icon-danger" data-action="deletePayment" title="حذف"><i class="fas fa-trash"></i></button>
-        </div>
-      </div>
-    `,
+      .filter(
+        payment =>
+          Number(
+            payment.booking_id ??
+            payment.bookingId
+          ) === Number(booking.id)
       )
-      .join("");
+      .reduce(
+        (sum, payment) =>
+          sum + Number(payment.amount || 0),
+        0
+      );
   }
 
-  // ============================================================
-  // 6. عرض كشف الحساب (محسّن)
-  // ============================================================
-  function renderStatement(statement) {
-    if (!statement || statement.length === 0) {
-      return `<div class="empty-state"><i class="fas fa-receipt"></i><h4>لا توجد حركات</h4></div>`;
+  function bookingRemaining(booking) {
+    return Math.max(
+      0,
+      Number(booking.total_amount || 0) -
+      bookingPaid(booking)
+    );
+  }
+
+  function renderInvoices() {
+    if (!currentBookings.length) {
+      return empty('لا توجد فواتير');
     }
-    let html = `
-      <div style="display:flex;justify-content:flex-end;margin-bottom:var(--space-3);">
-        <button class="btn btn-sm btn-secondary" id="exportStatementBtn"><i class="fas fa-file-pdf"></i> تصدير كشف الحساب</button>
-      </div>
-    `;
-    html += statement
-      .map(
-        (row) => `
-      <div class="statement-item">
-        <div class="desc">
-          <span style="font-weight:500;">${row.description}</span>
-          <span class="date">${row.date}</span>
-        </div>
-        ${row.debit > 0 ? `<span class="debit">${window.API.formatCurrency(row.debit)}</span>` : `<span class="credit">${window.API.formatCurrency(row.credit)}</span>`}
-        <span class="balance">${window.API.formatCurrency(row.balance)}</span>
-      </div>
-    `,
+
+    return [...currentBookings]
+      .sort(
+        (a, b) =>
+          new Date(b.event_date || 0) -
+          new Date(a.event_date || 0)
       )
-      .join("");
-    return html;
+      .map(booking => {
+        const paid = bookingPaid(booking);
+        const remaining = bookingRemaining(booking);
+        const items = Array.isArray(booking.items)
+          ? booking.items
+          : [];
+
+        const itemText = items
+          .map(
+            item =>
+              `${esc(item.item_name || '')} × ${Number(
+                item.quantity || 0
+              )}`
+          )
+          .join(' · ');
+
+        const deposit = Number(
+          booking.plate_deposit || 0
+        );
+
+        const returned = Number(
+          booking.plate_deposit_returned || 0
+        );
+
+        return `
+          <div
+            class="invoice-item"
+            data-id="${booking.id}"
+          >
+            <div class="info">
+              <div class="title">
+                فاتورة #${booking.id}
+                ${
+                  booking.mark
+                    ? ` · ${esc(booking.mark)}`
+                    : ''
+                }
+              </div>
+
+              <div class="sub invoice-meta">
+                <span>
+                  📅 ${esc(dateOnly(booking.event_date) || '—')}
+                </span>
+
+                <span>
+                  ⏰ ${esc(
+                    String(booking.delivery_time || '')
+                      .slice(0, 5) || '—'
+                  )}
+                </span>
+
+                <span>
+                  🕐 ${esc(booking.delivery_period || '—')}
+                </span>
+
+                <span class="${statusClass(
+                  booking.status
+                )}">
+                  ${esc(statusText(booking.status))}
+                </span>
+              </div>
+
+              <div class="sub">
+                ${esc(booking.delivery_address || '—')}
+                ${
+                  booking.notes
+                    ? ` · ${esc(booking.notes)}`
+                    : ''
+                }
+              </div>
+
+              ${
+                itemText
+                  ? `<div class="sub">${itemText}</div>`
+                  : ''
+              }
+
+              ${
+                deposit > 0
+                  ? `
+                    <div class="sub">
+                      تأمين الصحون: ${money(deposit)}
+                      · المرتجع: ${money(returned)}
+                    </div>
+                  `
+                  : ''
+              }
+            </div>
+
+            <div class="amount-section">
+              <span class="total">
+                ${money(booking.total_amount)}
+              </span>
+
+              <span class="paid">
+                مدفوع ${money(paid)}
+              </span>
+
+              ${
+                remaining > 0
+                  ? `
+                    <span class="remaining">
+                      متبقي ${money(remaining)}
+                    </span>
+                  `
+                  : ''
+              }
+            </div>
+
+            <div class="actions">
+              <button
+                type="button"
+                class="btn-icon-sm btn-icon-primary"
+                data-action="editBooking"
+                title="تعديل"
+              >
+                <i class="fas fa-pen"></i>
+              </button>
+
+              <button
+                type="button"
+                class="btn-icon-sm btn-icon-danger"
+                data-action="deleteBooking"
+                title="حذف"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+
+              <button
+                type="button"
+                class="btn-icon-sm"
+                data-action="exportBooking"
+                title="طباعة"
+              >
+                <i class="fas fa-print"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
   }
 
-  // ============================================================
-  // 7. ربط أحداث الأزرار
-  // ============================================================
-  function attachEventListeners() {
-    const container = document.getElementById("customerViewContent");
-    if (!container) return;
+  function paymentMethodName(payment) {
+    const method =
+      payment.payment_method ??
+      payment.paymentMethod;
 
-    container.addEventListener("click", function (e) {
-      const btn = e.target.closest("[data-action]");
-      if (!btn) return;
-      const action = btn.dataset.action;
+    if (method?.name) {
+      return method.name;
+    }
 
-      if (action === "deleteBooking") {
-        const item = btn.closest(".invoice-item");
-        if (item) handleDeleteBooking(parseInt(item.dataset.id));
-      } else if (action === "editBooking") {
-        const item = btn.closest(".invoice-item");
-        if (item) openEditBookingModal(parseInt(item.dataset.id));
-      } else if (action === "exportBooking") {
-        const item = btn.closest(".invoice-item");
-        if (item) exportBooking(parseInt(item.dataset.id));
-      } else if (action === "deletePayment") {
-        const item = btn.closest(".payment-item");
-        if (item) handleDeletePayment(parseInt(item.dataset.id));
-      } else if (action === "editPayment") {
-        const item = btn.closest(".payment-item");
-        if (item) openEditPaymentModal(parseInt(item.dataset.id));
-      } else if (action === "exportStatement") {
-        exportStatement();
-      }
+    const methodId =
+      payment.payment_method_id ??
+      payment.paymentMethodId;
+
+    const found = paymentMethods.find(
+      item => Number(item.id) === Number(methodId)
+    );
+
+    return found?.name || 'غير محددة';
+  }
+
+  function renderPayments() {
+    if (!currentPayments.length) {
+      return empty('لا توجد مدفوعات');
+    }
+
+    return [...currentPayments]
+      .sort(
+        (a, b) =>
+          new Date(
+            b.payment_date ||
+            b.paymentDate ||
+            0
+          ) -
+          new Date(
+            a.payment_date ||
+            a.paymentDate ||
+            0
+          )
+      )
+      .map(payment => {
+        const bookingId =
+          payment.booking_id ??
+          payment.bookingId;
+
+        return `
+          <div
+            class="payment-item"
+            data-id="${payment.id}"
+          >
+            <div class="info">
+              <div class="title">
+                دفعة
+                ${
+                  bookingId
+                    ? `لفواتير #${bookingId}`
+                    : 'عامة'
+                }
+                · ${esc(paymentMethodName(payment))}
+              </div>
+
+              <div class="sub">
+                ${esc(
+                  dateOnly(
+                    payment.payment_date ||
+                    payment.paymentDate
+                  ) || '—'
+                )}
+                ${
+                  payment.notes
+                    ? ` · ${esc(payment.notes)}`
+                    : ''
+                }
+              </div>
+            </div>
+
+            <div class="amount">
+              +${money(payment.amount)}
+            </div>
+
+            <div class="actions">
+              <button
+                type="button"
+                class="btn-icon-sm btn-icon-danger"
+                data-action="deletePayment"
+                title="حذف"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  function statementRows() {
+    const rows = [];
+
+    currentBookings.forEach(booking => {
+      rows.push({
+        date:
+          booking.invoice_date ||
+          booking.event_date ||
+          '',
+        description:
+          `فاتورة #${booking.id}` +
+          (
+            booking.mark
+              ? ` - ${booking.mark}`
+              : ''
+          ),
+        debit: Number(
+          booking.total_amount || 0
+        ),
+        credit: 0,
+        type: 'booking',
+        id: booking.id
+      });
     });
-  }
 
-  // ============================================================
-  // 8. عمليات الفواتير (الحجوزات)
-  // ============================================================
-  function handleDeleteBooking(id) {
-    const booking = currentBookings.find((b) => b.id === id);
-    if (!booking) return;
-
-    showConfirm({
-      title: "حذف الفاتورة",
-      message: `هل أنت متأكد من حذف الفاتورة "${booking.notes || "وليمة"}"؟`,
-      confirmText: "حذف",
-      danger: true,
-      onConfirm: function () {
-        try {
-          if (window.API.deleteBooking) {
-            window.API.deleteBooking(id);
-          } else {
-            const idx = currentBookings.findIndex((b) => b.id === id);
-            if (idx !== -1) currentBookings.splice(idx, 1);
-          }
-          showToast("تم حذف الفاتورة بنجاح", "success");
-          refreshData();
-        } catch (err) {
-          showToast(err.message || "حدث خطأ أثناء الحذف", "error");
-        }
-      },
+    currentPayments.forEach(payment => {
+      rows.push({
+        date: payment.payment_date || '',
+        description:
+          `دفعة ${
+            payment.booking_id
+              ? `لفواتير #${payment.booking_id}`
+              : 'عامة'
+          }` +
+          (
+            payment.notes
+              ? ` - ${payment.notes}`
+              : ''
+          ),
+        debit: 0,
+        credit: Number(payment.amount || 0),
+        type: 'payment',
+        id: payment.id
+      });
     });
-  }
 
-  function openEditBookingModal(id) {
-    const booking = currentBookings.find((b) => b.id === id);
-    if (!booking) {
-      showToast("الفاتورة غير موجودة", "error");
-      return;
-    }
-    editingBookingId = id;
-    isEditMode = true;
-    openTransactionModal("booking", booking);
-  }
-
-  function exportBooking(id) {
-    const booking = currentBookings.find((b) => b.id === id);
-    if (!booking) {
-      showToast("الفاتورة غير موجودة", "error");
-      return;
-    }
-    const content = `
-      <div style="direction:rtl;font-family:Tajawal,sans-serif;padding:20px;">
-        <h2 style="color:#8F1720;">شواطئ عدن</h2>
-        <h3>فاتورة #${booking.id}</h3>
-        <p><strong>العميل:</strong> ${currentCustomer.name}</p>
-        <p><strong>التاريخ:</strong> ${booking.eventDate}</p>
-        <p><strong>الوصف:</strong> ${booking.notes || "وليمة"}</p>
-        <p><strong>عدد الضيوف:</strong> ${booking.guests || 0}</p>
-        ${booking.items ? `<p><strong>الأصناف:</strong> ${booking.items.map((i) => i.name + " (x" + i.qty + ")").join(", ")}</p>` : ""}
-        <p><strong>تأمين الصحون:</strong> ${window.API.formatCurrency(booking.platesDeposit || 0)}</p>
-        <hr/>
-        <p><strong>الإجمالي:</strong> ${window.API.formatCurrency(booking.total)}</p>
-        <p><strong>المدفوع:</strong> ${window.API.formatCurrency(booking.paid)}</p>
-        <p><strong>المتبقي:</strong> ${window.API.formatCurrency(booking.remaining)}</p>
-        <p><strong>طريقة الدفع:</strong> ${booking.paymentMethod || "نقدي"}</p>
-        <p><strong>الحالة:</strong> ${booking.status || "جديد"}</p>
-      </div>
-    `;
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(`
-        <html><head><title>فاتورة #${booking.id}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-        </head><body>${content}</body></html>
-      `);
-      win.document.close();
-      win.print();
-    } else {
-      showToast("تعذر فتح نافذة الطباعة", "error");
-    }
-  }
-
-  // ============================================================
-  // 9. عمليات المدفوعات
-  // ============================================================
-  function handleDeletePayment(id) {
-    const payment = currentPayments.find((p) => p.id === id);
-    if (!payment) return;
-
-    showConfirm({
-      title: "حذف الدفعة",
-      message: `هل أنت متأكد من حذف الدفعة بقيمة ${window.API.formatCurrency(payment.amount)}؟`,
-      confirmText: "حذف",
-      danger: true,
-      onConfirm: function () {
-        try {
-          if (window.API.deletePayment) {
-            window.API.deletePayment(id);
-          } else {
-            const idx = currentPayments.findIndex((p) => p.id === id);
-            if (idx !== -1) currentPayments.splice(idx, 1);
-          }
-          showToast("تم حذف الدفعة بنجاح", "success");
-          refreshData();
-        } catch (err) {
-          showToast(err.message || "حدث خطأ أثناء الحذف", "error");
-        }
-      },
-    });
-  }
-
-  function openEditPaymentModal(id) {
-    const payment = currentPayments.find((p) => p.id === id);
-    if (!payment) {
-      showToast("الدفعة غير موجودة", "error");
-      return;
-    }
-    editingPaymentId = id;
-    isEditMode = true;
-    openTransactionModal("payment", payment);
-  }
-
-  // ============================================================
-  // 10. تصدير كشف الحساب
-  // ============================================================
-  function exportStatement() {
-    const statement = buildStatement(currentBookings, currentPayments);
-    if (!statement || statement.length === 0) {
-      showToast("لا توجد حركات لتصديرها", "warning");
-      return;
-    }
-    let content = `
-      <div style="direction:rtl;font-family:Tajawal,sans-serif;padding:20px;">
-        <h2 style="color:#8F1720;">شواطئ عدن</h2>
-        <h3>كشف حساب العميل: ${currentCustomer.name}</h3>
-        <p>رقم الجوال: ${currentCustomer.phone}</p>
-        <hr/>
-        <table style="width:100%;border-collapse:collapse;text-align:right;">
-          <thead>
-            <tr style="background:#f0f0f0;">
-              <th style="padding:8px;border:1px solid #ddd;">التاريخ</th>
-              <th style="padding:8px;border:1px solid #ddd;">البيان</th>
-              <th style="padding:8px;border:1px solid #ddd;">مدين</th>
-              <th style="padding:8px;border:1px solid #ddd;">دائن</th>
-              <th style="padding:8px;border:1px solid #ddd;">الرصيد</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-    statement.forEach((row) => {
-      content += `
-        <tr>
-          <td style="padding:8px;border:1px solid #ddd;">${row.date}</td>
-          <td style="padding:8px;border:1px solid #ddd;">${row.description}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:left;">${row.debit > 0 ? window.API.formatCurrency(row.debit) : "-"}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:left;">${row.credit > 0 ? window.API.formatCurrency(row.credit) : "-"}</td>
-          <td style="padding:8px;border:1px solid #ddd;text-align:left;">${window.API.formatCurrency(row.balance)}</td>
-        </tr>
-      `;
-    });
-    content += `
-          </tbody>
-          <tfoot>
-            <tr style="background:#f9f9f9;font-weight:bold;">
-              <td colspan="4" style="padding:8px;border:1px solid #ddd;">الرصيد الحالي</td>
-              <td style="padding:8px;border:1px solid #ddd;">${window.API.formatCurrency(statement[statement.length - 1]?.balance || 0)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    `;
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(`
-        <html><head><title>كشف حساب ${currentCustomer.name}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-        </head><body>${content}</body></html>
-      `);
-      win.document.close();
-      win.print();
-    } else {
-      showToast("تعذر فتح نافذة الطباعة", "error");
-    }
-  }
-
-  // ============================================================
-  // 11. تحديث البيانات وإعادة العرض
-  // ============================================================
-  function refreshData() {
-    if (!currentCustomer) return;
-    currentBookings = window.API.getCustomerInvoices(currentCustomer.id) || [];
-    currentPayments = window.API.getCustomerPayments(currentCustomer.id) || [];
-    currentCustomer = window.API.getCustomer(currentCustomer.id);
-    renderCustomerProfile();
-  }
-
-  // ============================================================
-  // 12. فتح مودال المعاملات (يتحكم بهذا الملف بالكامل)
-  // ============================================================
-  function openTransactionModal(tab, editData) {
-    const modal = document.getElementById("transactionModal");
-    if (!modal) {
-      showToast("المودال غير متوفر", "error");
-      return;
-    }
-
-    const titleEl = document.getElementById("transactionModalTitle");
-    const bookingCustomerName = document.getElementById("bookingCustomerName");
-    const bookingCustomerPhone = document.getElementById(
-      "bookingCustomerPhone",
+    return rows.sort(
+      (a, b) =>
+        new Date(a.date) -
+        new Date(b.date)
     );
-    const bookingCustomerAddress = document.getElementById(
-      "bookingCustomerAddress",
-    );
-    const paymentCustomerName = document.getElementById("paymentCustomerName");
-    const paymentCustomerPhone = document.getElementById(
-      "paymentCustomerPhone",
-    );
-    const paymentCurrentBalance = document.getElementById(
-      "paymentCurrentBalance",
-    );
-
-    if (
-      !titleEl ||
-      !bookingCustomerName ||
-      !bookingCustomerPhone ||
-      !bookingCustomerAddress ||
-      !paymentCustomerName ||
-      !paymentCustomerPhone ||
-      !paymentCurrentBalance
-    ) {
-      setTimeout(() => openTransactionModal(tab, editData), 100);
-      return;
-    }
-
-    const isEditing = !!editData;
-    titleEl.textContent = isEditing
-      ? tab === "booking"
-        ? "تعديل الفاتورة"
-        : "تعديل الدفعة"
-      : tab === "booking"
-        ? "حجز جديد"
-        : "تسجيل دفعة";
-
-    bookingCustomerName.textContent = currentCustomer.name;
-    bookingCustomerPhone.textContent = currentCustomer.phone;
-    bookingCustomerAddress.textContent =
-      currentCustomer.address || "لا يوجد عنوان";
-
-    paymentCustomerName.textContent = currentCustomer.name;
-    paymentCustomerPhone.textContent = currentCustomer.phone;
-    paymentCurrentBalance.textContent = window.API.formatCurrency(
-      currentCustomer.balance || 0,
-    );
-
-    modal.dataset.entityType = "customer";
-    modal.dataset.entityId = currentCustomer.id;
-
-    const bookingDate = document.getElementById("bookingDate");
-    const bookingGuests = document.getElementById("bookingGuests");
-    const bookingPlatesDeposit = document.getElementById(
-      "bookingPlatesDeposit",
-    );
-    const bookingNotes = document.getElementById("bookingNotes");
-    const bookingPaid = document.getElementById("bookingPaid");
-    const bookingPaymentMethod = document.getElementById(
-      "bookingPaymentMethod",
-    );
-
-    if (editData && tab === "booking") {
-      if (bookingDate) bookingDate.value = editData.eventDate || "";
-      if (bookingGuests) bookingGuests.value = editData.guests || "";
-      if (bookingPlatesDeposit)
-        bookingPlatesDeposit.value = editData.platesDeposit || "";
-      if (bookingNotes) bookingNotes.value = editData.notes || "";
-      if (bookingPaid) bookingPaid.value = editData.paid || "";
-      if (bookingPaymentMethod)
-        bookingPaymentMethod.value = editData.paymentMethod || "نقدي";
-      renderBookingItems(editData.items || []);
-      editingBookingId = editData.id;
-    } else {
-      if (bookingDate)
-        bookingDate.value = new Date().toISOString().slice(0, 10);
-      if (bookingGuests) bookingGuests.value = "";
-      if (bookingPlatesDeposit) bookingPlatesDeposit.value = "";
-      if (bookingNotes) bookingNotes.value = "";
-      if (bookingPaid) bookingPaid.value = "";
-      if (bookingPaymentMethod) bookingPaymentMethod.value = "نقدي";
-      renderBookingItems([]);
-      editingBookingId = null;
-    }
-
-    const paymentAmount = document.getElementById("paymentAmount");
-    const paymentNotes = document.getElementById("paymentNotes");
-
-    if (editData && tab === "payment") {
-      if (paymentAmount) paymentAmount.value = editData.amount || "";
-      if (paymentNotes) paymentNotes.value = editData.notes || "";
-      const methodRadio = document.querySelector(
-        `input[name="paymentMethod"][value="${editData.method || "نقدي"}"]`,
-      );
-      if (methodRadio) methodRadio.checked = true;
-      editingPaymentId = editData.id;
-    } else {
-      if (paymentAmount) paymentAmount.value = "";
-      if (paymentNotes) paymentNotes.value = "";
-      const defaultMethod = document.querySelector(
-        'input[name="paymentMethod"][value="نقدي"]',
-      );
-      if (defaultMethod) defaultMethod.checked = true;
-      editingPaymentId = null;
-    }
-
-    const saveBtn = document.getElementById("transactionSaveBtn");
-    if (saveBtn) {
-      saveBtn.textContent = isEditing
-        ? tab === "booking"
-          ? "تحديث الفاتورة"
-          : "تحديث الدفعة"
-        : tab === "booking"
-          ? "حفظ الحجز"
-          : "تسجيل الدفعة";
-    }
-
-    if (typeof setTransactionMode === "function") {
-      setTransactionMode(tab);
-    }
-
-    updateBookingTotals();
-    updatePaymentPreview();
-
-    modal.classList.add("active");
-    document.body.style.overflow = "hidden";
   }
 
-  // ============================================================
-  // 13. عرض الأصناف في نموذج الحجز
-  // ============================================================
-  function renderBookingItems(items) {
-    const container = document.getElementById("bookingItemsContainer");
-    if (!container) return;
+  function renderStatement() {
+    const rows = statementRows();
 
-    if (!items || items.length === 0) {
-      container.innerHTML = buildItemRow(null, 0);
-      return;
+    if (!rows.length) {
+      return empty('لا توجد حركات');
     }
 
-    container.innerHTML = items
-      .map((item, index) => buildItemRow(item, index))
-      .join("");
-    // تحديث الإجماليات بعد التحميل
-    setTimeout(updateBookingTotals, 50);
-  }
+    let balance = 0;
 
-  function buildItemRow(itemData, index) {
-    const items = allItems;
-    const selectedId = itemData ? itemData.id : "";
-    const qty = itemData ? itemData.qty : 1;
-    const price = itemData ? itemData.price : 0;
+    const content = rows
+      .map(row => {
+        balance +=
+          row.debit -
+          row.credit;
 
-    let optionsHtml = '<option value="">اختر صنف</option>';
-    items.forEach((it) => {
-      const selected = it.id === selectedId ? "selected" : "";
-      optionsHtml += `<option value="${it.id}" data-price="${it.price}" data-name="${it.name}" ${selected}>${it.name} (${it.price} ر.س)</option>`;
-    });
+        return `
+          <div class="statement-item">
+            <div class="desc">
+              <span style="font-weight:600;">
+                ${esc(row.description)}
+              </span>
+
+              <span class="date">
+                ${esc(dateOnly(row.date))}
+              </span>
+            </div>
+
+            <span class="${
+              row.debit
+                ? 'debit'
+                : 'credit'
+            }">
+              ${money(
+                row.debit ||
+                row.credit
+              )}
+            </span>
+
+            <span class="balance">
+              ${money(balance)}
+            </span>
+          </div>
+        `;
+      })
+      .join('');
 
     return `
-      <div class="item-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;" data-index="${index}">
-        <select class="form-select item-select" style="flex:2;min-width:100px;">
-          ${optionsHtml}
+      <div
+        style="
+          display:flex;
+          justify-content:flex-end;
+          margin-bottom:var(--space-3);
+        "
+      >
+        <button
+          type="button"
+          class="btn btn-sm btn-secondary"
+          data-action="exportStatement"
+        >
+          <i class="fas fa-print"></i>
+          طباعة كشف الحساب
+        </button>
+      </div>
+
+      ${content}
+    `;
+  }
+
+  function fillPaymentMethods(selectedId = null) {
+    const bookingSelect =
+      document.getElementById(
+        'bookingPaymentMethod'
+      );
+
+    const paymentBox =
+      document.getElementById(
+        'paymentMethodsContainer'
+      );
+
+    const activeMethods =
+      paymentMethods.filter(
+        method => method.is_active !== false
+      );
+
+    if (bookingSelect) {
+      bookingSelect.innerHTML =
+        activeMethods
+          .map(
+            method =>
+              `<option value="${method.id}">
+                ${esc(method.name)}
+              </option>`
+          )
+          .join('');
+
+      if (selectedId !== null) {
+        bookingSelect.value =
+          String(selectedId);
+      }
+    }
+
+    if (paymentBox) {
+      paymentBox.innerHTML =
+        activeMethods
+          .map(
+            (method, index) =>
+              `
+                <label class="payment-method-option">
+                  <input
+                    type="radio"
+                    name="customerPaymentMethod"
+                    value="${method.id}"
+                    ${
+                      selectedId !== null
+                        ? Number(selectedId) ===
+                          Number(method.id)
+                          ? 'checked'
+                          : ''
+                        : index === 0
+                          ? 'checked'
+                          : ''
+                    }
+                  >
+                  ${esc(method.name)}
+                </label>
+              `
+          )
+          .join('');
+    }
+  }
+
+  function fillPaymentBookings(selectedId = '') {
+    const select =
+      document.getElementById(
+        'paymentBooking'
+      );
+
+    if (!select) return;
+
+    select.innerHTML =
+      '<option value="">دفعة عامة في حساب العميل</option>' +
+      currentBookings
+        .map(
+          booking =>
+            `
+              <option value="${booking.id}">
+                فاتورة #${booking.id}
+                · ${esc(
+                  booking.mark ||
+                  dateOnly(
+                    booking.event_date
+                  ) ||
+                  'فاتورة'
+                )}
+              </option>
+            `
+        )
+        .join('');
+
+    select.value =
+      selectedId
+        ? String(selectedId)
+        : '';
+  }
+
+  function resetBookingForm(booking = null) {
+    const editing = !!booking;
+
+    editingBookingId = editing
+      ? Number(booking.id)
+      : null;
+
+    document.getElementById(
+      'bookingEventDate'
+    ).value =
+      booking?.event_date ||
+      nowDate();
+
+    document.getElementById(
+      'bookingDeliveryTime'
+    ).value =
+      String(
+        booking?.delivery_time ||
+        '14:00'
+      ).slice(0, 5);
+
+    document.getElementById(
+      'bookingDeliveryPeriod'
+    ).value =
+      booking?.delivery_period ||
+      'ظهراً';
+
+    document.getElementById(
+      'bookingAddress'
+    ).value =
+      booking?.delivery_address ||
+      '';
+
+    document.getElementById(
+      'bookingMark'
+    ).value =
+      booking?.mark ||
+      '';
+
+    document.getElementById(
+      'bookingPlateDeposit'
+    ).value =
+      booking?.plate_deposit ??
+      '';
+
+    document.getElementById(
+      'bookingPlateReturned'
+    ).value =
+      booking?.plate_deposit_returned ??
+      '';
+
+    document.getElementById(
+      'bookingStatus'
+    ).value =
+      booking?.status ||
+      'new';
+
+    document.getElementById(
+      'bookingNotes'
+    ).value =
+      booking?.notes ||
+      '';
+
+    document.getElementById(
+      'bookingInitialPayment'
+    ).value = '';
+
+    document.getElementById(
+      'bookingCustomerName'
+    ).textContent =
+      currentCustomer?.name ||
+      '—';
+
+    document.getElementById(
+      'bookingCustomerPhone'
+    ).textContent =
+      currentCustomer?.phone ||
+      '—';
+
+    document.getElementById(
+      'initialPaymentGroup'
+    ).style.display =
+      editing
+        ? 'none'
+        : 'block';
+
+    document.getElementById(
+      'initialPaymentMethodGroup'
+    ).style.display =
+      editing
+        ? 'none'
+        : 'block';
+
+    fillPaymentMethods();
+
+    renderBookingItems(
+      booking?.items || []
+    );
+
+    updateBookingPreview();
+  }
+
+  function renderBookingItems(items) {
+    const box =
+      document.getElementById(
+        'bookingItemsContainer'
+      );
+
+    if (!box) return;
+
+    const source =
+      items.length
+        ? items
+        : [{}];
+
+    box.innerHTML =
+      source
+        .map(
+          (item, index) => {
+            const selectedName =
+              item.item_name || '';
+
+            const catalog =
+              allItems.find(
+                item =>
+                  String(item.name) ===
+                  String(selectedName)
+              );
+
+            const selectedId =
+              catalog?.id || '';
+
+            const price =
+              Number(
+                item.unit_price ??
+                catalog?.default_price ??
+                0
+              );
+
+            const quantity =
+              Number(
+                item.quantity ??
+                1
+              );
+
+            return `
+              <div
+                class="item-row"
+                data-index="${index}"
+              >
+                <select
+                  class="form-input item-select"
+                >
+                  <option value="">
+                    اختر صنف
+                  </option>
+
+                  ${allItems
+                    .map(
+                      item =>
+                        `
+                          <option
+                            value="${item.id}"
+                            data-price="${item.default_price}"
+                            data-name="${esc(item.name)}"
+                            ${
+                              Number(item.id) ===
+                              Number(selectedId)
+                                ? 'selected'
+                                : ''
+                            }
+                          >
+                            ${esc(item.name)}
+                            · ${money(
+                              item.default_price
+                            )}
+                          </option>
+                        `
+                    )
+                    .join('')}
+                </select>
+
+                <input
+                  type="number"
+                  class="form-input item-qty"
+                  min="0.01"
+                  step="0.01"
+                  value="${quantity}"
+                >
+
+                <input
+                  type="number"
+                  class="form-input item-price"
+                  min="0"
+                  step="0.01"
+                  value="${price}"
+                >
+
+                <span class="item-total">
+                  ${money(
+                    quantity * price
+                  )}
+                </span>
+
+                <button
+                  type="button"
+                  class="btn-icon-sm btn-icon-danger remove-item-btn"
+                  title="حذف"
+                >
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            `;
+          }
+        )
+        .join('');
+
+    updateBookingPreview();
+  }
+
+  function renderNewItemRow() {
+    const index =
+      document.querySelectorAll(
+        '#bookingItemsContainer .item-row'
+      ).length;
+
+    return `
+      <div
+        class="item-row"
+        data-index="${index}"
+      >
+        <select class="form-input item-select">
+          <option value="">
+            اختر صنف
+          </option>
+
+          ${allItems
+            .map(
+              item =>
+                `
+                  <option
+                    value="${item.id}"
+                    data-price="${item.default_price}"
+                    data-name="${esc(item.name)}"
+                  >
+                    ${esc(item.name)}
+                    · ${money(
+                      item.default_price
+                    )}
+                  </option>
+                `
+            )
+            .join('')}
         </select>
-        <input type="number" class="form-input item-qty" placeholder="الكمية" min="1" value="${qty}" style="flex:1;min-width:60px;" />
-        <input type="number" class="form-input item-price" placeholder="السعر" min="0" step="0.5" value="${price}" style="flex:1;min-width:80px;" />
-        <span class="item-total" style="font-weight:700;min-width:70px;">${(qty * price).toFixed(2)} ر.س</span>
-        <button type="button" class="btn-icon-sm btn-icon-danger remove-item-btn" title="حذف"><i class="fas fa-times"></i></button>
+
+        <input
+          type="number"
+          class="form-input item-qty"
+          min="0.01"
+          step="0.01"
+          value="1"
+        >
+
+        <input
+          type="number"
+          class="form-input item-price"
+          min="0"
+          step="0.01"
+          value="0"
+        >
+
+        <span class="item-total">
+          ${money(0)}
+        </span>
+
+        <button
+          type="button"
+          class="btn-icon-sm btn-icon-danger remove-item-btn"
+          title="حذف"
+        >
+          <i class="fas fa-times"></i>
+        </button>
       </div>
     `;
   }
 
-  // ============================================================
-  // 14. تحديث الإجماليات في نموذج الحجز
-  // ============================================================
-  function updateBookingTotals() {
-    const rows = document.querySelectorAll("#bookingItemsContainer .item-row");
-    let itemsTotal = 0;
-    rows.forEach((row) => {
-      const totalSpan = row.querySelector(".item-total");
-      if (totalSpan) {
-        const val =
-          parseFloat(totalSpan.textContent.replace(/[^0-9.]/g, "")) || 0;
-        itemsTotal += val;
-      }
-    });
-    const platesDeposit =
-      parseFloat(document.getElementById("bookingPlatesDeposit")?.value) || 0;
-    const grandTotal = itemsTotal + platesDeposit;
-    const paid = parseFloat(document.getElementById("bookingPaid")?.value) || 0;
-    const remaining = grandTotal - paid;
-
-    const itemsTotalDisplay = document.getElementById("bookingItemsTotal");
-    const platesDisplay = document.getElementById("bookingPlatesDisplay");
-    const grandTotalDisplay = document.getElementById("bookingGrandTotal");
-    const remainingDisplay = document.getElementById("bookingRemaining");
-
-    if (itemsTotalDisplay)
-      itemsTotalDisplay.textContent = itemsTotal.toFixed(2) + " ر.س";
-    if (platesDisplay)
-      platesDisplay.textContent = platesDeposit.toFixed(2) + " ر.س";
-    if (grandTotalDisplay)
-      grandTotalDisplay.textContent = grandTotal.toFixed(2) + " ر.س";
-    if (remainingDisplay)
-      remainingDisplay.textContent = remaining.toFixed(2) + " ر.س";
-  }
-
-  // ============================================================
-  // 15. معاينة الرصيد في نموذج الدفعة
-  // ============================================================
-  function updatePaymentPreview() {
-    const currentBalanceEl = document.getElementById("paymentCurrentBalance");
-    const amountEl = document.getElementById("paymentAmount");
-    const afterEl = document.getElementById("paymentAfterBalance");
-
-    if (!currentBalanceEl || !amountEl || !afterEl) return;
-
-    const balanceText = currentBalanceEl.textContent;
-    const currentBalance = parseFloat(balanceText.replace(/[^0-9.]/g, "")) || 0;
-    const amount = parseFloat(amountEl.value) || 0;
-
-    afterEl.textContent = window.API.formatCurrency(
-      Math.max(0, currentBalance - amount),
-    );
-  }
-
-  // ============================================================
-  // 16. أحداث الأصناف (delegation)
-  // ============================================================
-  document.addEventListener("click", function (e) {
-    // إضافة صف صنف جديد
-    if (e.target && e.target.id === "addBookingItemBtn") {
-      const container = document.getElementById("bookingItemsContainer");
-      if (container) {
-        const index = container.querySelectorAll(".item-row").length;
-        container.insertAdjacentHTML("beforeend", buildItemRow(null, index));
-        const newRow = container.lastElementChild;
-        // ربط الأحداث
-        newRow
-          .querySelector(".item-select")
-          .addEventListener("change", function () {
-            updateItemRow(this.closest(".item-row"));
-          });
-        newRow
-          .querySelector(".item-qty")
-          .addEventListener("input", function () {
-            updateItemRow(this.closest(".item-row"));
-          });
-        newRow
-          .querySelector(".item-price")
-          .addEventListener("input", function () {
-            updateItemRow(this.closest(".item-row"));
-          });
-        newRow
-          .querySelector(".remove-item-btn")
-          .addEventListener("click", function () {
-            const container = document.getElementById("bookingItemsContainer");
-            if (container.querySelectorAll(".item-row").length > 1) {
-              newRow.remove();
-              updateBookingTotals();
-            } else {
-              showToast("يجب أن يكون هناك صنف واحد على الأقل", "warning");
-            }
-          });
-        updateItemRow(newRow);
-        updateBookingTotals();
-      }
-    }
-
-    // حذف صف صنف
-    const removeBtn = e.target.closest(".remove-item-btn");
-    if (removeBtn) {
-      const row = removeBtn.closest(".item-row");
-      if (row) {
-        const container = document.getElementById("bookingItemsContainer");
-        if (container && container.querySelectorAll(".item-row").length > 1) {
-          row.remove();
-          updateBookingTotals();
-        } else {
-          showToast("يجب أن يكون هناك صنف واحد على الأقل", "warning");
-        }
-      }
-    }
-  });
-
-  // مستمعات لتحديث الإجماليات
-  document.addEventListener("input", function (e) {
-    if (
-      e.target &&
-      (e.target.id === "bookingPlatesDeposit" || e.target.id === "bookingPaid")
-    ) {
-      updateBookingTotals();
-    }
-    if (e.target && e.target.id === "paymentAmount") {
-      updatePaymentPreview();
-    }
-  });
-
-  document.addEventListener("change", function (e) {
-    if (e.target && e.target.closest(".item-select")) {
-      const row = e.target.closest(".item-row");
-      if (row) updateItemRow(row);
-    }
-  });
-
-  document.addEventListener("input", function (e) {
-    if (
-      e.target &&
-      (e.target.closest(".item-qty") || e.target.closest(".item-price"))
-    ) {
-      const row = e.target.closest(".item-row");
-      if (row) updateItemRow(row);
-    }
-  });
-
   function updateItemRow(row) {
-    const select = row.querySelector(".item-select");
-    const qtyInput = row.querySelector(".item-qty");
-    const priceInput = row.querySelector(".item-price");
-    const totalSpan = row.querySelector(".item-total");
+    if (!row) return;
 
-    const selectedOption = select.options[select.selectedIndex];
-    if (selectedOption && selectedOption.value) {
-      const price = parseFloat(selectedOption.dataset.price) || 0;
-      if (!priceInput.value || parseFloat(priceInput.value) === 0) {
-        priceInput.value = price;
-      }
+    const select =
+      row.querySelector('.item-select');
+
+    const price =
+      row.querySelector('.item-price');
+
+    const quantity =
+      row.querySelector('.item-qty');
+
+    const option =
+      select?.options[
+        select.selectedIndex
+      ];
+
+    if (
+      option?.value &&
+      (!price.value ||
+        Number(price.value) === 0)
+    ) {
+      price.value =
+        option.dataset.price ||
+        0;
     }
-    const qty = parseFloat(qtyInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
-    totalSpan.textContent = (qty * price).toFixed(2) + " ر.س";
-    updateBookingTotals();
+
+    const qty =
+      Number(quantity?.value) ||
+      0;
+
+    const unitPrice =
+      Number(price?.value) ||
+      0;
+
+    const total =
+      qty *
+      unitPrice;
+
+    const totalElement =
+      row.querySelector(
+        '.item-total'
+      );
+
+    if (totalElement) {
+      totalElement.textContent =
+        money(total);
+    }
+
+    updateBookingPreview();
   }
 
-  // ============================================================
-  // 17. حفظ الفاتورة أو الدفعة من المودال
-  // ============================================================
-  function handleTransactionSave() {
-    const modal = document.getElementById("transactionModal");
-    if (!modal) return;
+  function collectItems() {
+    return [
+      ...document.querySelectorAll(
+        '#bookingItemsContainer .item-row'
+      )
+    ]
+      .map(row => {
+        const select =
+          row.querySelector(
+            '.item-select'
+          );
 
-    const entityId = parseInt(
-      modal.dataset.entityId || currentCustomer?.id || "0",
-    );
-    const activeMode =
-      document.querySelector(".switch-btn.active")?.dataset.mode || "booking";
+        const option =
+          select?.options[
+            select.selectedIndex
+          ];
 
-    if (!entityId) {
-      showToast("بيانات غير مكتملة", "error");
-      return;
+        const quantity =
+          Number(
+            row.querySelector(
+              '.item-qty'
+            )?.value
+          ) || 0;
+
+        const unitPrice =
+          Number(
+            row.querySelector(
+              '.item-price'
+            )?.value
+          ) || 0;
+
+        return {
+          item_name:
+            option?.dataset.name ||
+            '',
+          quantity,
+          unit_price:
+            unitPrice,
+          total_price:
+            Number(
+              (
+                quantity *
+                unitPrice
+              ).toFixed(2)
+            )
+        };
+      })
+      .filter(
+        item =>
+          item.item_name &&
+          item.quantity > 0 &&
+          item.unit_price >= 0
+      );
+  }
+
+  function itemsTotal() {
+    return collectItems()
+      .reduce(
+        (sum, item) =>
+          sum +
+          item.total_price,
+        0
+      );
+  }
+
+  function updateBookingPreview() {
+    const total =
+      itemsTotal();
+
+    const deposit =
+      Number(
+        document.getElementById(
+          'bookingPlateDeposit'
+        )?.value
+      ) || 0;
+
+    const paid =
+      Number(
+        document.getElementById(
+          'bookingInitialPayment'
+        )?.value
+      ) || 0;
+
+    const itemsTotalElement =
+      document.getElementById(
+        'bookingItemsTotal'
+      );
+
+    const plateElement =
+      document.getElementById(
+        'bookingPlateDisplay'
+      );
+
+    const grandTotalElement =
+      document.getElementById(
+        'bookingGrandTotal'
+      );
+
+    const remainingElement =
+      document.getElementById(
+        'bookingRemainingPreview'
+      );
+
+    if (itemsTotalElement) {
+      itemsTotalElement.textContent =
+        money(total);
     }
 
-    if (activeMode === "booking") {
-      saveBooking(entityId);
-    } else if (activeMode === "payment") {
-      savePayment(entityId);
+    if (plateElement) {
+      plateElement.textContent =
+        money(deposit);
+    }
+
+    if (grandTotalElement) {
+      grandTotalElement.textContent =
+        money(total);
+    }
+
+    if (remainingElement) {
+      remainingElement.textContent =
+        `المتبقي بعد الدفعة: ${money(
+          Math.max(
+            0,
+            total - paid
+          )
+        )}`;
     }
   }
 
-  function saveBooking(customerId) {
-    const eventDate = document.getElementById("bookingDate")?.value;
-    const guests =
-      parseInt(document.getElementById("bookingGuests")?.value || "0") || 0;
-    const platesDeposit =
-      parseFloat(document.getElementById("bookingPlatesDeposit")?.value) || 0;
-    const notes = document.getElementById("bookingNotes")?.value.trim() || "";
-    const paid = parseFloat(document.getElementById("bookingPaid")?.value) || 0;
-    const paymentMethod =
-      document.getElementById("bookingPaymentMethod")?.value || "نقدي";
+  function openBookingModal(booking = null) {
+    if (
+      typeof window.setTransactionMode ===
+      'function'
+    ) {
+      window.setTransactionMode(
+        'booking'
+      );
+    }
 
-    const itemRows = document.querySelectorAll(
-      "#bookingItemsContainer .item-row",
+    resetBookingForm(
+      booking
     );
-    const items = [];
-    let itemsTotal = 0;
-    itemRows.forEach((row) => {
-      const select = row.querySelector(".item-select");
-      const qty = parseFloat(row.querySelector(".item-qty")?.value) || 0;
-      const price = parseFloat(row.querySelector(".item-price")?.value) || 0;
-      const selectedOption = select.options[select.selectedIndex];
-      if (selectedOption && selectedOption.value) {
-        const name = selectedOption.dataset.name || selectedOption.text;
-        items.push({ id: parseInt(selectedOption.value), name, qty, price });
-        itemsTotal += qty * price;
-      }
-    });
 
-    const total = itemsTotal + platesDeposit;
+    const title =
+      document.getElementById(
+        'transactionModalTitle'
+      );
 
-    if (items.length === 0) {
-      showToast("يرجى إضافة صنف واحد على الأقل", "warning");
-      return;
-    }
-    if (!eventDate) {
-      showToast("يرجى تحديد تاريخ الفاتورة", "warning");
-      return;
+    const save =
+      document.getElementById(
+        'transactionSaveBtn'
+      );
+
+    if (title) {
+      title.textContent =
+        booking
+          ? 'تعديل الفاتورة'
+          : 'حجز جديد';
     }
 
-    const bookingData = {
-      customerId,
-      eventDate,
-      guests,
-      items,
-      platesDeposit,
-      total,
-      paid,
-      paymentMethod,
-      status: "جديد",
-      notes,
-      remaining: total - paid,
+    if (save) {
+      save.textContent =
+        booking
+          ? 'تحديث الفاتورة'
+          : 'حفظ الحجز';
+    }
+
+    openModal();
+  }
+
+  function openPaymentModal() {
+    if (
+      typeof window.setTransactionMode ===
+      'function'
+    ) {
+      window.setTransactionMode(
+        'payment'
+      );
+    }
+
+    document.getElementById(
+      'paymentCustomerName'
+    ).textContent =
+      currentCustomer?.name ||
+      '—';
+
+    document.getElementById(
+      'paymentCustomerPhone'
+    ).textContent =
+      currentCustomer?.phone ||
+      '—';
+
+    document.getElementById(
+      'paymentAmount'
+    ).value = '';
+
+    document.getElementById(
+      'paymentDate'
+    ).value =
+      nowDateTime();
+
+    document.getElementById(
+      'paymentNotes'
+    ).value = '';
+
+    fillPaymentBookings();
+
+    fillPaymentMethods();
+
+    updatePaymentPreview();
+
+    const title =
+      document.getElementById(
+        'transactionModalTitle'
+      );
+
+    const save =
+      document.getElementById(
+        'transactionSaveBtn'
+      );
+
+    if (title) {
+      title.textContent =
+        'تسجيل دفعة';
+    }
+
+    if (save) {
+      save.textContent =
+        'تسجيل الدفعة';
+    }
+
+    openModal();
+  }
+
+  function updatePaymentPreview() {
+    const balance =
+      Math.max(
+        0,
+        accountData().balance
+      );
+
+    const amount =
+      Number(
+        document.getElementById(
+          'paymentAmount'
+        )?.value
+      ) || 0;
+
+    const after =
+      Math.max(
+        0,
+        balance - amount
+      );
+
+    const current =
+      document.getElementById(
+        'paymentCurrentBalance'
+      );
+
+    const afterElement =
+      document.getElementById(
+        'paymentAfterBalance'
+      );
+
+    if (current) {
+      current.textContent =
+        money(balance);
+    }
+
+    if (afterElement) {
+      afterElement.textContent =
+        money(after);
+    }
+  }
+
+  async function saveBooking() {
+    if (saving) return;
+
+    const eventDate =
+      document.getElementById(
+        'bookingEventDate'
+      ).value;
+
+    const deliveryTime =
+      document.getElementById(
+        'bookingDeliveryTime'
+      ).value;
+
+    const deliveryPeriod =
+      document.getElementById(
+        'bookingDeliveryPeriod'
+      ).value;
+
+    const address =
+      document.getElementById(
+        'bookingAddress'
+      ).value.trim();
+
+    const mark =
+      document.getElementById(
+        'bookingMark'
+      ).value.trim();
+
+    const deposit =
+      Number(
+        document.getElementById(
+          'bookingPlateDeposit'
+        ).value
+      ) || 0;
+
+    const returned =
+      Number(
+        document.getElementById(
+          'bookingPlateReturned'
+        ).value
+      ) || 0;
+
+    const status =
+      document.getElementById(
+        'bookingStatus'
+      ).value;
+
+    const notes =
+      document.getElementById(
+        'bookingNotes'
+      ).value.trim();
+
+    const initialPayment =
+      Number(
+        document.getElementById(
+          'bookingInitialPayment'
+        ).value
+      ) || 0;
+
+    const paymentMethodId =
+      Number(
+        document.getElementById(
+          'bookingPaymentMethod'
+        ).value
+      ) || 0;
+
+    const items =
+      collectItems();
+
+    const total =
+      Number(
+        items
+          .reduce(
+            (sum, item) =>
+              sum +
+              item.total_price,
+            0
+          )
+          .toFixed(2)
+      );
+
+    if (
+      !eventDate ||
+      !deliveryTime ||
+      !deliveryPeriod ||
+      !address
+    ) {
+      toast(
+        'أكمل بيانات الفاتورة المطلوبة',
+        'warning'
+      );
+      return;
+    }
+
+    if (!items.length) {
+      toast(
+        'يجب إضافة صنف واحد على الأقل',
+        'warning'
+      );
+      return;
+    }
+
+    if (
+      deposit <= 0 &&
+      returned > 0
+    ) {
+      toast(
+        'لا يمكن تسجيل مبلغ مرتجع بدون تأمين',
+        'warning'
+      );
+      return;
+    }
+
+    if (returned > deposit) {
+      toast(
+        'مبلغ التأمين المرتجع لا يمكن أن يتجاوز التأمين',
+        'warning'
+      );
+      return;
+    }
+
+    if (
+      initialPayment >
+      total
+    ) {
+      toast(
+        'الدفعة الأولى لا يمكن أن تتجاوز إجمالي الفاتورة',
+        'warning'
+      );
+      return;
+    }
+
+    if (
+      initialPayment > 0 &&
+      !paymentMethodId
+    ) {
+      toast(
+        'اختر طريقة الدفع',
+        'warning'
+      );
+      return;
+    }
+
+    const payload = {
+      customer_id:
+        customerId,
+      event_date:
+        eventDate,
+      delivery_time:
+        deliveryTime,
+      delivery_period:
+        deliveryPeriod,
+      delivery_address:
+        address,
+      mark:
+        mark || null,
+      total_amount:
+        total,
+      plate_deposit:
+        deposit || null,
+      plate_deposit_returned:
+        returned || null,
+      status,
+      notes:
+        notes || null,
+      items
     };
+
+    if (!editingBookingId) {
+      payload.invoice_date =
+        new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace('T', ' ');
+
+      if (initialPayment > 0) {
+        payload.initial_payment =
+          initialPayment;
+
+        payload.payment_method_id =
+          paymentMethodId;
+
+        payload.payment_notes =
+          notes || null;
+      }
+    }
+
+    setSaving(
+      true,
+      'جاري الحفظ...'
+    );
 
     try {
       if (editingBookingId) {
-        if (window.API.updateBooking) {
-          window.API.updateBooking(editingBookingId, bookingData);
-        } else {
-          const idx = currentBookings.findIndex(
-            (b) => b.id === editingBookingId,
-          );
-          if (idx !== -1)
-            currentBookings[idx] = { ...currentBookings[idx], ...bookingData };
-        }
-        showToast("تم تحديث الفاتورة بنجاح", "success");
-        editingBookingId = null;
+        await apiCall(
+          ['updateBooking'],
+          editingBookingId,
+          payload
+        );
+
+        toast(
+          'تم تحديث الفاتورة بنجاح',
+          'success'
+        );
       } else {
-        if (window.API.addBooking) {
-          window.API.addBooking(customerId, bookingData);
-        } else {
-          const newId = currentBookings.length
-            ? Math.max(...currentBookings.map((b) => b.id)) + 1
-            : 1;
-          currentBookings.push({ id: newId, customerId, ...bookingData });
-        }
-        showToast("تم إضافة الفاتورة بنجاح", "success");
+        await apiCall(
+          [
+            'addBooking',
+            'createBooking'
+          ],
+          payload
+        );
+
+        toast(
+          'تم إضافة الفاتورة بنجاح',
+          'success'
+        );
       }
-      closeModal("transactionModal");
-      refreshData();
-    } catch (err) {
-      showToast(err.message || "حدث خطأ أثناء حفظ الفاتورة", "error");
+
+      closeModal();
+
+      editingBookingId =
+        null;
+
+      await loadData();
+    } catch (error) {
+      toast(
+        error.message ||
+        'فشل حفظ الفاتورة',
+        'error'
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
-  function savePayment(customerId) {
-    const amount = parseFloat(document.getElementById("paymentAmount")?.value);
-    const method =
-      document.querySelector('input[name="paymentMethod"]:checked')?.value ||
-      "نقدي";
-    const notes = document.getElementById("paymentNotes")?.value.trim() || "";
+  async function savePayment() {
+    if (saving) return;
 
-    if (!amount || amount <= 0) {
-      showToast("يرجى إدخال مبلغ صحيح", "warning");
-      return;
-    }
+    const amount =
+      Number(
+        document.getElementById(
+          'paymentAmount'
+        ).value
+      ) || 0;
 
-    const balanceText =
-      document.getElementById("paymentCurrentBalance")?.textContent || "0";
-    const currentBalance = parseFloat(balanceText.replace(/[^0-9.]/g, "")) || 0;
-    if (amount > currentBalance) {
-      showToast(
-        `المبلغ يتجاوز الرصيد الحالي (${window.API.formatCurrency(currentBalance)})`,
-        "error",
+    const bookingId =
+      Number(
+        document.getElementById(
+          'paymentBooking'
+        ).value
+      ) || null;
+
+    const paymentMethodId =
+      Number(
+        document.querySelector(
+          'input[name="customerPaymentMethod"]:checked'
+        )?.value
+      ) || 0;
+
+    const paymentDate =
+      document.getElementById(
+        'paymentDate'
+      ).value;
+
+    const notes =
+      document.getElementById(
+        'paymentNotes'
+      ).value.trim();
+
+    const balance =
+      Math.max(
+        0,
+        accountData().balance
+      );
+
+    if (amount <= 0) {
+      toast(
+        'أدخل مبلغاً صحيحاً',
+        'warning'
       );
       return;
     }
 
+    if (amount > balance) {
+      toast(
+        `المبلغ يتجاوز الرصيد الحالي ${money(balance)}`,
+        'error'
+      );
+      return;
+    }
+
+    if (!paymentMethodId) {
+      toast(
+        'اختر طريقة الدفع',
+        'warning'
+      );
+      return;
+    }
+
+    if (!paymentDate) {
+      toast(
+        'حدد تاريخ الدفع',
+        'warning'
+      );
+      return;
+    }
+
+    setSaving(
+      true,
+      'جاري التسجيل...'
+    );
+
     try {
-      if (editingPaymentId) {
-        // تعديل
-        if (window.API.updatePayment) {
-          window.API.updatePayment(editingPaymentId, {
+      await apiCall(
+        [
+          'addCustomerPayment',
+          'createCustomerPayment'
+        ],
+        {
+          customer_id:
             customerId,
-            amount,
-            method,
-            notes,
-          });
-        } else {
-          const idx = currentPayments.findIndex(
-            (p) => p.id === editingPaymentId,
+          booking_id:
+            bookingId,
+          amount,
+          payment_method_id:
+            paymentMethodId,
+          payment_date:
+            paymentDate.replace(
+              'T',
+              ' '
+            ),
+          notes:
+            notes || null
+        }
+      );
+
+      toast(
+        'تم تسجيل الدفعة بنجاح',
+        'success'
+      );
+
+      closeModal();
+
+      await loadData();
+    } catch (error) {
+      toast(
+        error.message ||
+        'فشل تسجيل الدفعة',
+        'error'
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function setSaving(value, text) {
+    saving = value;
+
+    const button =
+      document.getElementById(
+        'transactionSaveBtn'
+      );
+
+    if (!button) return;
+
+    if (value) {
+      button.disabled = true;
+      button.innerHTML =
+        `<i class="fas fa-spinner fa-spin"></i> ${text}`;
+      return;
+    }
+
+    button.disabled = false;
+
+    const mode =
+      document.querySelector(
+        '.switch-btn.active'
+      )?.dataset.mode;
+
+    button.textContent =
+      mode === 'payment'
+        ? 'تسجيل الدفعة'
+        : editingBookingId
+          ? 'تحديث الفاتورة'
+          : 'حفظ الحجز';
+  }
+
+  async function deleteBooking(id) {
+    const booking =
+      currentBookings.find(
+        item =>
+          Number(item.id) ===
+          Number(id)
+      );
+
+    if (!booking) return;
+
+    confirmAction({
+      title: 'حذف الفاتورة',
+      message:
+        `هل أنت متأكد من حذف الفاتورة #${id}؟`,
+      confirmText: 'حذف',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await apiCall(
+            ['deleteBooking'],
+            id
           );
-          if (idx !== -1)
-            currentPayments[idx] = {
-              ...currentPayments[idx],
-              amount,
-              method,
-              notes,
-            };
+
+          toast(
+            'تم حذف الفاتورة بنجاح',
+            'success'
+          );
+
+          await loadData();
+        } catch (error) {
+          toast(
+            error.message ||
+            'تعذر حذف الفاتورة',
+            'error'
+          );
         }
-        showToast("تم تحديث الدفعة بنجاح", "success");
-        editingPaymentId = null;
-      } else {
-        // إضافة
-        if (window.API.addPayment) {
-          window.API.addPayment(customerId, amount, method, notes);
-        } else {
-          const newId = currentPayments.length
-            ? Math.max(...currentPayments.map((p) => p.id)) + 1
-            : 1;
-          currentPayments.push({
-            id: newId,
-            customerId,
-            amount,
-            method,
-            notes,
-            date: new Date().toISOString().slice(0, 10),
-          });
-        }
-        showToast(
-          `تم تسجيل دفعة بقيمة ${window.API.formatCurrency(amount)}`,
-          "success",
-        );
       }
-      closeModal("transactionModal");
-      refreshData();
-    } catch (err) {
-      showToast(err.message || "حدث خطأ أثناء حفظ الدفعة", "error");
-    }
+    });
   }
 
-  // ============================================================
-  // 18. ربط زر الحفظ في المودال
-  // ============================================================
-  document.addEventListener("click", function (e) {
-    if (e.target && e.target.id === "transactionSaveBtn") {
-      handleTransactionSave();
-    }
-  });
+  async function deletePayment(id) {
+    const payment =
+      currentPayments.find(
+        item =>
+          Number(item.id) ===
+          Number(id)
+      );
 
-  // ============================================================
-  // 19. ربط FAB (من layout.js عبر حدث fab:modal:opened)
-  // ============================================================
-  document.addEventListener("fab:modal:opened", function (e) {
-    if (e.detail.modalId === "transactionModal" && currentCustomer) {
-      // فتح المودال في وضع الحجز الجديد
-      openTransactionModal("booking", null);
-    }
-  });
+    if (!payment) return;
 
-  // ============================================================
-  // 20. بدء التشغيل
-  // ============================================================
-  if (window.layoutReady) {
-    loadCustomerData();
+    confirmAction({
+      title: 'حذف الدفعة',
+      message:
+        `هل أنت متأكد من حذف الدفعة بقيمة ${money(payment.amount)}؟`,
+      confirmText: 'حذف',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await apiCall(
+            ['deleteCustomerPayment'],
+            id
+          );
+
+          toast(
+            'تم حذف الدفعة بنجاح',
+            'success'
+          );
+
+          await loadData();
+        } catch (error) {
+          toast(
+            error.message ||
+            'تعذر حذف الدفعة',
+            'error'
+          );
+        }
+      }
+    });
+  }
+
+  function printBooking(id) {
+    const booking =
+      currentBookings.find(
+        item =>
+          Number(item.id) ===
+          Number(id)
+      );
+
+    if (!booking) return;
+
+    const paid =
+      bookingPaid(booking);
+
+    const remaining =
+      bookingRemaining(
+        booking
+      );
+
+    const items =
+      Array.isArray(
+        booking.items
+      )
+        ? booking.items
+        : [];
+
+    const itemsHtml =
+      items
+        .map(
+          item =>
+            `
+              <tr>
+                <td>${esc(item.item_name)}</td>
+                <td>${Number(item.quantity || 0)}</td>
+                <td>${money(item.unit_price)}</td>
+                <td>${money(item.total_price)}</td>
+              </tr>
+            `
+        )
+        .join('');
+
+    const html = `
+      <!doctype html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>فاتورة #${booking.id}</title>
+        <style>
+          body{
+            font-family:Arial,sans-serif;
+            padding:30px;
+            color:#222
+          }
+          h1,h2{
+            margin:0 0 12px
+          }
+          table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px
+          }
+          th,td{
+            border:1px solid #ddd;
+            padding:9px;
+            text-align:right
+          }
+          th{
+            background:#f5f5f5
+          }
+          .totals{
+            margin-top:20px;
+            line-height:2
+          }
+        </style>
+      </head>
+      <body>
+        <h1>شواطئ عدن</h1>
+        <h2>فاتورة #${booking.id}</h2>
+
+        <p>
+          العميل:
+          ${esc(currentCustomer.name)}
+        </p>
+
+        <p>
+          تاريخ المناسبة:
+          ${esc(dateOnly(booking.event_date))}
+        </p>
+
+        <p>
+          وقت التسليم:
+          ${esc(
+            String(
+              booking.delivery_time || ''
+            ).slice(0, 5)
+          )}
+          ${esc(
+            booking.delivery_period || ''
+          )}
+        </p>
+
+        <p>
+          العنوان:
+          ${esc(
+            booking.delivery_address || ''
+          )}
+        </p>
+
+        <p>
+          العلامة:
+          ${esc(
+            booking.mark || ''
+          )}
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>الصنف</th>
+              <th>الكمية</th>
+              <th>سعر الوحدة</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div>
+            إجمالي الفاتورة:
+            ${money(booking.total_amount)}
+          </div>
+
+          <div>
+            المدفوع:
+            ${money(paid)}
+          </div>
+
+          <div>
+            المتبقي:
+            ${money(remaining)}
+          </div>
+
+          <div>
+            تأمين الصحون:
+            ${money(booking.plate_deposit || 0)}
+          </div>
+
+          <div>
+            المرتجع:
+            ${money(
+              booking.plate_deposit_returned || 0
+            )}
+          </div>
+
+          <div>
+            الحالة:
+            ${esc(
+              statusText(
+                booking.status
+              )
+            )}
+          </div>
+
+          <div>
+            ملاحظات:
+            ${esc(
+              booking.notes || ''
+            )}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const win =
+      window.open(
+        '',
+        '_blank'
+      );
+
+    if (!win) {
+      toast(
+        'تعذر فتح نافذة الطباعة',
+        'error'
+      );
+      return;
+    }
+
+    win.document.write(
+      html
+    );
+
+    win.document.close();
+    win.focus();
+
+    setTimeout(
+      () => win.print(),
+      150
+    );
+  }
+
+  function printStatement() {
+    const rows =
+      statementRows();
+
+    if (!rows.length) {
+      toast(
+        'لا توجد حركات للطباعة',
+        'warning'
+      );
+      return;
+    }
+
+    let balance = 0;
+
+    const body =
+      rows
+        .map(row => {
+          balance +=
+            row.debit -
+            row.credit;
+
+          return `
+            <tr>
+              <td>${esc(dateOnly(row.date))}</td>
+              <td>${esc(row.description)}</td>
+              <td>
+                ${
+                  row.debit
+                    ? money(row.debit)
+                    : '-'
+                }
+              </td>
+              <td>
+                ${
+                  row.credit
+                    ? money(row.credit)
+                    : '-'
+                }
+              </td>
+              <td>${money(balance)}</td>
+            </tr>
+          `;
+        })
+        .join('');
+
+    const html = `
+      <!doctype html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8">
+        <title>
+          كشف حساب ${esc(currentCustomer.name)}
+        </title>
+        <style>
+          body{
+            font-family:Arial,sans-serif;
+            padding:30px;
+            color:#222
+          }
+          table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px
+          }
+          th,td{
+            border:1px solid #ddd;
+            padding:9px;
+            text-align:right
+          }
+          th{
+            background:#f5f5f5
+          }
+          h1{
+            margin-bottom:4px
+          }
+        </style>
+      </head>
+      <body>
+        <h1>شواطئ عدن</h1>
+
+        <h2>
+          كشف حساب العميل:
+          ${esc(currentCustomer.name)}
+        </h2>
+
+        <p>
+          الجوال:
+          ${esc(
+            currentCustomer.phone ||
+            '—'
+          )}
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>البيان</th>
+              <th>مدين</th>
+              <th>دائن</th>
+              <th>الرصيد</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${body}
+          </tbody>
+        </table>
+
+        <h3>
+          الرصيد الحالي:
+          ${money(balance)}
+        </h3>
+      </body>
+      </html>
+    `;
+
+    const win =
+      window.open(
+        '',
+        '_blank'
+      );
+
+    if (!win) {
+      toast(
+        'تعذر فتح نافذة الطباعة',
+        'error'
+      );
+      return;
+    }
+
+    win.document.write(
+      html
+    );
+
+    win.document.close();
+    win.focus();
+
+    setTimeout(
+      () => win.print(),
+      150
+    );
+  }
+
+  function bindContainer() {
+    if (!container) return;
+
+    container.addEventListener(
+      'click',
+      event => {
+        const button =
+          event.target.closest(
+            '[data-action]'
+          );
+
+        if (!button) return;
+
+        const action =
+          button.dataset.action;
+
+        const card =
+          button.closest(
+            '[data-id]'
+          );
+
+        const id =
+          Number(
+            card?.dataset.id
+          );
+
+        if (
+          action ===
+          'editBooking'
+        ) {
+          const booking =
+            currentBookings.find(
+              item =>
+                Number(item.id) ===
+                id
+            );
+
+          openBookingModal(
+            booking || null
+          );
+        }
+
+        if (
+          action ===
+          'deleteBooking'
+        ) {
+          deleteBooking(id);
+        }
+
+        if (
+          action ===
+          'exportBooking'
+        ) {
+          printBooking(id);
+        }
+
+        if (
+          action ===
+          'deletePayment'
+        ) {
+          deletePayment(id);
+        }
+
+        if (
+          action ===
+          'exportStatement'
+        ) {
+          printStatement();
+        }
+      }
+    );
+  }
+
+  function bindModal() {
+    document
+      .querySelectorAll(
+        '.switch-btn'
+      )
+      .forEach(button => {
+        button.addEventListener(
+          'click',
+          () => {
+            const mode =
+              button.dataset.mode;
+
+            if (
+              mode ===
+              'booking'
+            ) {
+              openBookingModal();
+            } else {
+              openPaymentModal();
+            }
+          }
+        );
+      });
+
+    document
+      .getElementById(
+        'transactionSaveBtn'
+      )
+      ?.addEventListener(
+        'click',
+        () => {
+          const mode =
+            document.querySelector(
+              '.switch-btn.active'
+            )?.dataset.mode ||
+            'booking';
+
+          if (
+            mode ===
+            'booking'
+          ) {
+            saveBooking();
+          } else {
+            savePayment();
+          }
+        }
+      );
+
+    document
+      .getElementById(
+        'addBookingItemBtn'
+      )
+      ?.addEventListener(
+        'click',
+        () => {
+          const box =
+            document.getElementById(
+              'bookingItemsContainer'
+            );
+
+          if (!box) return;
+
+          box.insertAdjacentHTML(
+            'beforeend',
+            renderNewItemRow()
+          );
+        }
+      );
+
+    document
+      .getElementById(
+        'bookingItemsContainer'
+      )
+      ?.addEventListener(
+        'change',
+        event => {
+          if (
+            event.target.matches(
+              '.item-select'
+            )
+          ) {
+            updateItemRow(
+              event.target.closest(
+                '.item-row'
+              )
+            );
+          }
+        }
+      );
+
+    document
+      .getElementById(
+        'bookingItemsContainer'
+      )
+      ?.addEventListener(
+        'input',
+        event => {
+          if (
+            event.target.matches(
+              '.item-qty,.item-price'
+            )
+          ) {
+            updateItemRow(
+              event.target.closest(
+                '.item-row'
+              )
+            );
+          }
+        }
+      );
+
+    document
+      .getElementById(
+        'bookingItemsContainer'
+      )
+      ?.addEventListener(
+        'click',
+        event => {
+          const button =
+            event.target.closest(
+              '.remove-item-btn'
+            );
+
+          if (!button) return;
+
+          const row =
+            button.closest(
+              '.item-row'
+            );
+
+          const box =
+            document.getElementById(
+              'bookingItemsContainer'
+            );
+
+          if (
+            box.querySelectorAll(
+              '.item-row'
+            ).length > 1
+          ) {
+            row.remove();
+          } else {
+            row
+              .querySelectorAll(
+                'input,select'
+              )
+              .forEach(
+                field =>
+                  field.value = ''
+              );
+          }
+
+          updateBookingPreview();
+        }
+      );
+
+    [
+      'bookingPlateDeposit',
+      'bookingPlateReturned',
+      'bookingInitialPayment'
+    ].forEach(id => {
+      document
+        .getElementById(id)
+        ?.addEventListener(
+          'input',
+          updateBookingPreview
+        );
+    });
+
+    document
+      .getElementById(
+        'paymentAmount'
+      )
+      ?.addEventListener(
+        'input',
+        updatePaymentPreview
+      );
+
+    document
+      .querySelectorAll(
+        '[data-close="transactionModal"]'
+      )
+      .forEach(button => {
+        button.addEventListener(
+          'click',
+          closeModal
+        );
+      });
+  }
+
+  if (fab) {
+    fab.addEventListener(
+      'click',
+      () => {
+        if (!currentCustomer) return;
+        openBookingModal();
+      }
+    );
+  }
+
+  bindContainer();
+  bindModal();
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  customerId =
+    Number(
+      params.get('id')
+    ) || 0;
+
+  if (!customerId) {
+    renderFailure(
+      'معرف العميل غير صحيح',
+      'اختر عميلاً من صفحة العملاء.'
+    );
+  } else if (
+    window.layoutReady
+  ) {
+    loadData();
   } else {
-    document.addEventListener("layout:ready", loadCustomerData);
+    document.addEventListener(
+      'layout:ready',
+      loadData,
+      { once: true }
+    );
+
+    setTimeout(() => {
+      if (
+        window.API &&
+        currentCustomer === null
+      ) {
+        loadData();
+      }
+    }, 500);
   }
-});
+})();

@@ -1,349 +1,641 @@
-// ============================================================
-// assets/js/pages/customers.js
-// الصفحة الرئيسية للعملاء (عرض، بحث، إضافة، تعديل، حذف)
-// جميع العمليات المالية (دفع/فاتورة) تكون في customer-view.js
-// ============================================================
-
 document.addEventListener("DOMContentLoaded", function () {
   "use strict";
 
-  function init() {
-    // ---- عناصر DOM ----
-    const listEl = document.getElementById("customersList");
-    const searchInput = document.getElementById("customerSearch");
-    const countEl = document.getElementById("customersCount");
-    const receivablesEl = document.getElementById("customersReceivables");
-    const collectedEl = document.getElementById("customersCollected");
+  const listEl = document.getElementById("customersList");
+  const searchInput = document.getElementById("customerSearch");
+  const countEl = document.getElementById("customersCount");
+  const receivablesEl = document.getElementById("customersReceivables");
+  const collectedEl = document.getElementById("customersCollected");
 
-    // عناصر مودال الإضافة
-    const addModal = document.getElementById("addCustomerModal");
-    const nameInput = document.getElementById("newCustomerName");
-    const phoneInput = document.getElementById("newCustomerPhone");
-    const saveBtn = document.getElementById("saveNewCustomer");
-    const addHeaderBtn = document.getElementById("addCustomerBtn");
-    const fab = document.getElementById("fab");
+  const addModal = document.getElementById("addCustomerModal");
+  const nameInput = document.getElementById("newCustomerName");
+  const phoneInput = document.getElementById("newCustomerPhone");
+  const notesInput = document.getElementById("newCustomerNotes");
+  const saveBtn = document.getElementById("saveNewCustomer");
+  const addHeaderBtn = document.getElementById("addCustomerBtn");
+  const fab = document.getElementById("fab");
 
-    // عناصر مودال التعديل
-    const editModal = document.getElementById("editCustomerModal");
-    const editName = document.getElementById("editCustomerName");
-    const editPhone = document.getElementById("editCustomerPhone");
-    const saveEditBtn = document.getElementById("saveEditCustomer");
-    let editingCustomerId = null;
+  const editModal = document.getElementById("editCustomerModal");
+  const editName = document.getElementById("editCustomerName");
+  const editPhone = document.getElementById("editCustomerPhone");
+  const editNotes = document.getElementById("editCustomerNotes");
+  const saveEditBtn = document.getElementById("saveEditCustomer");
 
-    if (!listEl) return;
+  let editingCustomerId = null;
+  let customers = [];
+  let accounts = [];
 
-    // ---- دوال مساعدة ----
-    function formatCurrency(amount) {
-      if (window.API && typeof window.API.formatCurrency === "function") {
-        return window.API.formatCurrency(amount);
-      }
-      return Number(amount).toLocaleString("ar-SA") + " ر.س";
+  if (!listEl) return;
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function number(value) {
+    const result = Number(value);
+    return Number.isFinite(result) ? result : 0;
+  }
+
+  function formatCurrency(amount) {
+    if (window.API && typeof API.formatCurrency === "function") {
+      return API.formatCurrency(number(amount));
     }
 
-    // ---- عرض العملاء ----
-    function renderCustomers(filter = "") {
-      if (!window.API || typeof window.API.getCustomers !== "function") {
-        listEl.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h4>جاري التحميل...</h4></div>`;
-        return;
-      }
+    return number(amount).toLocaleString("ar-SA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + " ر.س";
+  }
 
-      const allCustomers = window.API.getCustomers();
-      const filtered = allCustomers.filter(
-        (c) => c.name.includes(filter) || c.phone.includes(filter),
+  function showToast(message, type = "info") {
+    const container =
+      document.querySelector(".custom-toast-container") ||
+      document.getElementById("toastContainer");
+
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = `custom-toast ${type}`;
+    toast.style.cssText =
+      "display:flex;align-items:center;gap:10px;padding:12px 16px;margin:8px;background:var(--surface-card);border-radius:12px;box-shadow:var(--shadow-md);font-family:Tajawal,sans-serif;";
+
+    const icons = {
+      success: "fa-check-circle",
+      error: "fa-times-circle",
+      warning: "fa-exclamation-circle",
+      info: "fa-info-circle"
+    };
+
+    toast.innerHTML = `
+      <i class="fas ${icons[type] || icons.info}"></i>
+      <span>${escapeHtml(message)}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 3000);
+  }
+
+  function getAccountForCustomer(customerId) {
+    return accounts.find(
+      (account) =>
+        Number(account.customer_id ?? account.customer?.id ?? account.id) ===
+        Number(customerId)
+    ) || null;
+  }
+
+  function getCustomerFinancialData(customer) {
+    const account = getAccountForCustomer(customer.id);
+
+    const totalInvoices = number(
+      account?.total_invoices ??
+      account?.totalInvoices ??
+      customer.total_invoices ??
+      customer.totalInvoices ??
+      0
+    );
+
+    const totalPaid = number(
+      account?.total_paid ??
+      account?.totalPaid ??
+      customer.total_paid ??
+      customer.totalPaid ??
+      0
+    );
+
+    const balance = number(
+      account?.balance ??
+      customer.balance ??
+      Math.max(0, totalInvoices - totalPaid)
+    );
+
+    const invoicesCount = number(
+      account?.invoices_count ??
+      account?.invoicesCount ??
+      customer.invoices_count ??
+      customer.invoicesCount ??
+      0
+    );
+
+    return {
+      totalInvoices,
+      totalPaid,
+      balance,
+      invoicesCount
+    };
+  }
+
+  function getInitials(name) {
+    const words = String(name || "؟")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (!words.length) return "؟";
+
+    return words
+      .slice(0, 2)
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase();
+  }
+
+  function renderCustomers(filter = "") {
+    const query = String(filter || "").trim().toLowerCase();
+
+    const filtered = customers.filter((customer) => {
+      const name = String(customer.name || "").toLowerCase();
+      const phone = String(customer.phone || "").toLowerCase();
+
+      return name.includes(query) || phone.includes(query);
+    });
+
+    if (!filtered.length) {
+      listEl.innerHTML = `
+        <div class="empty-state-box">
+          <div class="empty-state-icon">
+            <i class="fas fa-${query ? "search" : "user-slash"}"></i>
+          </div>
+          <h4 class="empty-state-title">
+            ${query ? "لا توجد نتائج مطابقة" : "لا يوجد عملاء مضافين"}
+          </h4>
+          <p class="empty-state-text">
+            ${
+              query
+                ? "لم نتمكن من العثور على عملاء بهذا الاسم أو الرقم."
+                : "ابدأ بإضافة عملائك لإدارة حساباتهم وفواتيرهم بسهولة."
+            }
+          </p>
+          ${
+            !query
+              ? `<button class="empty-state-btn" id="emptyAddCustomer">
+                   <i class="fas fa-plus"></i>
+                   إضافة عميل جديد
+                 </button>`
+              : ""
+          }
+        </div>
+      `;
+
+      document.getElementById("emptyAddCustomer")?.addEventListener(
+        "click",
+        openAddModal
       );
 
-      if (filtered.length === 0) {
-        listEl.innerHTML = `
-          <div class="empty-state">
-            <i class="fas fa-user-slash"></i>
-            <h4>لا يوجد عملاء</h4>
-            <p>${filter ? "لم يتم العثور على عملاء مطابقين للبحث" : "أضف أول عميل لك الآن"}</p>
-          </div>
-        `;
-        return;
-      }
+      return;
+    }
 
-      listEl.innerHTML = filtered
-        .map((c) => {
-          const balance = c.balance;
-          const initials = c.name
-            .split(" ")
-            .map((w) => w[0])
-            .join("")
-            .slice(0, 2);
-          return `
-          <div class="customer-card" data-id="${c.id}">
-            <div class="click-area" onclick="window.location.href='customer-view.html?id=${c.id}'">
-              <div class="avatar">${initials}</div>
+    listEl.innerHTML = filtered
+      .map((customer) => {
+        const financial = getCustomerFinancialData(customer);
+        const active = customer.is_active !== false;
+        const initials = getInitials(customer.name);
+
+        return `
+          <div class="customer-card ${active ? "" : "inactive"}" data-id="${customer.id}">
+            <div class="click-area" data-action="view">
+              <div class="avatar">${escapeHtml(initials)}</div>
+
               <div class="info">
-                <div class="name">${c.name}</div>
-                <div class="phone">${c.phone}</div>
+                <div class="name">${escapeHtml(customer.name)}</div>
+                <div class="phone">${escapeHtml(customer.phone || "—")}</div>
+
+                <span class="customer-status ${active ? "active" : "inactive"}">
+                  <i class="fas ${active ? "fa-check-circle" : "fa-ban"}"></i>
+                  ${active ? "نشط" : "غير نشط"}
+                </span>
+
                 <div class="financial">
-                  <span><span class="label">الفواتير</span> ${c.invoicesCount}</span>
-                  <span><span class="label">الإجمالي</span> <span class="amount">${formatCurrency(c.totalInvoices)}</span></span>
-                  <span><span class="label">مدفوع</span> <span class="paid">${formatCurrency(c.totalPaid)}</span></span>
+                  <span>
+                    <span class="label">الفواتير</span>
+                    ${financial.invoicesCount}
+                  </span>
+
+                  <span>
+                    <span class="label">الإجمالي</span>
+                    <span class="amount">${formatCurrency(financial.totalInvoices)}</span>
+                  </span>
+
+                  <span>
+                    <span class="label">مدفوع</span>
+                    <span class="paid">${formatCurrency(financial.totalPaid)}</span>
+                  </span>
+
                   ${
-                    balance > 0
-                      ? `<span><span class="label">متبقي</span> <span class="remaining">${formatCurrency(balance)}</span></span>`
-                      : `<span><span class="label">الحالة</span> <span style="color:var(--success);font-weight:700;">مسدد بالكامل</span></span>`
+                    financial.balance > 0
+                      ? `
+                        <span>
+                          <span class="label">متبقي</span>
+                          <span class="remaining">${formatCurrency(financial.balance)}</span>
+                        </span>
+                      `
+                      : `
+                        <span>
+                          <span class="label">الحالة</span>
+                          <span style="color:var(--success);font-weight:700;">مسدد</span>
+                        </span>
+                      `
                   }
                 </div>
               </div>
             </div>
+
             <div class="actions">
-              <button class="btn-icon-sm btn-icon-primary" data-action="edit" title="تعديل"><i class="fas fa-pen"></i></button>
-              <button class="btn-icon-sm btn-icon-danger" data-action="delete" title="حذف"><i class="fas fa-trash"></i></button>
-              <div class="arrow"><i class="fas fa-chevron-left"></i></div>
+              <button
+                type="button"
+                class="customer-action edit"
+                data-action="edit"
+                title="تعديل"
+              >
+                <i class="fas fa-pen"></i>
+              </button>
+
+              <button
+                type="button"
+                class="customer-action ${active ? "toggle" : "activate"}"
+                data-action="toggle"
+                title="${active ? "تعطيل العميل" : "تفعيل العميل"}"
+              >
+                <i class="fas ${active ? "fa-user-slash" : "fa-user-check"}"></i>
+              </button>
+
+              <div class="arrow">
+                <i class="fas fa-chevron-left"></i>
+              </div>
             </div>
           </div>
         `;
-        })
-        .join("");
+      })
+      .join("");
+  }
+
+  async function loadAccounts() {
+    accounts = [];
+
+    if (typeof API.getCustomerAccounts !== "function") return;
+
+    try {
+      const result = await API.getCustomerAccounts();
+      accounts = Array.isArray(result) ? result : [];
+    } catch (error) {
+      accounts = [];
+    }
+  }
+
+  async function loadCustomers() {
+    if (!window.API || typeof API.getCustomers !== "function") {
+      listEl.innerHTML = `
+        <div class="empty-state-box">
+          <div class="empty-state-icon">
+            <i class="fas fa-exclamation-circle"></i>
+          </div>
+          <h4 class="empty-state-title">تعذر الاتصال بالخادم</h4>
+        </div>
+      `;
+      return;
     }
 
-    // ---- تحديث الملخص المالي ----
-    function updateSummary() {
-      if (!window.API || typeof window.API.getCustomers !== "function") return;
+    try {
+      const result = await API.getCustomers();
 
-      const allCustomers = window.API.getCustomers();
-      const total = allCustomers.length;
-      const receivables = allCustomers.reduce((sum, c) => sum + c.balance, 0);
-      const collected = allCustomers.reduce((sum, c) => sum + c.totalPaid, 0);
+      customers = Array.isArray(result) ? result : [];
 
-      countEl.textContent = total;
-      receivablesEl.textContent = formatCurrency(receivables);
-      collectedEl.textContent = formatCurrency(collected);
+      await loadAccounts();
+
+      updateSummary();
+      renderCustomers(searchInput?.value.trim() || "");
+    } catch (error) {
+      listEl.innerHTML = `
+        <div class="empty-state-box">
+          <div class="empty-state-icon">
+            <i class="fas fa-exclamation-circle"></i>
+          </div>
+          <h4 class="empty-state-title">حدث خطأ في تحميل العملاء</h4>
+          <p class="empty-state-text">${escapeHtml(error.message || "تعذر تحميل البيانات")}</p>
+        </div>
+      `;
+
+      showToast(error.message || "فشل تحميل العملاء", "error");
     }
+  }
 
-    // ---- البحث الفوري ----
-    searchInput.addEventListener("input", function () {
-      renderCustomers(this.value.trim());
+  function updateSummary() {
+    const activeCustomers = customers.filter(
+      (customer) => customer.is_active !== false
+    );
+
+    let receivables = 0;
+    let collected = 0;
+
+    customers.forEach((customer) => {
+      const financial = getCustomerFinancialData(customer);
+      receivables += financial.balance;
+      collected += financial.totalPaid;
     });
 
-    // ============================================================
-    // إضافة عميل جديد
-    // ============================================================
-    function openAddModal() {
-      nameInput.value = "";
-      phoneInput.value = "";
-      addModal.classList.add("active");
-      document.body.style.overflow = "hidden";
-      setTimeout(() => nameInput.focus(), 100);
-    }
+    if (countEl) countEl.textContent = activeCustomers.length;
+    if (receivablesEl) receivablesEl.textContent = formatCurrency(receivables);
+    if (collectedEl) collectedEl.textContent = formatCurrency(collected);
+  }
 
-    function closeAddModal() {
-      addModal.classList.remove("active");
+  function openAddModal() {
+    nameInput.value = "";
+    phoneInput.value = "";
+    notesInput.value = "";
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = "حفظ العميل";
+
+    addModal.classList.add("active");
+    document.body.style.overflow = "hidden";
+
+    setTimeout(() => nameInput.focus(), 100);
+  }
+
+  function closeAddModal() {
+    addModal.classList.remove("active");
+
+    if (!editModal.classList.contains("active")) {
       document.body.style.overflow = "";
     }
+  }
 
-    function handleSaveCustomer() {
-      const name = nameInput.value.trim();
-      const phone = phoneInput.value.trim();
+  async function handleSaveCustomer() {
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const notes = notesInput.value.trim();
 
-      if (!name) {
-        showToast("يرجى إدخال اسم العميل", "warning");
-        nameInput.focus();
-        return;
-      }
-      if (!phone) {
-        showToast("يرجى إدخال رقم الجوال", "warning");
-        phoneInput.focus();
-        return;
-      }
-
-      try {
-        window.API.addCustomer(name, phone, "");
-        showToast(`تم إضافة العميل "${name}" بنجاح`, "success");
-        renderCustomers(searchInput.value.trim());
-        updateSummary();
-        closeAddModal();
-      } catch (err) {
-        showToast(err.message || "حدث خطأ أثناء إضافة العميل", "error");
-      }
+    if (!name) {
+      showToast("يرجى إدخال اسم العميل", "warning");
+      nameInput.focus();
+      return;
     }
 
-    addHeaderBtn.addEventListener("click", openAddModal);
-    fab.addEventListener("click", openAddModal);
-    saveBtn.addEventListener("click", handleSaveCustomer);
+    if (!phone) {
+      showToast("يرجى إدخال رقم الجوال", "warning");
+      phoneInput.focus();
+      return;
+    }
 
-    document
-      .querySelectorAll('[data-close="addCustomerModal"]')
-      .forEach((btn) => {
-        btn.addEventListener("click", closeAddModal);
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const result = await API.createCustomer({
+        name,
+        phone,
+        notes,
+        is_active: true
       });
 
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && addModal.classList.contains("active")) {
-        closeAddModal();
-      }
-    });
+      const customer = result?.data || result;
 
-    [nameInput, phoneInput].forEach((input) => {
-      input.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleSaveCustomer();
-        }
-      });
-    });
+      showToast(
+        `تم إضافة العميل "${customer?.name || name}" بنجاح`,
+        "success"
+      );
 
-    // ============================================================
-    // تعديل عميل (بدون عنوان)
-    // ============================================================
-    function openEditModal(customerId) {
-      const customer = window.API.getCustomer(customerId);
+      closeAddModal();
+      await loadCustomers();
+    } catch (error) {
+      showToast(error.message || "حدث خطأ أثناء إضافة العميل", "error");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = "حفظ العميل";
+    }
+  }
+
+  async function openEditModal(customerId) {
+    try {
+      const result = await API.getCustomer(customerId);
+      const customer = result?.data || result;
+
       if (!customer) {
         showToast("العميل غير موجود", "error");
         return;
       }
+
       editingCustomerId = customerId;
+
       editName.value = customer.name || "";
       editPhone.value = customer.phone || "";
+      editNotes.value = customer.notes || "";
+
+      saveEditBtn.disabled = false;
+      saveEditBtn.innerHTML = "حفظ التغييرات";
+
       editModal.classList.add("active");
       document.body.style.overflow = "hidden";
+
       setTimeout(() => editName.focus(), 100);
+    } catch (error) {
+      showToast(error.message || "فشل تحميل بيانات العميل", "error");
     }
+  }
 
-    function closeEditModal() {
-      editModal.classList.remove("active");
+  function closeEditModal() {
+    editModal.classList.remove("active");
+    editingCustomerId = null;
+
+    if (!addModal.classList.contains("active")) {
       document.body.style.overflow = "";
-      editingCustomerId = null;
+    }
+  }
+
+  async function handleEditCustomer() {
+    if (!editingCustomerId) return;
+
+    const name = editName.value.trim();
+    const phone = editPhone.value.trim();
+    const notes = editNotes.value.trim();
+
+    if (!name) {
+      showToast("يرجى إدخال اسم العميل", "warning");
+      editName.focus();
+      return;
     }
 
-    function handleEditCustomer() {
-      const name = editName.value.trim();
-      const phone = editPhone.value.trim();
-
-      if (!name) {
-        showToast("يرجى إدخال اسم العميل", "warning");
-        editName.focus();
-        return;
-      }
-      if (!phone) {
-        showToast("يرجى إدخال رقم الجوال", "warning");
-        editPhone.focus();
-        return;
-      }
-
-      try {
-        // الحفاظ على العنوان القديم إن وجد
-        const customer = window.API.getCustomer(editingCustomerId);
-        const address = customer ? customer.address : "";
-        window.API.updateCustomer(editingCustomerId, name, phone, address);
-        showToast(`تم تحديث العميل "${name}" بنجاح`, "success");
-        renderCustomers(searchInput.value.trim());
-        updateSummary();
-        closeEditModal();
-      } catch (err) {
-        showToast(err.message || "حدث خطأ أثناء التحديث", "error");
-      }
+    if (!phone) {
+      showToast("يرجى إدخال رقم الجوال", "warning");
+      editPhone.focus();
+      return;
     }
 
+    const currentCustomer = customers.find(
+      (customer) => Number(customer.id) === Number(editingCustomerId)
+    );
+
+    saveEditBtn.disabled = true;
+    saveEditBtn.innerHTML =
+      '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
+
+    try {
+      await API.updateCustomer(editingCustomerId, {
+        name,
+        phone,
+        notes,
+        is_active: currentCustomer?.is_active !== false
+      });
+
+      showToast(`تم تحديث العميل "${name}" بنجاح`, "success");
+
+      closeEditModal();
+      await loadCustomers();
+    } catch (error) {
+      showToast(error.message || "حدث خطأ أثناء التحديث", "error");
+    } finally {
+      saveEditBtn.disabled = false;
+      saveEditBtn.innerHTML = "حفظ التغييرات";
+    }
+  }
+
+  async function toggleCustomer(customerId) {
+    const customer = customers.find(
+      (item) => Number(item.id) === Number(customerId)
+    );
+
+    if (!customer) return;
+
+    const isActive = customer.is_active !== false;
+    const nextState = !isActive;
+
+    try {
+      await API.updateCustomer(customerId, {
+        name: customer.name,
+        phone: customer.phone,
+        notes: customer.notes || "",
+        is_active: nextState
+      });
+
+      showToast(
+        nextState
+          ? `تم تفعيل العميل "${customer.name}"`
+          : `تم تعطيل العميل "${customer.name}"`,
+        "success"
+      );
+
+      await loadCustomers();
+    } catch (error) {
+      showToast(
+        error.message ||
+          (nextState ? "فشل تفعيل العميل" : "فشل تعطيل العميل"),
+        "error"
+      );
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", function () {
+      renderCustomers(this.value.trim());
+    });
+  }
+
+  if (addHeaderBtn) {
+    addHeaderBtn.addEventListener("click", openAddModal);
+  }
+
+  if (fab) {
+    fab.addEventListener("click", openAddModal);
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener("click", handleSaveCustomer);
+  }
+
+  if (saveEditBtn) {
     saveEditBtn.addEventListener("click", handleEditCustomer);
-
-    document
-      .querySelectorAll('[data-close="editCustomerModal"]')
-      .forEach((btn) => {
-        btn.addEventListener("click", closeEditModal);
-      });
-
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && editModal.classList.contains("active")) {
-        closeEditModal();
-      }
-    });
-
-    [editName, editPhone].forEach((input) => {
-      if (input) {
-        input.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleEditCustomer();
-          }
-        });
-      }
-    });
-
-    // ============================================================
-    // حذف عميل
-    // ============================================================
-    function handleDeleteCustomer(id) {
-      const customer = window.API.getCustomer(id);
-      if (!customer) return;
-
-      showConfirm({
-        title: "حذف العميل",
-        message: `هل أنت متأكد من حذف العميل "${customer.name}"؟`,
-        confirmText: "حذف",
-        danger: true,
-        onConfirm: function () {
-          try {
-            if (window.API.deleteCustomer) {
-              window.API.deleteCustomer(id);
-            } else {
-              // محاكاة الحذف
-              const customers = window.API.getCustomers();
-              const index = customers.findIndex((c) => c.id === id);
-              if (index !== -1) {
-                customers.splice(index, 1);
-              }
-            }
-            showToast(`تم حذف العميل "${customer.name}" بنجاح`, "success");
-            renderCustomers(searchInput.value.trim());
-            updateSummary();
-          } catch (err) {
-            showToast(err.message || "حدث خطأ أثناء الحذف", "error");
-          }
-        },
-      });
-    }
-
-    // ---- أحداث الأزرار (delegation) ----
-    listEl.addEventListener("click", function (e) {
-      const editBtn = e.target.closest('[data-action="edit"]');
-      if (editBtn) {
-        const card = editBtn.closest(".customer-card");
-        if (card) {
-          const id = parseInt(card.dataset.id);
-          openEditModal(id);
-        }
-        return;
-      }
-
-      const deleteBtn = e.target.closest('[data-action="delete"]');
-      if (deleteBtn) {
-        const card = deleteBtn.closest(".customer-card");
-        if (card) {
-          const id = parseInt(card.dataset.id);
-          handleDeleteCustomer(id);
-        }
-        return;
-      }
-    });
-
-    // ---- التهيئة الأولية ----
-    function loadData() {
-      if (!window.API) {
-        setTimeout(loadData, 200);
-        return;
-      }
-      renderCustomers();
-      updateSummary();
-    }
-
-    loadData();
-
-    if (!window.layoutReady) {
-      document.addEventListener("layout:ready", function () {
-        renderCustomers(searchInput.value.trim());
-        updateSummary();
-      });
-    }
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
+  document.querySelectorAll('[data-close="addCustomerModal"]').forEach((element) => {
+    element.addEventListener("click", closeAddModal);
+  });
+
+  document.querySelectorAll('[data-close="editCustomerModal"]').forEach((element) => {
+    element.addEventListener("click", closeEditModal);
+  });
+
+  [nameInput, phoneInput, notesInput].forEach((input) => {
+    input?.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && event.target.tagName !== "TEXTAREA") {
+        event.preventDefault();
+        handleSaveCustomer();
+      }
+    });
+  });
+
+  [editName, editPhone, editNotes].forEach((input) => {
+    input?.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && event.target.tagName !== "TEXTAREA") {
+        event.preventDefault();
+        handleEditCustomer();
+      }
+    });
+  });
+
+  listEl.addEventListener("click", function (event) {
+    const card = event.target.closest(".customer-card");
+
+    if (!card) return;
+
+    const customerId = Number(card.dataset.id);
+
+    const editButton = event.target.closest('[data-action="edit"]');
+    if (editButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openEditModal(customerId);
+      return;
+    }
+
+    const toggleButton = event.target.closest('[data-action="toggle"]');
+    if (toggleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleCustomer(customerId);
+      return;
+    }
+
+    const viewArea = event.target.closest('[data-action="view"]');
+    if (viewArea) {
+      window.location.href = `customer-view.html?id=${customerId}`;
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape") return;
+
+    if (addModal.classList.contains("active")) {
+      closeAddModal();
+    }
+
+    if (editModal.classList.contains("active")) {
+      closeEditModal();
+    }
+  });
+
+  async function initialize() {
+    if (!window.API) {
+      setTimeout(initialize, 150);
+      return;
+    }
+
+    listEl.innerHTML = `
+      <div class="empty-state-box">
+        <div class="empty-state-icon">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <h4 class="empty-state-title">جاري تحميل العملاء...</h4>
+      </div>
+    `;
+
+    await loadCustomers();
   }
+
+  initialize();
 });

@@ -1,276 +1,752 @@
-// ============================================================
-// assets/js/pages/items.js
-// (معدل لإزالة مستمع FAB والاعتماد على layout.js)
-// ============================================================
+'use strict';
 
-document.addEventListener('DOMContentLoaded', function() {
-  'use strict';
+document.addEventListener('DOMContentLoaded', () => {
 
-  // ---- الحالة (State) ----
-  let items = [];
-  let editingId = null;
+    const state = {
+        items: [],
+        filteredItems: [],
+        editingId: null,
+        loading: false,
+        saving: false
+    };
 
-  // ---- عناصر DOM ----
-  const listEl = document.getElementById('itemsList');
-  const searchInput = document.getElementById('itemSearch');
-  const countEl = document.getElementById('itemsCount');
-  const minPriceEl = document.getElementById('minPrice');
-  const maxPriceEl = document.getElementById('maxPrice');
+    const $ = selector => document.querySelector(selector);
 
-  const modal = document.getElementById('itemModal');
-  const modalTitle = document.getElementById('itemModalTitle');
-  const nameInput = document.getElementById('itemName');
-  const priceInput = document.getElementById('itemPrice');
-  const saveBtn = document.getElementById('saveItemBtn');
-  const addBtn = document.getElementById('addItemBtn');
-  // تم إزالة fab لأنه سيتم التحكم به من layout.js
+    const listEl = $('#itemsList');
+    const searchInput = $('#itemSearch');
 
-  // ---- دوال مساعدة ----
-  function formatCurrency(amount) {
-    if (window.API && typeof window.API.formatCurrency === 'function') {
-      return window.API.formatCurrency(amount);
-    }
-    return Number(amount).toLocaleString('ar-SA') + ' ر.س';
-  }
+    const countEl = $('#itemsCount');
+    const minPriceEl = $('#minPrice');
+    const maxPriceEl = $('#maxPrice');
 
-  // ---- تحميل البيانات ----
-  function loadItems() {
-    if (!window.API || typeof window.API.getItems !== 'function') {
-      console.warn('API not ready, retrying...');
-      setTimeout(loadItems, 100);
-      return;
-    }
-    items = window.API.getItems();
-    renderItems();
-    updateSummary();
-  }
+    const addItemBtn = $('#addItemBtn');
+    const fab = $('#fab');
 
-  // ---- عرض الأصناف ----
-  function renderItems(filter = '') {
-    if (!items || items.length === 0) {
-      listEl.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-tags"></i>
-          <h4>لا توجد أصناف</h4>
-          <p>${filter ? 'لم يتم العثور على أصناف مطابقة للبحث' : 'أضف أول صنف لك الآن'}</p>
-        </div>
-      `;
-      return;
+    const modal = $('#itemModal');
+    const modalTitle = $('#itemModalTitle');
+
+    const form = $('#itemForm');
+    const nameInput = $('#itemName');
+    const priceInput = $('#itemPrice');
+    const noteInput = $('#itemNote');
+    const saveBtn = $('#saveItemBtn');
+
+    function showToast(message, type = 'info') {
+        if (
+            window.Layout &&
+            typeof Layout.showToast === 'function'
+        ) {
+            Layout.showToast(message, type);
+            return;
+        }
+
+        if (
+            window.Utils &&
+            typeof Utils.notify === 'function'
+        ) {
+            Utils.notify(message, type);
+            return;
+        }
+
+        if (type === 'error') {
+            console.error(message);
+        } else {
+            console.log(message);
+        }
     }
 
-    const filtered = items.filter(item =>
-      item.name.toLowerCase().includes(filter.toLowerCase())
-    );
+    function formatCurrency(value) {
+        if (
+            window.Utils &&
+            typeof Utils.formatCurrency === 'function'
+        ) {
+            return Utils.formatCurrency(value);
+        }
 
-    if (filtered.length === 0) {
-      listEl.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-tags"></i>
-          <h4>لا توجد أصناف</h4>
-          <p>لم يتم العثور على أصناف مطابقة للبحث</p>
-        </div>
-      `;
-      return;
+        const number = Number(value) || 0;
+
+        return `${number.toLocaleString('ar-SA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })} ر.س`;
     }
 
-    listEl.innerHTML = filtered.map(item => `
-      <div class="item-card" data-id="${item.id}">
-        <div class="icon"><i class="fas fa-utensils"></i></div>
-        <div class="info">
-          <div class="name">${item.name}</div>
-          <div class="details">
-            <span class="price">${formatCurrency(item.price)}</span>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn-icon-sm btn-icon-primary" data-action="edit" title="تعديل"><i class="fas fa-pen"></i></button>
-          <button class="btn-icon-sm btn-icon-danger" data-action="delete" title="حذف"><i class="fas fa-trash"></i></button>
-        </div>
-      </div>
-    `).join('');
-  }
+    function escapeHtml(value) {
+        if (
+            window.Utils &&
+            typeof Utils.escapeHtml === 'function'
+        ) {
+            return Utils.escapeHtml(value);
+        }
 
-  // ---- تحديث الملخص ----
-  function updateSummary() {
-    if (!items || items.length === 0) {
-      countEl.textContent = '0';
-      minPriceEl.textContent = '0 ر.س';
-      maxPriceEl.textContent = '0 ر.س';
-      return;
-    }
-    const total = items.length;
-    const prices = items.map(i => i.price);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-
-    countEl.textContent = total;
-    minPriceEl.textContent = formatCurrency(min);
-    maxPriceEl.textContent = formatCurrency(max);
-  }
-
-  // ---- فتح المودال (إضافة أو تعديل) ----
-  function openModal(item = null) {
-    if (item) {
-      editingId = item.id;
-      modalTitle.textContent = 'تعديل الصنف';
-      nameInput.value = item.name || '';
-      priceInput.value = item.price || '';
-    } else {
-      editingId = null;
-      modalTitle.textContent = 'إضافة صنف جديد';
-      nameInput.value = '';
-      priceInput.value = '';
-    }
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => nameInput.focus(), 100);
-  }
-
-  // ---- إغلاق المودال ----
-  function closeModal() {
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
-    editingId = null;
-  }
-
-  // ---- حفظ الصنف ----
-  function handleSaveItem() {
-    const name = nameInput.value.trim();
-    const price = parseFloat(priceInput.value);
-
-    if (!name) {
-      showToast('يرجى إدخال اسم الصنف', 'warning');
-      nameInput.focus();
-      return;
-    }
-    if (!price || price <= 0) {
-      showToast('يرجى إدخال سعر صحيح', 'warning');
-      priceInput.focus();
-      return;
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    try {
-      if (editingId) {
-        const existing = items.find(i => i.id === editingId);
-        const unit = (existing && existing.unit) || 'قطعة';
-        window.API.updateItem(editingId, name, unit, price);
-        showToast(`تم تحديث الصنف "${name}" بنجاح`, 'success');
-      } else {
-        window.API.addItem(name, 'قطعة', price);
-        showToast(`تم إضافة الصنف "${name}" بنجاح`, 'success');
-      }
+    function getErrorMessage(error) {
+        if (
+            window.Utils &&
+            typeof Utils.getErrorText === 'function'
+        ) {
+            return Utils.getErrorText(error);
+        }
 
-      items = window.API.getItems();
-      renderItems(searchInput.value.trim());
-      updateSummary();
-      closeModal();
-
-    } catch (err) {
-      showToast(err.message || 'حدث خطأ أثناء حفظ الصنف', 'error');
+        return error?.message ||
+            'حدث خطأ أثناء تنفيذ العملية.';
     }
-  }
 
-  // ---- حذف صنف ----
-  function handleDeleteItem(id) {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
+    function openModal() {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
 
-    showConfirm({
-      title: 'حذف الصنف',
-      message: `هل أنت متأكد من حذف الصنف "${item.name}"؟`,
-      confirmText: 'حذف',
-      danger: true,
-      onConfirm: function() {
+        setTimeout(() => {
+            nameInput.focus();
+        }, 100);
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+
+        state.editingId = null;
+        form.reset();
+
+        modalTitle.textContent = 'إضافة صنف جديد';
+        saveBtn.innerHTML =
+            '<i class="fas fa-save"></i> حفظ الصنف';
+    }
+
+    function openAddModal() {
+        state.editingId = null;
+
+        form.reset();
+
+        modalTitle.textContent = 'إضافة صنف جديد';
+
+        saveBtn.innerHTML =
+            '<i class="fas fa-save"></i> حفظ الصنف';
+
+        openModal();
+    }
+
+    function openEditModal(item) {
+        if (!item) return;
+
+        state.editingId = Number(item.id);
+
+        modalTitle.textContent = 'تعديل الصنف';
+
+        nameInput.value = item.name || '';
+        priceInput.value =
+            item.default_price ?? '';
+        noteInput.value =
+            item.note || '';
+
+        openModal();
+    }
+
+    function updateSummary() {
+        const items = state.items;
+
+        if (!items.length) {
+            countEl.textContent = '0';
+            minPriceEl.textContent = '0 ر.س';
+            maxPriceEl.textContent = '0 ر.س';
+            return;
+        }
+
+        const prices = items.map(item =>
+            Number(item.default_price) || 0
+        );
+
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+
+        countEl.textContent =
+            items.length.toLocaleString('ar-SA');
+
+        minPriceEl.textContent =
+            formatCurrency(min);
+
+        maxPriceEl.textContent =
+            formatCurrency(max);
+    }
+
+    function filterItems() {
+        const term =
+            searchInput.value.trim().toLowerCase();
+
+        if (!term) {
+            state.filteredItems = [...state.items];
+            return;
+        }
+
+        state.filteredItems = state.items.filter(item => {
+            const name =
+                String(item.name || '').toLowerCase();
+
+            const note =
+                String(item.note || '').toLowerCase();
+
+            return (
+                name.includes(term) ||
+                note.includes(term)
+            );
+        });
+    }
+
+    function renderLoading() {
+        listEl.innerHTML = `
+            <div class="items-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                جاري تحميل الأصناف...
+            </div>
+        `;
+    }
+
+    function renderEmpty(searching = false) {
+        listEl.innerHTML = `
+            <div class="items-empty">
+                <div class="items-empty-icon">
+                    <i class="fas fa-${
+                        searching
+                            ? 'magnifying-glass'
+                            : 'utensils'
+                    }"></i>
+                </div>
+
+                <div class="items-empty-title">
+                    ${
+                        searching
+                            ? 'لا توجد نتائج'
+                            : 'لا توجد أصناف'
+                    }
+                </div>
+
+                <div class="items-empty-text">
+                    ${
+                        searching
+                            ? 'لم يتم العثور على صنف مطابق للبحث.'
+                            : 'ابدأ بإضافة الأصناف المستخدمة في الحجوزات.'
+                    }
+                </div>
+
+                ${
+                    !searching
+                        ? `
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                id="emptyAddItemBtn"
+                            >
+                                <i class="fas fa-plus"></i>
+                                إضافة صنف جديد
+                            </button>
+                        `
+                        : ''
+                }
+            </div>
+        `;
+
+        const emptyAdd =
+            $('#emptyAddItemBtn');
+
+        emptyAdd?.addEventListener(
+            'click',
+            openAddModal
+        );
+    }
+
+    function renderItems() {
+        filterItems();
+
+        const items = state.filteredItems;
+
+        if (!items.length) {
+            renderEmpty(
+                Boolean(searchInput.value.trim())
+            );
+            return;
+        }
+
+        listEl.innerHTML = items.map(item => {
+
+            const id = Number(item.id);
+
+            const name =
+                escapeHtml(item.name || 'بدون اسم');
+
+            const price =
+                formatCurrency(item.default_price);
+
+            const note =
+                item.note
+                    ? `
+                        <span class="item-note">
+                            <i class="fas fa-note-sticky"></i>
+                            ${escapeHtml(item.note)}
+                        </span>
+                    `
+                    : '';
+
+            return `
+                <article
+                    class="item-card"
+                    data-id="${id}"
+                >
+
+                    <div class="item-icon">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+
+                    <div class="item-info">
+
+                        <div class="item-name">
+                            ${name}
+                        </div>
+
+                        <div class="item-details">
+
+                            <span class="item-price">
+                                ${price}
+                            </span>
+
+                            ${note}
+
+                        </div>
+
+                    </div>
+
+                    <div class="item-actions">
+
+                        <button
+                            type="button"
+                            class="btn-icon-sm btn-icon-primary"
+                            data-action="edit"
+                            title="تعديل"
+                            aria-label="تعديل ${name}"
+                        >
+                            <i class="fas fa-pen"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn-icon-sm btn-icon-danger"
+                            data-action="delete"
+                            title="حذف"
+                            aria-label="حذف ${name}"
+                        >
+                            <i class="fas fa-trash"></i>
+                        </button>
+
+                    </div>
+
+                </article>
+            `;
+        }).join('');
+    }
+
+    async function loadItems() {
+        if (state.loading) return;
+
+        state.loading = true;
+
+        renderLoading();
+
         try {
-          window.API.deleteItem(id);
-          showToast(`تم حذف الصنف "${item.name}" بنجاح`, 'success');
-          items = window.API.getItems();
-          renderItems(searchInput.value.trim());
-          updateSummary();
-        } catch (err) {
-          showToast(err.message || 'حدث خطأ أثناء حذف الصنف', 'error');
-        }
-      }
-    });
-  }
+            const data = await API.getItems();
 
-  // ---- تهيئة الصفحة ----
-  function init() {
-    if (!window.API) {
-      console.warn('API not found, waiting...');
-      setTimeout(init, 200);
-      return;
+            state.items =
+                Array.isArray(data)
+                    ? data
+                    : [];
+
+            state.filteredItems =
+                [...state.items];
+
+            updateSummary();
+            renderItems();
+
+        } catch (error) {
+            console.error(
+                'Failed to load items:',
+                error
+            );
+
+            listEl.innerHTML = `
+                <div class="items-empty">
+
+                    <div class="items-empty-icon">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+
+                    <div class="items-empty-title">
+                        تعذر تحميل الأصناف
+                    </div>
+
+                    <div class="items-empty-text">
+                        ${escapeHtml(
+                            getErrorMessage(error)
+                        )}
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="retryItemsBtn"
+                    >
+                        <i class="fas fa-rotate"></i>
+                        إعادة المحاولة
+                    </button>
+
+                </div>
+            `;
+
+            $('#retryItemsBtn')?.addEventListener(
+                'click',
+                loadItems
+            );
+
+        } finally {
+            state.loading = false;
+        }
     }
 
-    loadItems();
+    async function saveItem() {
+        if (state.saving) return;
 
-    // ---- البحث ----
-    searchInput.addEventListener('input', function() {
-      renderItems(this.value.trim());
-    });
-
-    // ---- زر "إضافة صنف" في الـ Header ----
-    addBtn.addEventListener('click', function() {
-      openModal(null);
-    });
-
-    // ---- استماع لحدث فتح المودال من FAB (الذي يديره layout.js) ----
-    document.addEventListener('fab:modal:opened', function(e) {
-      if (e.detail.modalId === 'itemModal') {
-        // فتح المودال في وضع الإضافة (تفريغ الحقول)
-        openModal(null);
-      }
-    });
-
-    // ---- حفظ الصنف ----
-    saveBtn.addEventListener('click', handleSaveItem);
-
-    // ---- إغلاق المودال ----
-    document.querySelectorAll('[data-close="itemModal"]').forEach(btn => {
-      btn.addEventListener('click', closeModal);
-    });
-
-    // ---- إغلاق المودال بالـ ESC ----
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && modal.classList.contains('active')) {
-        closeModal();
-      }
-    });
-
-    // ---- الضغط على Enter ----
-    [nameInput, priceInput].forEach(input => {
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleSaveItem();
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
         }
-      });
-    });
 
-    // ---- أحداث التعديل والحذف ----
-    listEl.addEventListener('click', function(e) {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
+        const name =
+            nameInput.value.trim();
 
-      const card = btn.closest('.item-card');
-      if (!card) return;
+        const price =
+            Number(priceInput.value);
 
-      const id = parseInt(card.dataset.id);
-      const action = btn.dataset.action;
+        const note =
+            noteInput.value.trim();
 
-      if (action === 'edit') {
-        const item = items.find(i => i.id === id);
-        if (item) openModal(item);
-      } else if (action === 'delete') {
-        handleDeleteItem(id);
-      }
-    });
-  }
+        if (!name) {
+            showToast(
+                'يرجى إدخال اسم الصنف',
+                'warning'
+            );
 
-  // ---- بدء التشغيل ----
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
+            nameInput.focus();
+            return;
+        }
+
+        if (!Number.isFinite(price) || price < 0) {
+            showToast(
+                'يرجى إدخال سعر صحيح',
+                'warning'
+            );
+
+            priceInput.focus();
+            return;
+        }
+
+        const payload = {
+            name,
+            default_price: Number(
+                price.toFixed(2)
+            ),
+            note: note || null
+        };
+
+        state.saving = true;
+
+        if (
+            window.Utils &&
+            typeof Utils.setLoadingButton === 'function'
+        ) {
+            Utils.setLoadingButton(
+                saveBtn,
+                true,
+                'جاري الحفظ...'
+            );
+        } else {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML =
+                '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+        }
+
+        try {
+
+            if (state.editingId !== null) {
+
+                await API.updateItem(
+                    state.editingId,
+                    payload
+                );
+
+                showToast(
+                    'تم تحديث الصنف بنجاح',
+                    'success'
+                );
+
+            } else {
+
+                await API.createItem(
+                    payload
+                );
+
+                showToast(
+                    'تم إضافة الصنف بنجاح',
+                    'success'
+                );
+            }
+
+            closeModal();
+
+            await loadItems();
+
+        } catch (error) {
+
+            console.error(
+                'Failed to save item:',
+                error
+            );
+
+            showToast(
+                getErrorMessage(error),
+                'error'
+            );
+
+        } finally {
+
+            state.saving = false;
+
+            if (
+                window.Utils &&
+                typeof Utils.setLoadingButton === 'function'
+            ) {
+                Utils.setLoadingButton(
+                    saveBtn,
+                    false
+                );
+            } else {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML =
+                    '<i class="fas fa-save"></i> حفظ الصنف';
+            }
+        }
+    }
+
+    function confirmDelete(item) {
+        if (!item) return;
+
+        const name =
+            item.name || 'هذا الصنف';
+
+        if (
+            window.Layout &&
+            typeof Layout.showConfirm === 'function'
+        ) {
+            Layout.showConfirm({
+                title: 'حذف الصنف',
+                message:
+                    `هل أنت متأكد من حذف "${name}"؟ لا يمكن التراجع عن هذه العملية.`,
+                confirmText: 'حذف',
+                cancelText: 'إلغاء',
+                danger: true,
+                onConfirm: () => deleteItem(item)
+            });
+
+            return;
+        }
+
+        if (
+            window.Utils &&
+            typeof Utils.confirmAction === 'function'
+        ) {
+            if (
+                Utils.confirmAction(
+                    `هل أنت متأكد من حذف "${name}"؟`
+                )
+            ) {
+                deleteItem(item);
+            }
+
+            return;
+        }
+
+        if (
+            window.confirm(
+                `هل أنت متأكد من حذف "${name}"؟`
+            )
+        ) {
+            deleteItem(item);
+        }
+    }
+
+    async function deleteItem(item) {
+        try {
+
+            await API.deleteItem(
+                Number(item.id)
+            );
+
+            showToast(
+                'تم حذف الصنف بنجاح',
+                'success'
+            );
+
+            state.items =
+                state.items.filter(
+                    current =>
+                        Number(current.id) !==
+                        Number(item.id)
+                );
+
+            updateSummary();
+            renderItems();
+
+        } catch (error) {
+
+            console.error(
+                'Failed to delete item:',
+                error
+            );
+
+            showToast(
+                getErrorMessage(error),
+                'error'
+            );
+        }
+    }
+
+    function handleListClick(event) {
+        const button =
+            event.target.closest(
+                '[data-action]'
+            );
+
+        if (!button) return;
+
+        const card =
+            button.closest('.item-card');
+
+        if (!card) return;
+
+        const id =
+            Number(card.dataset.id);
+
+        if (!Number.isInteger(id)) return;
+
+        const item =
+            state.items.find(
+                current =>
+                    Number(current.id) === id
+            );
+
+        if (!item) return;
+
+        const action =
+            button.dataset.action;
+
+        if (action === 'edit') {
+            openEditModal(item);
+        }
+
+        if (action === 'delete') {
+            confirmDelete(item);
+        }
+    }
+
+    function bindEvents() {
+
+        addItemBtn?.addEventListener(
+            'click',
+            openAddModal
+        );
+
+        fab?.addEventListener(
+            'click',
+            openAddModal
+        );
+
+        form?.addEventListener(
+            'submit',
+            event => {
+                event.preventDefault();
+                saveItem();
+            }
+        );
+
+        searchInput?.addEventListener(
+            'input',
+            renderItems
+        );
+
+        listEl?.addEventListener(
+            'click',
+            handleListClick
+        );
+
+        document
+            .querySelectorAll(
+                '[data-close="itemModal"]'
+            )
+            .forEach(button => {
+                button.addEventListener(
+                    'click',
+                    closeModal
+                );
+            });
+
+        document.addEventListener(
+            'keydown',
+            event => {
+
+                if (
+                    event.key === 'Escape' &&
+                    modal.classList.contains('active')
+                ) {
+                    closeModal();
+                }
+            }
+        );
+
+        document.addEventListener(
+            'fab:modal:opened',
+            event => {
+
+                if (
+                    event.detail?.modalId ===
+                    'itemModal'
+                ) {
+                    openAddModal();
+                }
+            }
+        );
+    }
+
+    async function init() {
+
+        if (
+            !window.API ||
+            !window.Utils
+        ) {
+            setTimeout(
+                init,
+                100
+            );
+            return;
+        }
+
+        bindEvents();
+
+        await loadItems();
+    }
+
     init();
-  }
+
 });

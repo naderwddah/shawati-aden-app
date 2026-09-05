@@ -1,358 +1,530 @@
-// ============================================================
-// assets/js/pages/suppliers.js
-// الصفحة الرئيسية للموردين (عرض، بحث، إضافة، تعديل، حذف)
-// جميع العمليات المالية (دفع/فاتورة) تكون في supplier-view.js
-// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  'use strict';
 
-document.addEventListener("DOMContentLoaded", function () {
-  "use strict";
+  const state = {
+    suppliers: [],
+    accounts: [],
+    filtered: [],
+    editingId: null,
+    loading: false,
+    saving: false
+  };
 
-  function init() {
-    // ---- عناصر DOM ----
-    const listEl = document.getElementById("suppliersList");
-    const searchInput = document.getElementById("supplierSearch");
-    const countEl = document.getElementById("suppliersCount");
-    const payablesEl = document.getElementById("suppliersPayables");
-    const paidEl = document.getElementById("suppliersPaid");
+  const els = {
+    list: document.getElementById('suppliersList'),
+    search: document.getElementById('supplierSearch'),
+    count: document.getElementById('suppliersCount'),
+    payables: document.getElementById('suppliersPayables'),
+    paid: document.getElementById('suppliersPaid'),
+    addBtn: document.getElementById('addSupplierBtn'),
+    fab: document.getElementById('fab'),
+    modal: document.getElementById('supplierModal'),
+    modalTitle: document.getElementById('supplierModalTitle'),
+    name: document.getElementById('supplierName'),
+    phone: document.getElementById('supplierPhone'),
+    notes: document.getElementById('supplierNotes'),
+    active: document.getElementById('supplierActive'),
+    save: document.getElementById('saveSupplierBtn')
+  };
 
-    // عناصر مودال الإضافة
-    const addModal = document.getElementById("addSupplierModal");
-    const nameInput = document.getElementById("newSupplierName");
-    const phoneInput = document.getElementById("newSupplierPhone");
-    const saveBtn = document.getElementById("saveNewSupplier");
-    const addHeaderBtn = document.getElementById("addSupplierBtn");
-    const fab = document.getElementById("fab");
-
-    // عناصر مودال التعديل (تم حذف category و address)
-    const editModal = document.getElementById("editSupplierModal");
-    const editName = document.getElementById("editSupplierName");
-    const editPhone = document.getElementById("editSupplierPhone");
-    const saveEditBtn = document.getElementById("saveEditSupplier");
-    let editingSupplierId = null;
-
-    if (!listEl) return;
-
-    // ---- دوال مساعدة ----
-    function formatCurrency(amount) {
-      if (window.API && typeof window.API.formatCurrency === "function") {
-        return window.API.formatCurrency(amount);
-      }
-      return Number(amount).toLocaleString("ar-SA") + " ر.س";
+  function toast(message, type = 'info') {
+    if (window.Layout && typeof Layout.showToast === 'function') {
+      Layout.showToast(message, type);
+      return;
     }
 
-    // ---- عرض الموردين ----
-    function renderSuppliers(filter = "") {
-      if (!window.API || typeof window.API.getSuppliers !== "function") {
-        listEl.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h4>جاري التحميل...</h4></div>`;
-        return;
+    if (window.Utils && typeof Utils.showToast === 'function') {
+      Utils.showToast(message, type);
+      return;
+    }
+
+    alert(message);
+  }
+
+  function confirmAction(options) {
+    if (window.Layout && typeof Layout.showConfirm === 'function') {
+      Layout.showConfirm(options);
+      return;
+    }
+
+    if (confirm(options.message || 'هل أنت متأكد؟')) {
+      options.onConfirm?.();
+    }
+  }
+
+  function currency(value) {
+    const amount = Number(value || 0);
+
+    if (window.Utils && typeof Utils.formatCurrency === 'function') {
+      return Utils.formatCurrency(amount);
+    }
+
+    return `${amount.toLocaleString('ar-SA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })} ر.س`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function getInitials(name) {
+    const words = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (!words.length) {
+      return 'م';
+    }
+
+    return words
+      .slice(0, 2)
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase();
+  }
+
+  function normalizeAccount(account) {
+    if (!account) {
+      return {
+        totalInvoices: 0,
+        totalPaid: 0,
+        balance: 0
+      };
+    }
+
+    return {
+      totalInvoices: Number(
+        account.total_invoices ??
+        account.totalInvoices ??
+        0
+      ),
+      totalPaid: Number(
+        account.total_paid ??
+        account.totalPaid ??
+        0
+      ),
+      balance: Number(
+        account.balance ??
+        account.total_remaining ??
+        account.totalRemaining ??
+        0
+      )
+    };
+  }
+
+  function accountForSupplier(id) {
+    const account = state.accounts.find(item => {
+      return Number(item.supplier_id ?? item.id) === Number(id);
+    });
+
+    return normalizeAccount(account);
+  }
+
+  function updateSummary() {
+    let totalPayables = 0;
+    let totalPaid = 0;
+
+    state.suppliers.forEach(supplier => {
+      const account = accountForSupplier(supplier.id);
+
+      if (account.balance > 0) {
+        totalPayables += account.balance;
       }
 
-      const allSuppliers = window.API.getSuppliers();
-      const filtered = allSuppliers.filter(
-        (s) => s.name.includes(filter) || s.phone.includes(filter),
-      );
+      totalPaid += account.totalPaid;
+    });
 
-      if (filtered.length === 0) {
-        listEl.innerHTML = `
-          <div class="empty-state">
-            <i class="fas fa-truck"></i>
-            <h4>لا يوجد موردين</h4>
-            <p>${filter ? "لم يتم العثور على موردين مطابقين للبحث" : "أضف أول مورد لك الآن"}</p>
-          </div>
-        `;
-        return;
-      }
+    els.count.textContent = String(state.suppliers.length);
+    els.payables.textContent = currency(totalPayables);
+    els.paid.textContent = currency(totalPaid);
 
-      listEl.innerHTML = filtered
-        .map((s) => {
-          const balance = s.balance;
-          const initials = s.name
-            .split(" ")
-            .map((w) => w[0])
-            .join("")
-            .slice(0, 2);
-          return `
-          <div class="supplier-card" data-id="${s.id}">
-            <div class="click-area" onclick="window.location.href='supplier-view.html?id=${s.id}'">
-              <div class="avatar">${initials}</div>
-              <div class="info">
-                <div class="name">${s.name}</div>
-                <div class="phone">${s.phone}</div>
-                <div class="category">${s.category || "بدون تصنيف"}</div>
-                <div class="financial">
-                  <span><span class="label">الفواتير</span> ${s.invoicesCount}</span>
-                  <span><span class="label">الإجمالي</span> <span class="amount">${formatCurrency(s.totalInvoices)}</span></span>
-                  <span><span class="label">مدفوع</span> <span class="paid">${formatCurrency(s.totalPaid)}</span></span>
-                  ${
-                    balance > 0
-                      ? `<span><span class="label">مستحق</span> <span class="remaining">${formatCurrency(balance)}</span></span>`
-                      : `<span><span class="label">الحالة</span> <span style="color:var(--success);font-weight:700;">مسدد بالكامل</span></span>`
-                  }
-                </div>
+    els.payables.className =
+      totalPayables > 0
+        ? 'summary-value danger'
+        : 'summary-value';
+  }
+
+  function render() {
+    const search = els.search.value.trim().toLowerCase();
+
+    state.filtered = search
+      ? state.suppliers.filter(supplier => {
+          const name = String(supplier.name || '').toLowerCase();
+          const phone = String(supplier.phone || '').toLowerCase();
+          const notes = String(supplier.notes || '').toLowerCase();
+
+          return (
+            name.includes(search) ||
+            phone.includes(search) ||
+            notes.includes(search)
+          );
+        })
+      : [...state.suppliers];
+
+    if (!state.filtered.length) {
+      els.list.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-truck"></i>
+          <h4>${search ? 'لا توجد نتائج مطابقة' : 'لا يوجد موردون'}</h4>
+          <p>${search ? 'جرّب كلمة بحث مختلفة' : 'أضف أول مورد الآن'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    els.list.innerHTML = state.filtered.map(supplier => {
+      const account = accountForSupplier(supplier.id);
+      const balance = account.balance;
+
+      return `
+        <div class="supplier-card" data-id="${supplier.id}">
+          <div class="supplier-main" data-action="view">
+            <div class="supplier-avatar">
+              ${escapeHtml(getInitials(supplier.name))}
+            </div>
+
+            <div class="supplier-info">
+              <div class="supplier-name">
+                ${escapeHtml(supplier.name || 'بدون اسم')}
+              </div>
+
+              <div class="supplier-phone">
+                ${escapeHtml(supplier.phone || 'لا يوجد رقم')}
+              </div>
+
+              <div class="supplier-account">
+                <span class="account-item">
+                  <span class="account-label">فواتير:</span>
+                  <span class="account-value">
+                    ${currency(account.totalInvoices)}
+                  </span>
+                </span>
+
+                <span class="account-item">
+                  <span class="account-label">مدفوع:</span>
+                  <span class="account-value success">
+                    ${currency(account.totalPaid)}
+                  </span>
+                </span>
+
+                <span class="account-item">
+                  <span class="account-label">الرصيد:</span>
+                  <span class="account-value ${balance > 0 ? 'danger' : 'success'}">
+                    ${currency(Math.abs(balance))}
+                  </span>
+                </span>
               </div>
             </div>
-            <div class="actions">
-              <button class="btn-icon-sm btn-icon-primary" data-action="edit" title="تعديل"><i class="fas fa-pen"></i></button>
-              <button class="btn-icon-sm btn-icon-danger" data-action="delete" title="حذف"><i class="fas fa-trash"></i></button>
-              <div class="arrow"><i class="fas fa-chevron-left"></i></div>
-            </div>
           </div>
-        `;
-        })
-        .join("");
-    }
 
-    // ---- تحديث الملخص المالي ----
-    function updateSummary() {
-      if (!window.API || typeof window.API.getSuppliers !== "function") return;
+          <div class="supplier-actions">
+            <button
+              type="button"
+              class="btn-icon-sm btn-icon-primary"
+              data-action="edit"
+              title="تعديل"
+              aria-label="تعديل المورد"
+            >
+              <i class="fas fa-pen"></i>
+            </button>
 
-      const allSuppliers = window.API.getSuppliers();
-      const total = allSuppliers.length;
-      const payables = allSuppliers.reduce((sum, s) => sum + s.balance, 0);
-      const paid = allSuppliers.reduce((sum, s) => sum + s.totalPaid, 0);
+            <button
+              type="button"
+              class="btn-icon-sm btn-icon-danger"
+              data-action="delete"
+              title="حذف"
+              aria-label="حذف المورد"
+            >
+              <i class="fas fa-trash"></i>
+            </button>
 
-      countEl.textContent = total;
-      payablesEl.textContent = formatCurrency(payables);
-      paidEl.textContent = formatCurrency(paid);
-    }
+            <span class="supplier-arrow">
+              <i class="fas fa-chevron-left"></i>
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
-    // ---- البحث الفوري ----
-    searchInput.addEventListener("input", function () {
-      renderSuppliers(this.value.trim());
-    });
-
-    // ============================================================
-    // إضافة مورد جديد
-    // ============================================================
-    function openAddModal() {
-      nameInput.value = "";
-      phoneInput.value = "";
-      addModal.classList.add("active");
-      document.body.style.overflow = "hidden";
-      setTimeout(() => nameInput.focus(), 100);
-    }
-
-    function closeAddModal() {
-      addModal.classList.remove("active");
-      document.body.style.overflow = "";
-    }
-
-    function handleSaveSupplier() {
-      const name = nameInput.value.trim();
-      const phone = phoneInput.value.trim();
-
-      if (!name) {
-        showToast("يرجى إدخال اسم المورد", "warning");
-        nameInput.focus();
-        return;
-      }
-      if (!phone) {
-        showToast("يرجى إدخال رقم الجوال", "warning");
-        phoneInput.focus();
+  async function loadAccounts() {
+    try {
+      if (typeof API.getSupplierAccounts !== 'function') {
+        state.accounts = [];
         return;
       }
 
-      try {
-        window.API.addSupplier(name, phone, "", "");
-        showToast(`تم إضافة المورد "${name}" بنجاح`, "success");
-        renderSuppliers(searchInput.value.trim());
-        updateSummary();
-        closeAddModal();
-      } catch (err) {
-        showToast(err.message || "حدث خطأ أثناء إضافة المورد", "error");
-      }
+      const data = await API.getSupplierAccounts();
+      state.accounts = Array.isArray(data) ? data : [];
+    } catch {
+      state.accounts = [];
+    }
+  }
+
+  async function loadSuppliers() {
+    if (state.loading) {
+      return;
     }
 
-    addHeaderBtn.addEventListener("click", openAddModal);
-    fab.addEventListener("click", openAddModal);
-    saveBtn.addEventListener("click", handleSaveSupplier);
+    state.loading = true;
 
-    document
-      .querySelectorAll('[data-close="addSupplierModal"]')
-      .forEach((btn) => {
-        btn.addEventListener("click", closeAddModal);
-      });
+    els.list.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h4>جاري تحميل الموردين</h4>
+        <p>يرجى الانتظار...</p>
+      </div>
+    `;
 
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && addModal.classList.contains("active")) {
-        closeAddModal();
-      }
-    });
+    try {
+      const data = await API.getSuppliers();
 
-    [nameInput, phoneInput].forEach((input) => {
-      input.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleSaveSupplier();
-        }
-      });
-    });
+      state.suppliers = Array.isArray(data) ? data : [];
 
-    // ============================================================
-    // تعديل مورد (بدون تصنيف وعنوان)
-    // ============================================================
-    function openEditModal(supplierId) {
-      const supplier = window.API.getSupplier(supplierId);
-      if (!supplier) {
-        showToast("المورد غير موجود", "error");
-        return;
-      }
-      editingSupplierId = supplierId;
-      editName.value = supplier.name || "";
-      editPhone.value = supplier.phone || "";
-      editModal.classList.add("active");
-      document.body.style.overflow = "hidden";
-      setTimeout(() => editName.focus(), 100);
-    }
+      await loadAccounts();
 
-    function closeEditModal() {
-      editModal.classList.remove("active");
-      document.body.style.overflow = "";
-      editingSupplierId = null;
-    }
-
-    function handleEditSupplier() {
-      const name = editName.value.trim();
-      const phone = editPhone.value.trim();
-
-      if (!name) {
-        showToast("يرجى إدخال اسم المورد", "warning");
-        editName.focus();
-        return;
-      }
-      if (!phone) {
-        showToast("يرجى إدخال رقم الجوال", "warning");
-        editPhone.focus();
-        return;
-      }
-
-      try {
-        // الحصول على القيم القديمة للتصنيف والعنوان للحفاظ عليها
-        const supplier = window.API.getSupplier(editingSupplierId);
-        const category = supplier ? supplier.category : "";
-        const address = supplier ? supplier.address : "";
-        window.API.updateSupplier(
-          editingSupplierId,
-          name,
-          phone,
-          address,
-          category,
-        );
-        showToast(`تم تحديث المورد "${name}" بنجاح`, "success");
-        renderSuppliers(searchInput.value.trim());
-        updateSummary();
-        closeEditModal();
-      } catch (err) {
-        showToast(err.message || "حدث خطأ أثناء التحديث", "error");
-      }
-    }
-
-    saveEditBtn.addEventListener("click", handleEditSupplier);
-
-    document
-      .querySelectorAll('[data-close="editSupplierModal"]')
-      .forEach((btn) => {
-        btn.addEventListener("click", closeEditModal);
-      });
-
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && editModal.classList.contains("active")) {
-        closeEditModal();
-      }
-    });
-
-    // إضافة مستمعات الأحداث فقط للحقول الموجودة
-    [editName, editPhone].forEach((input) => {
-      if (input) {
-        input.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleEditSupplier();
-          }
-        });
-      }
-    });
-
-    // ============================================================
-    // حذف مورد
-    // ============================================================
-    function handleDeleteSupplier(id) {
-      const supplier = window.API.getSupplier(id);
-      if (!supplier) return;
-
-      showConfirm({
-        title: "حذف المورد",
-        message: `هل أنت متأكد من حذف المورد "${supplier.name}"؟`,
-        confirmText: "حذف",
-        danger: true,
-        onConfirm: function () {
-          try {
-            if (window.API.deleteSupplier) {
-              window.API.deleteSupplier(id);
-            } else {
-              // محاكاة الحذف
-              const suppliers = window.API.getSuppliers();
-              const index = suppliers.findIndex((s) => s.id === id);
-              if (index !== -1) {
-                suppliers.splice(index, 1);
-              }
-            }
-            showToast(`تم حذف المورد "${supplier.name}" بنجاح`, "success");
-            renderSuppliers(searchInput.value.trim());
-            updateSummary();
-          } catch (err) {
-            showToast(err.message || "حدث خطأ أثناء الحذف", "error");
-          }
-        },
-      });
-    }
-
-    // ---- أحداث الأزرار (delegation) ----
-    listEl.addEventListener("click", function (e) {
-      const editBtn = e.target.closest('[data-action="edit"]');
-      if (editBtn) {
-        const card = editBtn.closest(".supplier-card");
-        if (card) {
-          const id = parseInt(card.dataset.id);
-          openEditModal(id);
-        }
-        return;
-      }
-
-      const deleteBtn = e.target.closest('[data-action="delete"]');
-      if (deleteBtn) {
-        const card = deleteBtn.closest(".supplier-card");
-        if (card) {
-          const id = parseInt(card.dataset.id);
-          handleDeleteSupplier(id);
-        }
-        return;
-      }
-    });
-
-    // ---- التهيئة الأولية ----
-    function loadData() {
-      if (!window.API) {
-        setTimeout(loadData, 200);
-        return;
-      }
-      renderSuppliers();
       updateSummary();
+      render();
+    } catch (error) {
+      console.error(error);
+
+      els.list.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-triangle-exclamation"></i>
+          <h4>تعذر تحميل الموردين</h4>
+          <p>${escapeHtml(error?.message || 'حدث خطأ أثناء الاتصال بالخادم')}</p>
+        </div>
+      `;
+
+      toast(
+        error?.message || 'حدث خطأ أثناء تحميل الموردين',
+        'error'
+      );
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  function openModal(supplier = null) {
+    state.editingId = supplier ? Number(supplier.id) : null;
+
+    els.modalTitle.textContent = supplier
+      ? 'تعديل المورد'
+      : 'إضافة مورد جديد';
+
+    els.name.value = supplier?.name || '';
+    els.phone.value = supplier?.phone || '';
+    els.notes.value = supplier?.notes || '';
+    els.active.checked =
+      supplier?.is_active === undefined
+        ? true
+        : Boolean(supplier.is_active);
+
+    els.modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    setTimeout(() => els.name.focus(), 100);
+  }
+
+  function closeModal() {
+    els.modal.classList.remove('active');
+    document.body.style.overflow = '';
+    state.editingId = null;
+    state.saving = false;
+  }
+
+  async function saveSupplier() {
+    if (state.saving) {
+      return;
     }
 
-    loadData();
+    const name = els.name.value.trim();
+    const phone = els.phone.value.trim();
+    const notes = els.notes.value.trim();
 
-    if (!window.layoutReady) {
-      document.addEventListener("layout:ready", function () {
-        renderSuppliers(searchInput.value.trim());
-        updateSummary();
+    if (!name) {
+      toast('يرجى إدخال اسم المورد', 'warning');
+      els.name.focus();
+      return;
+    }
+
+    state.saving = true;
+    els.save.disabled = true;
+    els.save.innerHTML = `
+      <i class="fas fa-spinner fa-spin"></i>
+      جاري الحفظ...
+    `;
+
+    const payload = {
+      name,
+      phone: phone || null,
+      notes: notes || null,
+      is_active: els.active.checked
+    };
+
+    try {
+      if (state.editingId) {
+        await API.updateSupplier(state.editingId, payload);
+        toast('تم تحديث المورد بنجاح', 'success');
+      } else {
+        await API.createSupplier(payload);
+        toast('تم إضافة المورد بنجاح', 'success');
+      }
+
+      closeModal();
+      await loadSuppliers();
+    } catch (error) {
+      console.error(error);
+
+      toast(
+        error?.message || 'حدث خطأ أثناء حفظ المورد',
+        'error'
+      );
+    } finally {
+      state.saving = false;
+      els.save.disabled = false;
+      els.save.textContent = 'حفظ المورد';
+    }
+  }
+
+  function deleteSupplier(id) {
+    const supplier = state.suppliers.find(
+      item => Number(item.id) === Number(id)
+    );
+
+    if (!supplier) {
+      return;
+    }
+
+    const account = accountForSupplier(id);
+
+    if (account.balance > 0) {
+      toast(
+        `لا يمكن حذف المورد لوجود مستحقات بقيمة ${currency(account.balance)}`,
+        'error'
+      );
+      return;
+    }
+
+    confirmAction({
+      title: 'حذف المورد',
+      message: `هل أنت متأكد من حذف المورد "${supplier.name}"؟`,
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          await API.deleteSupplier(id);
+
+          toast('تم حذف المورد بنجاح', 'success');
+
+          await loadSuppliers();
+        } catch (error) {
+          console.error(error);
+
+          toast(
+            error?.message || 'تعذر حذف المورد',
+            'error'
+          );
+        }
+      }
+    });
+  }
+
+  function handleListClick(event) {
+    const button = event.target.closest('[data-action]');
+
+    if (!button) {
+      return;
+    }
+
+    const card = button.closest('.supplier-card');
+
+    if (!card) {
+      return;
+    }
+
+    const id = Number(card.dataset.id);
+
+    if (!id) {
+      return;
+    }
+
+    const action = button.dataset.action;
+
+    if (action === 'edit') {
+      const supplier = state.suppliers.find(
+        item => Number(item.id) === id
+      );
+
+      openModal(supplier);
+      return;
+    }
+
+    if (action === 'delete') {
+      deleteSupplier(id);
+      return;
+    }
+
+    if (action === 'view') {
+      window.location.href = `supplier-view.html?id=${id}`;
+    }
+  }
+
+  function bindEvents() {
+    els.addBtn?.addEventListener('click', () => {
+      openModal();
+    });
+
+    els.fab?.addEventListener('click', () => {
+      openModal();
+    });
+
+    els.search?.addEventListener('input', render);
+
+    els.save?.addEventListener('click', saveSupplier);
+
+    els.list?.addEventListener('click', handleListClick);
+
+    document.querySelectorAll('[data-close="supplierModal"]')
+      .forEach(element => {
+        element.addEventListener('click', closeModal);
       });
-    }
+
+    [els.name, els.phone, els.notes].forEach(input => {
+      input?.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && input !== els.notes) {
+          event.preventDefault();
+          saveSupplier();
+        }
+      });
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' &&
+          els.modal.classList.contains('active')) {
+        closeModal();
+      }
+    });
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
+  async function init() {
+    if (!window.API) {
+      setTimeout(init, 200);
+      return;
+    }
+
+    bindEvents();
+    await loadSuppliers();
   }
+
+  init();
 });

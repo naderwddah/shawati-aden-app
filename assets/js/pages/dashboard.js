@@ -1,203 +1,753 @@
-document.addEventListener("DOMContentLoaded", function () {
-  const today = new Date().toISOString().slice(0, 10);
-
-  const mockBookings = [
-    {
-      id: 1,
-      customer: "أحمد محمد",
-      eventDate: today,
-      guests: 50,
-      status: "مؤكد",
-      total: 8500,
-      paid: 6000,
+const Dashboard = {
+    state: {
+        today: '',
+        bookings: [],
+        customers: [],
+        suppliers: [],
+        items: [],
+        accounts: []
     },
-    {
-      id: 2,
-      customer: "سارة علي",
-      eventDate: today,
-      guests: 30,
-      status: "جديد",
-      total: 4200,
-      paid: 0,
+
+    async init() {
+        try {
+            if (!window.API) {
+                throw new Error('ملف API غير محمل');
+            }
+
+            this.state.today = this.getToday();
+
+            const [
+                bookings,
+                customers,
+                suppliers,
+                items
+            ] = await Promise.all([
+                API.getBookings(),
+                API.getCustomers(),
+                API.getSuppliers(),
+                API.getItems()
+            ]);
+
+            this.state.bookings = this.normalizeArray(bookings);
+            this.state.customers = this.normalizeArray(customers);
+            this.state.suppliers = this.normalizeArray(suppliers);
+            this.state.items = this.normalizeArray(items);
+
+            await this.loadAccounts();
+
+            this.render();
+        } catch (error) {
+            console.error('Dashboard error:', error);
+
+            this.showError(
+                error?.message || 'تعذر تحميل بيانات لوحة التحكم'
+            );
+        } finally {
+            this.hideLoading();
+        }
     },
-    {
-      id: 3,
-      customer: "محمد العتيبي",
-      eventDate: "2026-08-25",
-      guests: 80,
-      status: "مؤكد",
-      total: 12500,
-      paid: 5000,
+
+    async loadAccounts() {
+        const customers = this.state.customers;
+
+        if (!customers.length) {
+            this.state.accounts = [];
+            return;
+        }
+
+        const results = await Promise.allSettled(
+            customers.map(customer =>
+                API.getCustomerAccount(customer.id)
+                    .then(account => ({
+                        customer,
+                        account: account || {}
+                    }))
+                    .catch(() => ({
+                        customer,
+                        account: {}
+                    }))
+            )
+        );
+
+        this.state.accounts = results
+            .filter(result => result.status === 'fulfilled')
+            .map(result => result.value);
     },
-    {
-      id: 4,
-      customer: "نورة الحمد",
-      eventDate: "2026-08-28",
-      guests: 20,
-      status: "جديد",
-      total: 2800,
-      paid: 0,
+
+    render() {
+        const today = this.state.today;
+
+        const todayBookings = this.state.bookings
+            .filter(booking => {
+                return this.dateOnly(
+                    booking.eventDate ?? booking.event_date
+                ) === today;
+            })
+            .filter(booking => this.isActiveBooking(booking));
+
+        const upcomingBookings = this.state.bookings
+            .filter(booking => {
+                const date = this.dateOnly(
+                    booking.eventDate ?? booking.event_date
+                );
+
+                return (
+                    date >= today &&
+                    date <= this.addDays(today, 7) &&
+                    this.isActiveBooking(booking)
+                );
+            })
+            .sort((a, b) => {
+                return this.dateOnly(
+                    a.eventDate ?? a.event_date
+                ).localeCompare(
+                    this.dateOnly(
+                        b.eventDate ?? b.event_date
+                    )
+                );
+            });
+
+        const receivables = this.getReceivables();
+
+        this.setText(
+            'todayCount',
+            todayBookings.length
+        );
+
+        this.setText(
+            'todayTotal',
+            this.formatMoney(
+                todayBookings.reduce(
+                    (sum, booking) =>
+                        sum + this.number(
+                            booking.totalAmount ??
+                            booking.total_amount
+                        ),
+                    0
+                )
+            )
+        );
+
+        this.setText(
+            'upcomingCount',
+            upcomingBookings.length
+        );
+
+        this.setText(
+            'upcomingGuests',
+            upcomingBookings.reduce(
+                (sum, booking) =>
+                    sum + this.getBookingQuantity(booking),
+                0
+            )
+        );
+
+        this.setText(
+            'receivablesTotal',
+            this.formatMoney(receivables.total)
+        );
+
+        this.setText(
+            'receivablesCount',
+            receivables.count
+        );
+
+        this.setText(
+            'todayRevenue',
+            this.formatMoney(
+                this.getTodayRevenue(todayBookings)
+            )
+        );
+
+        this.setText(
+            'activeCustomers',
+            this.state.customers.filter(customer =>
+                customer.isActive !== false &&
+                customer.is_active !== false &&
+                customer.isActive !== 0 &&
+                customer.is_active !== 0
+            ).length
+        );
+
+        this.setText(
+            'supplierCount',
+            this.state.suppliers.length
+        );
+
+        this.setText(
+            'itemCount',
+            this.state.items.length
+        );
+
+        this.renderTodayBookings(todayBookings);
+        this.renderUpcomingBookings(upcomingBookings);
+        this.renderPaymentAlerts(receivables);
     },
-    {
-      id: 5,
-      customer: "خالد السبيعي",
-      eventDate: "2026-08-30",
-      guests: 45,
-      status: "مؤكد",
-      total: 6700,
-      paid: 6700,
+
+    getReceivables() {
+        let total = 0;
+        let count = 0;
+
+        const accounts = this.state.accounts;
+
+        accounts.forEach(entry => {
+            const account = entry.account || {};
+
+            const balance = this.number(
+                account.balance ??
+                account.balanceAmount ??
+                account.balance_amount ??
+                0
+            );
+
+            const balanceType = String(
+                account.balanceType ??
+                account.balance_type ??
+                ''
+            ).toLowerCase();
+
+            const due =
+                balance > 0 &&
+                (
+                    !balanceType ||
+                    balanceType === 'due' ||
+                    balanceType === 'debit' ||
+                    balanceType === 'مستحق'
+                );
+
+            if (due) {
+                total += balance;
+                count++;
+            }
+        });
+
+        return {
+            total,
+            count,
+            accounts: accounts.filter(entry => {
+                const account = entry.account || {};
+
+                const balance = this.number(
+                    account.balance ??
+                    account.balanceAmount ??
+                    account.balance_amount ??
+                    0
+                );
+
+                const balanceType = String(
+                    account.balanceType ??
+                    account.balance_type ??
+                    ''
+                ).toLowerCase();
+
+                return (
+                    balance > 0 &&
+                    (
+                        !balanceType ||
+                        balanceType === 'due' ||
+                        balanceType === 'debit' ||
+                        balanceType === 'مستحق'
+                    )
+                );
+            })
+        };
     },
-  ];
 
-  function formatCurrency(amount) {
-    if (window.API && typeof window.API.formatCurrency === "function") {
-      return window.API.formatCurrency(amount);
-    }
-    return Number(amount || 0).toLocaleString("ar-SA") + " ر.س";
-  }
+    getTodayRevenue(todayBookings) {
+        return todayBookings.reduce(
+            (sum, booking) =>
+                sum + this.number(
+                    booking.totalAmount ??
+                    booking.total_amount
+                ),
+            0
+        );
+    },
 
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+    renderTodayBookings(bookings) {
+        const container =
+            document.getElementById('todayBookingsList');
 
-  function renderDashboard() {
-    const todayBookings = mockBookings.filter(
-      (booking) => booking.eventDate === today,
-    );
-    const future = mockBookings.filter((booking) => {
-      if (booking.eventDate === today) return false;
-      const diff = new Date(booking.eventDate) - new Date(today);
-      return diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000;
-    });
+        if (!container) return;
 
-    const receivables = mockBookings.filter(
-      (booking) => booking.total - booking.paid > 0,
-    );
-    const totalReceivables = receivables.reduce(
-      (sum, booking) => sum + (booking.total - booking.paid),
-      0,
-    );
-    const todayRevenue = todayBookings.reduce(
-      (sum, booking) => sum + booking.total,
-      0,
-    );
+        if (!bookings.length) {
+            container.innerHTML = this.emptyState(
+                'لا توجد حجوزات اليوم'
+            );
+            return;
+        }
 
-    const todayTotal = document.getElementById("todayTotal");
-    const todayCount = document.getElementById("todayCount");
-    const upcomingCount = document.getElementById("upcomingCount");
-    const upcomingGuests = document.getElementById("upcomingGuests");
-    const receivablesTotal = document.getElementById("receivablesTotal");
-    const receivablesCount = document.getElementById("receivablesCount");
-    const todayRevenueEl = document.getElementById("todayRevenue");
-    const activeCustomers = document.getElementById("activeCustomers");
-    const supplierCount = document.getElementById("supplierCount");
-    const itemCount = document.getElementById("itemCount");
+        const sorted = [...bookings].sort((a, b) => {
+            const timeA =
+                a.deliveryTime ??
+                a.delivery_time ??
+                '';
 
-    if (todayTotal) todayTotal.textContent = mockBookings.length;
-    if (todayCount) todayCount.textContent = todayBookings.length;
-    if (upcomingCount) upcomingCount.textContent = future.length;
-    if (upcomingGuests)
-      upcomingGuests.textContent = future.reduce(
-        (sum, booking) => sum + booking.guests,
-        0,
-      );
-    if (receivablesTotal)
-      receivablesTotal.textContent = formatCurrency(totalReceivables);
-    if (receivablesCount) receivablesCount.textContent = receivables.length;
-    if (todayRevenueEl)
-      todayRevenueEl.textContent = formatCurrency(todayRevenue);
-    if (activeCustomers)
-      activeCustomers.textContent = new Set(
-        mockBookings.map((b) => b.customer),
-      ).size;
-    if (supplierCount) supplierCount.textContent = 4;
-    if (itemCount) itemCount.textContent = 12;
+            const timeB =
+                b.deliveryTime ??
+                b.delivery_time ??
+                '';
 
-    const todayList = document.getElementById("todayBookingsList");
-    if (todayList) {
-      if (todayBookings.length === 0) {
-        todayList.innerHTML =
-          '<div class="empty-state-compact"><i class="fas fa-calendar-plus"></i><span>لا توجد حجوزات مسجلة اليوم</span></div>';
-      } else {
-        todayList.innerHTML = todayBookings
-          .map(
-            (booking) => `
-          <div class="list-item">
-            <div class="list-item-icon" style="background: var(--primary-soft); color: var(--primary);"><i class="fas fa-user"></i></div>
-            <div class="list-item-content">
-              <div class="list-item-title">${escapeHtml(booking.customer)}</div>
-              <div class="list-item-subtitle">${booking.guests} ضيف · ${booking.eventDate}</div>
-            </div>
-            <span class="badge ${booking.status === "مؤكد" ? "badge-confirmed" : "badge-new"}">${booking.status}</span>
-          </div>
-        `,
-          )
-          .join("");
-      }
-    }
+            return String(timeA).localeCompare(
+                String(timeB)
+            );
+        });
 
-    const upcomingList = document.getElementById("upcomingBookingsList");
-    const upcomingBadge = document.getElementById("upcomingBadge");
-    if (upcomingBadge) upcomingBadge.textContent = `${future.length} حجز`;
-    if (upcomingList) {
-      if (future.length === 0) {
-        upcomingList.innerHTML =
-          '<div class="empty-state-compact"><i class="fas fa-calendar-alt"></i><span>لا توجد حجوزات قادمة</span></div>';
-      } else {
-        upcomingList.innerHTML = future
-          .slice(0, 4)
-          .map(
-            (booking) => `
-          <div class="list-item">
-            <div class="list-item-icon" style="background: var(--surface-soft); color: var(--text-secondary);"><i class="fas fa-calendar"></i></div>
-            <div class="list-item-content">
-              <div class="list-item-title">${escapeHtml(booking.customer)}</div>
-              <div class="list-item-subtitle">${booking.eventDate} · ${booking.guests} ضيف</div>
-            </div>
-            <span class="badge ${booking.status === "مؤكد" ? "badge-confirmed" : "badge-new"}">${booking.status}</span>
-          </div>
-        `,
-          )
-          .join("");
-      }
-    }
+        container.innerHTML = sorted.map(booking => {
+            const id = booking.id;
 
-    const alertList = document.getElementById("paymentAlertsList");
-    const alertBadge = document.getElementById("alertBadge");
-    if (alertBadge) alertBadge.textContent = receivables.length;
-    if (alertList) {
-      if (receivables.length === 0) {
-        alertList.innerHTML =
-          '<div class="empty-state-compact"><i class="fas fa-check-circle"></i><span>لا توجد تنبيهات مالية</span></div>';
-      } else {
-        alertList.innerHTML = receivables
-          .slice(0, 3)
-          .map((booking) => {
-            const remaining = booking.total - booking.paid;
+            const customer = this.getCustomerName(booking);
+
+            const time =
+                booking.deliveryTime ??
+                booking.delivery_time ??
+                '—';
+
+            const period =
+                booking.deliveryPeriod ??
+                booking.delivery_period ??
+                '';
+
+            const total =
+                booking.totalAmount ??
+                booking.total_amount ??
+                0;
+
             return `
-            <div class="list-item">
-              <div class="list-item-icon" style="background: var(--danger-soft); color: var(--danger);"><i class="fas fa-exclamation"></i></div>
-              <div class="list-item-content">
-                <div class="list-item-title">${escapeHtml(booking.customer)}</div>
-                <div class="list-item-subtitle">متبقي ${formatCurrency(remaining)}</div>
-              </div>
-              <button class="btn btn-sm btn-primary" type="button" onclick="showToast('يتم تجهيز صفحة التسديد','info')">تسديد</button>
-            </div>
-          `;
-          })
-          .join("");
-      }
-    }
-  }
+                <div class="dashboard-list-item"
+                     data-booking-id="${this.escape(id)}">
+                    <div class="dashboard-list-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
 
-  if (window.layoutReady) {
-    renderDashboard();
-  } else {
-    document.addEventListener("layout:ready", renderDashboard);
-  }
-});
+                    <div class="dashboard-list-content">
+                        <div class="dashboard-list-title">
+                            ${this.escape(customer)}
+                        </div>
+
+                        <div class="dashboard-list-meta">
+                            ${this.escape(time)}
+                            ${period ? ` · ${this.escape(period)}` : ''}
+                        </div>
+                    </div>
+
+                    <div class="dashboard-list-value">
+                        ${this.escape(this.formatMoney(total))}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.bindBookingLinks(container);
+    },
+
+    renderUpcomingBookings(bookings) {
+        const container =
+            document.getElementById('upcomingBookingsList');
+
+        const badge =
+            document.getElementById('upcomingBadge');
+
+        if (badge) {
+            badge.textContent = `${bookings.length} حجز`;
+        }
+
+        if (!container) return;
+
+        if (!bookings.length) {
+            container.innerHTML = this.emptyState(
+                'لا توجد حجوزات قادمة'
+            );
+            return;
+        }
+
+        container.innerHTML = bookings
+            .slice(0, 10)
+            .map(booking => {
+                const id = booking.id;
+
+                const customer =
+                    this.getCustomerName(booking);
+
+                const date =
+                    booking.eventDate ??
+                    booking.event_date;
+
+                const time =
+                    booking.deliveryTime ??
+                    booking.delivery_time ??
+                    '—';
+
+                const total =
+                    booking.totalAmount ??
+                    booking.total_amount ??
+                    0;
+
+                return `
+                    <div class="dashboard-list-item"
+                         data-booking-id="${this.escape(id)}">
+
+                        <div class="dashboard-list-icon">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+
+                        <div class="dashboard-list-content">
+                            <div class="dashboard-list-title">
+                                ${this.escape(customer)}
+                            </div>
+
+                            <div class="dashboard-list-meta">
+                                ${this.escape(
+                                    this.formatDate(date)
+                                )}
+                                ·
+                                ${this.escape(time)}
+                            </div>
+                        </div>
+
+                        <div class="dashboard-list-value">
+                            ${this.escape(
+                                this.formatMoney(total)
+                            )}
+                        </div>
+                    </div>
+                `;
+            })
+            .join('');
+
+        this.bindBookingLinks(container);
+    },
+
+    renderPaymentAlerts(receivables) {
+        const container =
+            document.getElementById('paymentAlertsList');
+
+        const badge =
+            document.getElementById('alertBadge');
+
+        if (!container) return;
+
+        if (badge) {
+            badge.textContent = receivables.count;
+        }
+
+        if (!receivables.accounts.length) {
+            container.innerHTML = this.emptyState(
+                'لا توجد مستحقات مالية'
+            );
+            return;
+        }
+
+        container.innerHTML =
+            receivables.accounts
+                .slice(0, 10)
+                .map(entry => {
+                    const customer =
+                        entry.customer || {};
+
+                    const account =
+                        entry.account || {};
+
+                    const balance =
+                        this.number(
+                            account.balance ??
+                            account.balanceAmount ??
+                            account.balance_amount ??
+                            0
+                        );
+
+                    return `
+                        <div class="dashboard-list-item"
+                             data-customer-id="${this.escape(customer.id)}">
+
+                            <div class="dashboard-list-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+
+                            <div class="dashboard-list-content">
+                                <div class="dashboard-list-title">
+                                    ${this.escape(
+                                        customer.name || 'عميل'
+                                    )}
+                                </div>
+
+                                <div class="dashboard-list-meta">
+                                    ${this.escape(
+                                        customer.phone || ''
+                                    )}
+                                </div>
+                            </div>
+
+                            <div class="dashboard-list-value">
+                                ${this.escape(
+                                    this.formatMoney(balance)
+                                )}
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+
+        container
+            .querySelectorAll('[data-customer-id]')
+            .forEach(element => {
+                element.addEventListener('click', () => {
+                    const id =
+                        element.dataset.customerId;
+
+                    if (id) {
+                        window.location.href =
+                            `customer-view.html?id=${encodeURIComponent(id)}`;
+                    }
+                });
+            });
+    },
+
+    bindBookingLinks(container) {
+        container
+            .querySelectorAll('[data-booking-id]')
+            .forEach(element => {
+                element.addEventListener('click', () => {
+                    const id =
+                        element.dataset.bookingId;
+
+                    if (id) {
+                        window.location.href =
+                            `booking-form.html?id=${encodeURIComponent(id)}`;
+                    }
+                });
+            });
+    },
+
+    getCustomerName(booking) {
+        if (
+            booking.customer &&
+            booking.customer.name
+        ) {
+            return booking.customer.name;
+        }
+
+        if (booking.customerName) {
+            return booking.customerName;
+        }
+
+        if (booking.customer_name) {
+            return booking.customer_name;
+        }
+
+        const customerId =
+            booking.customerId ??
+            booking.customer_id;
+
+        const customer =
+            this.state.customers.find(
+                item =>
+                    String(item.id) ===
+                    String(customerId)
+            );
+
+        return customer?.name || 'عميل';
+    },
+
+    getBookingQuantity(booking) {
+        const items = booking.items;
+
+        if (Array.isArray(items)) {
+            return items.reduce(
+                (sum, item) =>
+                    sum + this.number(
+                        item.quantity
+                    ),
+                0
+            );
+        }
+
+        return this.number(
+            booking.quantity ??
+            booking.guests ??
+            0
+        );
+    },
+
+    isActiveBooking(booking) {
+        const status = String(
+            booking.status || ''
+        ).toLowerCase();
+
+        return ![
+            'cancelled',
+            'canceled',
+            'ملغي'
+        ].includes(status);
+    },
+
+    getToday() {
+        const date = new Date();
+
+        const year =
+            date.getFullYear();
+
+        const month =
+            String(
+                date.getMonth() + 1
+            ).padStart(2, '0');
+
+        const day =
+            String(
+                date.getDate()
+            ).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+    },
+
+    addDays(dateString, days) {
+        const parts =
+            dateString.split('-').map(Number);
+
+        const date = new Date(
+            parts[0],
+            parts[1] - 1,
+            parts[2]
+        );
+
+        date.setDate(
+            date.getDate() + days
+        );
+
+        const year =
+            date.getFullYear();
+
+        const month =
+            String(
+                date.getMonth() + 1
+            ).padStart(2, '0');
+
+        const day =
+            String(
+                date.getDate()
+            ).padStart(2, '0');
+
+        return `${year}-${month}-${day}`;
+    },
+
+    dateOnly(value) {
+        if (!value) return '';
+
+        return String(value).slice(0, 10);
+    },
+
+    formatDate(value) {
+        if (!value) return '—';
+
+        const date =
+            new Date(`${this.dateOnly(value)}T00:00:00`);
+
+        if (Number.isNaN(date.getTime())) {
+            return String(value);
+        }
+
+        return date.toLocaleDateString(
+            'ar-SA',
+            {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            }
+        );
+    },
+
+    formatMoney(value) {
+        return `${this.number(value).toLocaleString(
+            'ar-SA',
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }
+        )} ر.س`;
+    },
+
+    normalizeArray(data) {
+        if (Array.isArray(data)) {
+            return data;
+        }
+
+        if (
+            data &&
+            Array.isArray(data.data)
+        ) {
+            return data.data;
+        }
+
+        return [];
+    },
+
+    number(value) {
+        const number =
+            Number(value);
+
+        return Number.isFinite(number)
+            ? number
+            : 0;
+    },
+
+    setText(id, value) {
+        const element =
+            document.getElementById(id);
+
+        if (element) {
+            element.textContent = value;
+        }
+    },
+
+    emptyState(message) {
+        return `
+            <div class="empty-state-compact">
+                <i class="fas fa-inbox"></i>
+                <span>${this.escape(message)}</span>
+            </div>
+        `;
+    },
+
+    showError(error) {
+        if (
+            typeof showToast === 'function'
+        ) {
+            showToast(
+                error,
+                'error'
+            );
+        }
+    },
+
+    hideLoading() {
+        const loading =
+            document.getElementById(
+                'loadingScreen'
+            );
+
+        if (!loading) return;
+
+        loading.style.opacity = '0';
+        loading.style.pointerEvents = 'none';
+
+        setTimeout(() => {
+            loading.style.display = 'none';
+        }, 250);
+    },
+
+    escape(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+};
+
+document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+        Dashboard.init();
+    }
+);

@@ -1,236 +1,423 @@
 <!doctype html>
 <html dir="rtl" lang="ar" data-page="suppliers">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="theme-color" content="#8F1720" />
-    <meta name="description" content="إدارة الموردين - شواطئ عدن" />
-    <title>الموردين - شواطئ عدن</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="assets/css/global.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" href="assets/images/logo.png" />
-    <style>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="theme-color" content="#8F1720">
+  <meta name="description" content="إدارة الموردين">
+  <title>الموردين</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/images/logo.png">
+
+  <style>
+    .suppliers-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-item {
+      text-align: center;
+      min-width: 0;
+    }
+
+    .summary-label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .summary-value {
+      display: block;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .summary-value.danger {
+      color: var(--danger);
+    }
+
+    .supplier-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 15px 16px;
+      margin-bottom: var(--space-2);
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+
+    .supplier-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-light);
+    }
+
+    .supplier-main {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .supplier-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .supplier-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .supplier-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .supplier-phone {
+      font-size: 13px;
+      color: var(--text-muted);
+      direction: ltr;
+      text-align: right;
+    }
+
+    .supplier-account {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      margin-top: 7px;
+      font-size: 12px;
+    }
+
+    .account-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .account-label {
+      color: var(--text-muted);
+    }
+
+    .account-value {
+      font-weight: 800;
+      color: var(--text-secondary);
+    }
+
+    .account-value.danger {
+      color: var(--danger);
+    }
+
+    .account-value.success {
+      color: var(--success);
+    }
+
+    .supplier-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .supplier-arrow {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-right: 2px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 70px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state i {
+      display: block;
+      font-size: 46px;
+      opacity: .25;
+      margin-bottom: 14px;
+    }
+
+    .empty-state h4 {
+      margin: 0 0 5px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .empty-state p {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .modal-body .form-group + .form-group {
+      margin-top: 14px;
+    }
+
+    .status-row {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 767px) {
       .suppliers-summary {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-bottom: var(--space-4);
-        padding: 12px;
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-sm);
+        padding: 10px 7px;
+        gap: 5px;
       }
-      .summary-item { text-align: center; }
-      .summary-label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
-      .summary-value { font-size: 18px; font-weight: 800; color: var(--text); }
-      .summary-value.danger { color: var(--danger); }
+
+      .summary-label {
+        font-size: 10px;
+      }
+
+      .summary-value {
+        font-size: 15px;
+      }
 
       .supplier-card {
-        display: flex;
-        align-items: stretch;
-        background: var(--surface-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 14px 16px;
-        margin-bottom: var(--space-2);
-        box-shadow: var(--shadow-sm);
-        transition: all 0.15s ease;
-        gap: var(--space-3);
-        position: relative;
+        padding: 12px;
+        gap: 9px;
       }
-      .supplier-card:last-child { margin-bottom: 0; }
-      .supplier-card .click-area {
-        flex: 1;
-        display: flex;
-        align-items: stretch;
-        gap: var(--space-3);
-        cursor: pointer;
-        min-width: 0;
+
+      .supplier-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 15px;
       }
-      .supplier-card .click-area:active { transform: scale(0.99); }
-      .supplier-card .avatar {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        border-radius: var(--radius-sm);
-        background: var(--primary-soft);
-        color: var(--primary);
-        font-size: 18px;
-        font-weight: 700;
-        flex-shrink: 0;
-      }
-      .supplier-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-      .supplier-card .info .name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-      .supplier-card .info .phone { font-size: 13px; color: var(--text-muted); direction: ltr; text-align: start; }
-      .supplier-card .info .category { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-      .supplier-card .financial {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-3);
-        margin-top: 4px;
-        font-size: 12px;
-        color: var(--text-secondary);
-      }
-      .supplier-card .financial .label { color: var(--text-muted); margin-left: 2px; }
-      .supplier-card .financial .amount { font-weight: 700; }
-      .supplier-card .financial .remaining { color: var(--danger); font-weight: 800; }
-      .supplier-card .financial .paid { color: var(--success); }
-      .supplier-card .actions {
-        display: flex;
-        align-items: center;
-        gap: var(--space-1);
-        flex-shrink: 0;
-      }
-      .supplier-card .actions .arrow {
-        display: flex;
-        align-items: center;
-        color: var(--text-muted);
+
+      .supplier-name {
         font-size: 14px;
       }
 
-      .empty-state { text-align: center; padding: var(--space-8) var(--space-4); color: var(--text-muted); }
-      .empty-state i { font-size: 36px; opacity: 0.3; margin-bottom: var(--space-3); display: block; }
-      .empty-state h4 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: var(--space-1); }
-      .empty-state p { font-size: 14px; }
-
-      .page-header .btn-sm { display: none; }
-
-      @media (max-width: 767px) {
-        .suppliers-summary { grid-template-columns: repeat(3, 1fr); padding: 10px; gap: 6px; }
-        .summary-value { font-size: 16px; }
-        .supplier-card { padding: 12px 14px; }
-        .supplier-card .avatar { width: 38px; height: 38px; font-size: 15px; }
-        .supplier-card .info .name { font-size: 14px; }
-        .supplier-card .info .phone { font-size: 12px; }
-        .supplier-card .financial { font-size: 11px; gap: var(--space-2); }
+      .supplier-phone {
+        font-size: 11px;
       }
-      @media (min-width: 768px) {
-        .page-header .btn-sm { display: inline-flex; }
-        .suppliers-summary { padding: 16px 20px; }
-        .summary-value { font-size: 22px; }
-        .supplier-card { padding: 16px 20px; }
-        .supplier-card .avatar { width: 50px; height: 50px; font-size: 20px; }
-        .supplier-card .info .name { font-size: 17px; }
+
+      .supplier-account {
+        gap: 5px 10px;
+        font-size: 10px;
       }
-      @media (min-width: 1024px) {
-        #suppliersList { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
-        .supplier-card { margin-bottom: 0; }
+
+      .supplier-actions {
+        gap: 2px;
       }
-    </style>
-  </head>
-  <body>
-    <div id="loadingScreen" class="loading-screen">
-      <div class="loading-content">
-        <div class="loading-logo"><i class="fas fa-utensils"></i></div>
-        <h1 class="loading-title">شواطئ عدن</h1>
-        <p class="loading-subtitle">مطابخ ومطاعم</p>
-        <div class="loading-dots"><span></span><span></span><span></span></div>
+
+      .supplier-arrow {
+        display: none;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      #suppliersList {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+      }
+
+      .supplier-card {
+        margin-bottom: 0;
+      }
+
+      .summary-value {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-logo"><i class="fas fa-utensils"></i></div>
+      <h1 class="loading-title">شواطئ عدن</h1>
+      <p class="loading-subtitle">مطابخ ومطاعم</p>
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <div class="app">
+    <aside id="sidebar" class="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <div class="main-area">
+      <header id="header" class="header"></header>
+
+      <main class="content" id="pageContent">
+        <div class="page-header">
+          <button class="btn btn-primary btn-sm" id="addSupplierBtn">
+            <i class="fas fa-plus"></i>
+            <span>مورد جديد</span>
+          </button>
+        </div>
+
+        <div class="suppliers-summary">
+          <div class="summary-item">
+            <span class="summary-label">إجمالي الموردين</span>
+            <span class="summary-value" id="suppliersCount">0</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-label">إجمالي المستحقات</span>
+            <span class="summary-value danger" id="suppliersPayables">0 ر.س</span>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-label">إجمالي المدفوع</span>
+            <span class="summary-value" id="suppliersPaid">0 ر.س</span>
+          </div>
+        </div>
+
+        <div class="search-bar">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            class="search-input"
+            id="supplierSearch"
+            placeholder="ابحث عن اسم المورد أو رقم الجوال"
+            autocomplete="off"
+          >
+        </div>
+
+        <div id="suppliersList"></div>
+      </main>
+    </div>
+  </div>
+
+  <nav id="bottomNav" class="bottom-nav"></nav>
+
+  <button id="fab" class="fab" aria-label="إضافة مورد">
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <div id="modalContainer"></div>
+  <div id="toastContainer" class="toast-container"></div>
+
+  <div class="modal" id="supplierModal" role="dialog" aria-modal="true">
+    <div class="modal-overlay" data-close="supplierModal"></div>
+
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="supplierModalTitle">إضافة مورد جديد</h3>
+
+        <button class="modal-close" data-close="supplierModal" aria-label="إغلاق">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="supplierName">
+            اسم المورد <span class="req">*</span>
+          </label>
+
+          <input
+            type="text"
+            class="form-input"
+            id="supplierName"
+            placeholder="اسم المورد"
+            maxlength="150"
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="supplierPhone">
+            رقم الجوال
+          </label>
+
+          <input
+            type="tel"
+            class="form-input"
+            id="supplierPhone"
+            placeholder="05xxxxxxxx"
+            maxlength="30"
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="supplierNotes">
+            ملاحظات
+          </label>
+
+          <textarea
+            class="form-input"
+            id="supplierNotes"
+            rows="3"
+            placeholder="ملاحظات عن المورد"
+            maxlength="1000"
+          ></textarea>
+        </div>
+
+        <div class="status-row">
+          <span class="status-text">المورد نشط</span>
+
+          <label class="switch">
+            <input type="checkbox" id="supplierActive" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="supplierModal">
+          إلغاء
+        </button>
+
+        <button class="btn btn-primary" id="saveSupplierBtn">
+          حفظ المورد
+        </button>
       </div>
     </div>
+  </div>
 
-    <div class="app">
-      <aside id="sidebar" class="sidebar"></aside>
-      <div id="sidebarOverlay" class="sidebar-overlay"></div>
-      <div class="main-area">
-        <header id="header" class="header"></header>
-        <main class="content" id="pageContent">
-          <div class="page-header">
-            <button class="btn btn-primary btn-sm" id="addSupplierBtn">
-              <i class="fas fa-truck"></i> <span>مورد جديد</span>
-            </button>
-          </div>
-
-          <div class="suppliers-summary">
-            <div class="summary-item">
-              <span class="summary-label">إجمالي الموردين</span>
-              <span class="summary-value" id="suppliersCount">0</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">إجمالي المستحقات (علينا)</span>
-              <span class="summary-value danger" id="suppliersPayables">0 ر.س</span>
-            </div>
-            <div class="summary-item">
-              <span class="summary-label">إجمالي المدفوع للموردين</span>
-              <span class="summary-value" id="suppliersPaid">0 ر.س</span>
-            </div>
-          </div>
-
-          <div class="search-bar">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" id="supplierSearch" placeholder="ابحث عن اسم المورد أو رقم الجوال" />
-          </div>
-
-          <div id="suppliersList"></div>
-        </main>
-      </div>
-    </div>
-
-    <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="إضافة مورد"><i class="fas fa-plus"></i></button>
-    <div id="modalContainer"></div>
-    <div id="toastContainer" class="toast-container"></div>
-
-    <!-- ===== مودال إضافة مورد جديد (حقلين فقط: الاسم + رقم الجوال) ===== -->
-    <div class="modal" id="addSupplierModal" role="dialog" aria-modal="true">
-      <div class="modal-overlay" data-close="addSupplierModal"></div>
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 class="modal-title">إضافة مورد جديد</h3>
-          <button class="modal-close" data-close="addSupplierModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="newSupplierName">اسم المورد <span class="req">*</span></label>
-            <input type="text" class="form-input" id="newSupplierName" placeholder="مثال: مؤسسة الغذاء الذهبي" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="newSupplierPhone">رقم الجوال <span class="req">*</span></label>
-            <input type="tel" class="form-input" id="newSupplierPhone" placeholder="05xxxxxxxx" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" data-close="addSupplierModal">إلغاء</button>
-          <button class="btn btn-primary" id="saveNewSupplier">حفظ المورد</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== مودال تعديل المورد (حقلين فقط: الاسم + رقم الجوال) ===== -->
-    <div class="modal" id="editSupplierModal" role="dialog" aria-modal="true">
-      <div class="modal-overlay" data-close="editSupplierModal"></div>
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 class="modal-title">تعديل المورد</h3>
-          <button class="modal-close" data-close="editSupplierModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="editSupplierName">اسم المورد <span class="req">*</span></label>
-            <input type="text" class="form-input" id="editSupplierName" placeholder="اسم المورد" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="editSupplierPhone">رقم الجوال <span class="req">*</span></label>
-            <input type="tel" class="form-input" id="editSupplierPhone" placeholder="05xxxxxxxx" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" data-close="editSupplierModal">إلغاء</button>
-          <button class="btn btn-primary" id="saveEditSupplier">حفظ التغييرات</button>
-        </div>
-      </div>
-    </div>
-
-    <script src="assets/js/core/utils.js"></script>
-    <script src="assets/js/core/api.js"></script>
-    <script src="assets/js/components/layout.js"></script>
-    <script src="assets/js/pages/suppliers.js"></script>
-  </body>
+  <script src="assets/js/core/utils.js"></script>
+  <script src="assets/js/core/api.js"></script>
+  <script src="assets/js/components/layout.js"></script>
+  <script src="assets/js/pages/suppliers.js"></script>
+</body>
 </html>

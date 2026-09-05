@@ -1,104 +1,693 @@
 <!doctype html>
 <html dir="rtl" lang="ar" data-page="bookings">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
-    />
-    <meta name="theme-color" content="#8F1720" />
-    <meta name="description" content="إدارة الحجوزات - شواطئ عدن" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#8F1720">
+    <meta name="description" content="إدارة الحجوزات - شواطئ عدن">
     <title>الحجوزات - شواطئ عدن</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css"
-    />
-    <link rel="stylesheet" href="assets/css/global.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" href="assets/images/logo.png" />
-  </head>
-  <body>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/layout.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="assets/images/logo.png">
+    <link rel="apple-touch-icon" href="assets/images/logo.png">
+
+    <style>
+        /* ===== تحسينات شريط الأدوات ===== */
+        .bookings-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .bookings-search {
+            position: relative;
+        }
+
+        .bookings-search .search-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            font-size: 14px;
+        }
+
+        .bookings-search .search-input {
+            width: 100%;
+            padding-right: 46px;
+            height: 48px;
+            background: var(--surface-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+        .bookings-search .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+            outline: none;
+        }
+
+        .bookings-search .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* ===== شريط الفلتر ===== */
+        .filter-chips {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 0 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-full);
+            background: var(--surface-card);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        .filter-chip.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(143, 23, 32, 0.25);
+        }
+
+        .filter-chip .chip-count {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .filter-chip.active .chip-count {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        /* ===== بطاقات الملخص ===== */
+        .bookings-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .summary-box {
+            padding: 16px 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--surface-card);
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.2s ease, transform 0.15s ease;
+        }
+
+        .summary-box:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .summary-label {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        .summary-value {
+            color: var(--text);
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .summary-value .currency {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+
+        /* ===== قائمة الحجوزات ===== */
+        .bookings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 200px;
+        }
+
+        /* ===== بطاقة الحجز ===== */
+        .booking-card {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 18px;
+            align-items: center;
+            padding: 18px 22px;
+            background: var(--surface-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .booking-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-light);
+        }
+
+        .booking-card:active {
+            transform: scale(0.99);
+        }
+
+        /* الأيقونة الجانبية */
+        .booking-icon {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 20px;
+            flex-shrink: 0;
+            font-weight: 800;
+            transition: all 0.2s ease;
+        }
+
+        .booking-card:hover .booking-icon {
+            background: var(--primary);
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* المحتوى الأساسي */
+        .booking-main {
+            min-width: 0;
+        }
+
+        .booking-title-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+
+        .booking-title {
+            margin: 0;
+            color: var(--text);
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .booking-number {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--surface);
+            padding: 2px 10px;
+            border-radius: var(--radius-full);
+        }
+
+        .booking-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .booking-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .booking-meta i {
+            color: var(--primary);
+            width: 16px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .booking-mark-tag {
+            margin-top: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--warning);
+            background: var(--warning-soft);
+            padding: 2px 12px;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+        }
+
+        .booking-mark-tag i {
+            font-size: 11px;
+        }
+
+        /* الجانب الأيمن (المبلغ والحالة) */
+        .booking-side {
+            min-width: 130px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .booking-total {
+            color: var(--text);
+            font-size: 19px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .booking-total small {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .booking-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 0 14px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .booking-status-new {
+            background: var(--warning-soft);
+            color: var(--warning);
+        }
+
+        .booking-status-confirmed {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .booking-status-completed {
+            background: var(--primary-soft);
+            color: var(--primary);
+        }
+
+        .booking-status-cancelled {
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .booking-status-default {
+            background: var(--surface);
+            color: var(--text-secondary);
+        }
+
+        /* ===== حالات خاصة (فارغ/تحميل/خطأ) ===== */
+        .bookings-empty,
+        .bookings-loading,
+        .bookings-error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            min-height: 240px;
+            padding: 40px 20px;
+            background: var(--surface-card);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .bookings-empty {
+            border: 2px dashed var(--border);
+        }
+
+        .bookings-empty i {
+            font-size: 40px;
+            opacity: 0.4;
+        }
+
+        .bookings-empty h4 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .bookings-empty p {
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .bookings-error {
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .bookings-error i {
+            font-size: 36px;
+        }
+
+        .bookings-error button {
+            border: 0;
+            border-radius: var(--radius-md);
+            padding: 10px 24px;
+            background: var(--primary);
+            color: #fff;
+            font-family: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .bookings-error button:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ===== التجاوب ===== */
+        @media (max-width: 767px) {
+            .bookings-summary {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .summary-box {
+                padding: 12px 10px;
+            }
+
+            .summary-value {
+                font-size: 17px;
+            }
+
+            .booking-card {
+                grid-template-columns: auto 1fr;
+                padding: 14px 16px;
+                gap: 12px;
+            }
+
+            .booking-side {
+                grid-column: 2;
+                min-width: 0;
+                text-align: right;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                border-top: 1px solid var(--border);
+                padding-top: 12px;
+                flex-wrap: wrap;
+            }
+
+            .booking-total {
+                font-size: 16px;
+            }
+
+            .booking-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 17px;
+            }
+
+            .booking-title {
+                font-size: 15px;
+            }
+
+            .booking-meta {
+                font-size: 12px;
+                gap: 6px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .bookings-summary {
+                gap: 6px;
+            }
+
+            .summary-box {
+                padding: 10px 8px;
+            }
+
+            .summary-label {
+                font-size: 10px;
+            }
+
+            .summary-value {
+                font-size: 14px;
+            }
+
+            .filter-chips {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 4px;
+                scrollbar-width: none;
+            }
+
+            .filter-chips::-webkit-scrollbar {
+                display: none;
+            }
+
+            .filter-chip {
+                flex-shrink: 0;
+                padding: 0 12px;
+                font-size: 12px;
+                min-height: 34px;
+            }
+
+            .booking-card {
+                padding: 12px;
+                gap: 10px;
+            }
+
+            .booking-icon {
+                width: 38px;
+                height: 38px;
+                font-size: 14px;
+                border-radius: var(--radius-sm);
+            }
+
+            .booking-title {
+                font-size: 13px;
+            }
+
+            .booking-number {
+                font-size: 10px;
+            }
+
+            .booking-meta {
+                font-size: 11px;
+                gap: 4px 10px;
+            }
+
+            .booking-total {
+                font-size: 14px;
+            }
+
+            .booking-status {
+                font-size: 10px;
+                min-height: 24px;
+                padding: 0 10px;
+            }
+
+            .booking-side {
+                padding-top: 8px;
+                gap: 4px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .bookings-list {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+
+            .booking-card {
+                margin-bottom: 0;
+            }
+
+            .summary-value {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- شاشة التحميل -->
     <div id="loadingScreen" class="loading-screen">
-      <div class="loading-content">
-        <div class="loading-logo"><i class="fas fa-utensils"></i></div>
-        <h1 class="loading-title">شواطئ عدن</h1>
-        <p class="loading-subtitle">مطابخ ومطاعم</p>
-        <div class="loading-dots"><span></span><span></span><span></span></div>
-      </div>
+        <div class="loading-content">
+            <div class="loading-logo">
+                <i class="fas fa-utensils"></i>
+            </div>
+            <h1 class="loading-title">شواطئ عدن</h1>
+            <p class="loading-subtitle">مطابخ ومطاعم</p>
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
     </div>
 
     <div class="app">
-      <aside id="sidebar" class="sidebar"></aside>
-      <div id="sidebarOverlay" class="sidebar-overlay"></div>
-      <div class="main-area">
-        <header id="header" class="header"></header>
-        <main class="content" id="pageContent">
-          <div class="page-header">
-            <div>
-              <h1 class="page-title">الحجوزات</h1>
-              <p class="page-subtitle">إدارة حجوزات قاعات المناسبات</p>
-            </div>
-            <a href="booking-new.html" class="btn btn-primary btn-sm">
-              <i class="fas fa-plus"></i>
-              <span>حجز جديد</span>
-            </a>
-          </div>
+        <!-- القائمة الجانبية -->
+        <aside id="sidebar" class="sidebar"></aside>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-          <div class="search-bar">
-            <i class="fas fa-search search-icon"></i>
-            <input
-              type="text"
-              class="search-input"
-              id="bookingSearch"
-              placeholder="ابحث بالاسم، رقم الحجز، أو الهاتف..."
-            />
-          </div>
+        <div class="main-area">
+            <!-- رأس الصفحة -->
+            <header id="header" class="header"></header>
 
-          <div class="filter-chips" id="filterChips">
-            <button class="chip active" data-filter="all">
-              الكل <span class="chip-count">0</span>
-            </button>
-            <button class="chip" data-filter="جديد">
-              جديد <span class="chip-count">0</span>
-            </button>
-            <button class="chip" data-filter="مؤكد">
-              مؤكد <span class="chip-count">0</span>
-            </button>
-            <button class="chip" data-filter="مكتمل">
-              مكتمل <span class="chip-count">0</span>
-            </button>
-            <button class="chip" data-filter="ملغي">
-              ملغي <span class="chip-count">0</span>
-            </button>
-          </div>
+            <!-- المحتوى الرئيسي -->
+            <main class="content" id="pageContent">
 
-          <div
-            id="bookingList"
-            style="display: flex; flex-direction: column; gap: 16px"
-          ></div>
-        </main>
-      </div>
+                <!-- عنوان الصفحة -->
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">📋 الحجوزات</h1>
+                        <p class="page-subtitle">إدارة حجوزات المناسبات والفواتير</p>
+                    </div>
+
+                    <a href="booking-new.html" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i>
+                        <span>حجز جديد</span>
+                    </a>
+                </div>
+
+                <!-- شريط الأدوات (بحث + فلتر) -->
+                <div class="bookings-toolbar">
+
+                    <div class="bookings-search">
+                        <i class="fas fa-search search-icon"></i>
+                        <input
+                            type="search"
+                            id="bookingSearch"
+                            class="search-input"
+                            placeholder="ابحث باسم العميل، الهاتف، أو رقم الحجز..."
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="filter-chips" id="filterChips">
+                        <button type="button" class="filter-chip active" data-filter="all">
+                            <span>الكل</span>
+                            <span class="chip-count">0</span>
+                        </button>
+                        <button type="button" class="filter-chip" data-filter="new">
+                            <span>جديد</span>
+                            <span class="chip-count">0</span>
+                        </button>
+                        <button type="button" class="filter-chip" data-filter="confirmed">
+                            <span>مؤكد</span>
+                            <span class="chip-count">0</span>
+                        </button>
+                        <button type="button" class="filter-chip" data-filter="completed">
+                            <span>مكتمل</span>
+                            <span class="chip-count">0</span>
+                        </button>
+                        <button type="button" class="filter-chip" data-filter="cancelled">
+                            <span>ملغي</span>
+                            <span class="chip-count">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- بطاقات الملخص -->
+                <div class="bookings-summary">
+                    <div class="summary-box">
+                        <div class="summary-label">إجمالي الحجوزات</div>
+                        <div class="summary-value" id="totalBookings">0</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-label">حجوزات اليوم</div>
+                        <div class="summary-value" id="todayBookings">0</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-label">إجمالي القيمة</div>
+                        <div class="summary-value" id="totalAmount">0 <span class="currency">ر.س</span></div>
+                    </div>
+                </div>
+
+                <!-- قائمة الحجوزات (يتم تعبئتها بواسطة JavaScript) -->
+                <div id="bookingList" class="bookings-list">
+                    <div class="bookings-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>جاري تحميل الحجوزات...</span>
+                    </div>
+                </div>
+
+            </main>
+        </div>
     </div>
 
+    <!-- التنقل السفلي -->
     <nav id="bottomNav" class="bottom-nav"></nav>
-    <button id="fab" class="fab" aria-label="حجز جديد">
-      <i class="fas fa-plus"></i>
+
+    <!-- زر الإضافة العائم -->
+    <button
+        id="fab"
+        class="fab"
+        type="button"
+        aria-label="حجز جديد"
+        onclick="window.location.href='booking-new.html'"
+    >
+        <i class="fas fa-plus"></i>
     </button>
+
+    <!-- حاويات للـ Modal و Toast -->
     <div id="modalContainer"></div>
     <div id="toastContainer" class="toast-container"></div>
 
+    <!-- تحميل ملفات JavaScript -->
     <script src="assets/js/core/utils.js"></script>
-    <script src="assets/js/core/state.js"></script>
     <script src="assets/js/core/api.js"></script>
     <script src="assets/js/components/layout.js"></script>
     <script src="assets/js/pages/bookings.js"></script>
-    <script src="assets/js/pages/invoice.js"></script>
-  </body>
+</body>
 </html>

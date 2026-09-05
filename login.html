@@ -1,0 +1,561 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
+    />
+    <meta name="theme-color" content="#8F1720" />
+    <title>تسجيل الدخول - شواطئ عدن</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <!-- استيراد api.js و login.js -->
+    <script src="assets/js/core/api.js"></script>
+    <script src="assets/js/pages/login.js"></script>
+    <style>
+      /* ----- Reset & Base (إضاءة كاملة) ----- */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Tajawal", sans-serif;
+        background: #f7f6f4;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        margin: 0;
+        color: #1e1e1e;
+      }
+
+      /* ----- بطاقة الدخول (فاتحة وأنيقة) ----- */
+      .login-card {
+        width: 100%;
+        max-width: 420px;
+        background: #ffffff;
+        border-radius: 24px;
+        padding: 40px 32px 28px;
+        box-shadow:
+          0 12px 40px rgba(0, 0, 0, 0.06),
+          0 4px 16px rgba(0, 0, 0, 0.03);
+        border: 1px solid #f0eeeb;
+        transition: box-shadow 0.25s ease;
+      }
+      .login-card:hover {
+        box-shadow: 0 20px 56px rgba(0, 0, 0, 0.08);
+      }
+
+      /* ----- الشعار والعنوان ----- */
+      .login-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+      .login-brand .logo-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        background: #8f1720;
+        border-radius: 16px;
+        color: #fff;
+        font-size: 24px;
+        box-shadow: 0 6px 16px rgba(143, 23, 32, 0.2);
+        flex-shrink: 0;
+      }
+      .login-brand h1 {
+        font-size: 26px;
+        font-weight: 800;
+        color: #1a1a1a;
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+      .login-brand h1 span {
+        color: #8f1720;
+      }
+      .login-subtitle {
+        text-align: center;
+        color: #7a7a7a;
+        font-size: 14px;
+        margin: 4px 0 28px 0;
+        border-bottom: 1px solid #f0eeeb;
+        padding-bottom: 18px;
+      }
+      .login-subtitle i {
+        color: #8f1720;
+        margin-left: 6px;
+        opacity: 0.7;
+      }
+
+      /* ----- رسالة الخطأ (أنيقة) ----- */
+      .error-message {
+        background: #fef6f5;
+        border: 1px solid #fadcd9;
+        color: #b83a3a;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .error-message.show {
+        display: flex;
+        animation: shake 0.35s ease;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-6px);
+        }
+        40% {
+          transform: translateX(6px);
+        }
+        60% {
+          transform: translateX(-4px);
+        }
+        80% {
+          transform: translateX(4px);
+        }
+      }
+      .error-message i {
+        font-size: 18px;
+        flex-shrink: 0;
+        color: #b83a3a;
+      }
+
+      /* ----- حقول النموذج ----- */
+      .form-group {
+        margin-bottom: 20px;
+        position: relative;
+      }
+      .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #4a4a4a;
+        margin-bottom: 6px;
+      }
+      .form-group .input-wrap {
+        position: relative;
+      }
+      .form-group .input-wrap i {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #b0b0b0;
+        font-size: 16px;
+        transition: color 0.2s;
+        pointer-events: none;
+      }
+      .form-group input {
+        width: 100%;
+        height: 50px;
+        padding: 0 48px 0 16px;
+        font-family: inherit;
+        font-size: 15px;
+        color: #1a1a1a;
+        background: #fafafa;
+        border: 1.5px solid #e8e5e1;
+        border-radius: 14px;
+        transition:
+          border 0.2s,
+          box-shadow 0.2s;
+        outline: none;
+      }
+      .form-group input::placeholder {
+        color: #bdbdbd;
+        font-weight: 400;
+      }
+      .form-group input:focus {
+        border-color: #8f1720;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(143, 23, 32, 0.06);
+      }
+      .form-group input:focus ~ i,
+      .form-group .input-wrap:focus-within i {
+        color: #8f1720;
+      }
+
+      /* ----- خيارات (تذكرني ونسيت كلمة المرور) ----- */
+      .login-options {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin: 4px 0 24px;
+      }
+      .login-options .remember {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #555;
+        cursor: pointer;
+      }
+      .login-options .remember input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #8f1720;
+        cursor: pointer;
+        margin: 0;
+      }
+      .login-options .forgot {
+        font-size: 14px;
+        color: #8f1720;
+        text-decoration: none;
+        font-weight: 500;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.2s;
+      }
+      .login-options .forgot:hover {
+        border-bottom-color: #8f1720;
+      }
+
+      /* ----- زر الدخول (بورجوندي غامق) ----- */
+      .btn-login {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        height: 52px;
+        background: #8f1720;
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-family: inherit;
+        font-size: 17px;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          background 0.2s,
+          transform 0.15s,
+          box-shadow 0.2s;
+        box-shadow: 0 6px 20px rgba(143, 23, 32, 0.25);
+      }
+      .btn-login:hover {
+        background: #731019;
+        box-shadow: 0 8px 28px rgba(143, 23, 32, 0.3);
+        transform: translateY(-1px);
+      }
+      .btn-login:active {
+        transform: scale(0.97);
+        box-shadow: 0 4px 12px rgba(143, 23, 32, 0.2);
+      }
+      .btn-login i {
+        font-size: 18px;
+        transition: transform 0.2s;
+      }
+      .btn-login:hover i {
+        transform: translateX(-3px);
+      }
+
+      /* ----- تذييل (تكنوفا) ----- */
+      .login-footer {
+        margin-top: 28px;
+        padding-top: 18px;
+        border-top: 1px solid #f0eeeb;
+        text-align: center;
+        font-size: 13px;
+        color: #9a9a9a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+      .login-footer .company {
+        font-weight: 700;
+        color: #8f1720;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+      }
+      .login-footer .company i {
+        margin-left: 6px;
+        opacity: 0.7;
+      }
+      .login-footer .copy {
+        font-size: 12px;
+        color: #b5b5b5;
+      }
+      .login-footer .version {
+        font-size: 11px;
+        color: #c5c5c5;
+        margin-top: 2px;
+      }
+
+      /* ===== استجابة كاملة ===== */
+
+      /* جوال صغير */
+      @media (max-width: 480px) {
+        body {
+          padding: 16px;
+        }
+        .login-card {
+          padding: 28px 18px 22px;
+          border-radius: 20px;
+        }
+        .login-brand .logo-icon {
+          width: 44px;
+          height: 44px;
+          font-size: 20px;
+        }
+        .login-brand h1 {
+          font-size: 22px;
+        }
+        .login-subtitle {
+          font-size: 13px;
+          margin-bottom: 22px;
+          padding-bottom: 14px;
+        }
+        .form-group input {
+          height: 46px;
+          font-size: 14px;
+          padding: 0 44px 0 14px;
+        }
+        .form-group .input-wrap i {
+          right: 14px;
+          font-size: 15px;
+        }
+        .btn-login {
+          height: 46px;
+          font-size: 15px;
+          border-radius: 12px;
+        }
+        .login-options {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+        }
+        .login-options .remember {
+          font-size: 13px;
+        }
+        .login-options .forgot {
+          font-size: 13px;
+        }
+        .login-footer .company {
+          font-size: 13px;
+        }
+        .login-footer .copy {
+          font-size: 11px;
+        }
+      }
+
+      /* شاشات متوسطة (تابلت) */
+      @media (min-width: 481px) and (max-width: 768px) {
+        .login-card {
+          padding: 34px 28px 26px;
+          max-width: 400px;
+        }
+        .login-brand h1 {
+          font-size: 24px;
+        }
+        .login-brand .logo-icon {
+          width: 48px;
+          height: 48px;
+          font-size: 22px;
+        }
+        .btn-login {
+          height: 48px;
+          font-size: 16px;
+        }
+      }
+
+      /* شاشات كبيرة */
+      @media (min-width: 1200px) {
+        .login-card {
+          max-width: 460px;
+          padding: 48px 40px 32px;
+        }
+        .login-brand h1 {
+          font-size: 30px;
+        }
+        .login-brand .logo-icon {
+          width: 60px;
+          height: 60px;
+          font-size: 28px;
+        }
+        .btn-login {
+          height: 56px;
+          font-size: 18px;
+        }
+      }
+
+      /* ===== دعم الوضع المظلم (معطل – نضبطه ليبقى فاتحاً) ===== */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #f7f6f4 !important;
+        }
+        .login-card {
+          background: #ffffff !important;
+          border-color: #f0eeeb !important;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06) !important;
+        }
+        .login-brand h1 {
+          color: #1a1a1a !important;
+        }
+        .login-subtitle {
+          color: #7a7a7a !important;
+          border-bottom-color: #f0eeeb !important;
+        }
+        .form-group label {
+          color: #4a4a4a !important;
+        }
+        .form-group input {
+          background: #fafafa !important;
+          border-color: #e8e5e1 !important;
+          color: #1a1a1a !important;
+        }
+        .form-group input::placeholder {
+          color: #bdbdbd !important;
+        }
+        .form-group input:focus {
+          background: #ffffff !important;
+          border-color: #8f1720 !important;
+          box-shadow: 0 0 0 4px rgba(143, 23, 32, 0.06) !important;
+        }
+        .form-group .input-wrap i {
+          color: #b0b0b0 !important;
+        }
+        .form-group input:focus ~ i,
+        .form-group .input-wrap:focus-within i {
+          color: #8f1720 !important;
+        }
+        .login-options .remember {
+          color: #555 !important;
+        }
+        .login-options .forgot {
+          color: #8f1720 !important;
+        }
+        .login-options .forgot:hover {
+          border-bottom-color: #8f1720 !important;
+        }
+        .error-message {
+          background: #fef6f5 !important;
+          border-color: #fadcd9 !important;
+          color: #b83a3a !important;
+        }
+        .login-footer {
+          border-top-color: #f0eeeb !important;
+          color: #9a9a9a !important;
+        }
+        .login-footer .company {
+          color: #8f1720 !important;
+        }
+        .login-footer .copy {
+          color: #b5b5b5 !important;
+        }
+        .login-footer .version {
+          color: #c5c5c5 !important;
+        }
+        .btn-login {
+          background: #8f1720 !important;
+          box-shadow: 0 6px 20px rgba(143, 23, 32, 0.25) !important;
+        }
+        .btn-login:hover {
+          background: #731019 !important;
+        }
+        .login-card:hover {
+          box-shadow: 0 20px 56px rgba(0, 0, 0, 0.08) !important;
+        }
+        .login-subtitle i {
+          color: #8f1720 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-card">
+      <!-- الهوية -->
+      <div class="login-brand">
+        <div class="logo-icon"><i class="fas fa-utensils"></i></div>
+        <h1>شواطئ <span>عدن</span></h1>
+      </div>
+      <p class="login-subtitle">
+        <i class="fas fa-chevron-left"></i> مطابخ ومطاعم · نظام إدارة الولائم
+      </p>
+
+      <!-- رسالة الخطأ -->
+      <div id="loginError" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="errorText">بيانات الدخول غير صحيحة</span>
+      </div>
+
+      <!-- النموذج -->
+      <form id="loginForm" autocomplete="on">
+        <div class="form-group">
+          <label for="email">البريد الإلكتروني</label>
+          <div class="input-wrap">
+            <input
+              type="email"
+              id="email"
+              placeholder="admin@shawati.com"
+              required
+              autofocus
+            />
+            <i class="fas fa-envelope"></i>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">كلمة المرور</label>
+          <div class="input-wrap">
+            <input
+              type="password"
+              id="password"
+              placeholder="••••••••"
+              required
+            />
+            <i
+              class="fas fa-lock"
+              id="togglePassword"
+              style="cursor: pointer; pointer-events: auto"
+            ></i>
+          </div>
+        </div>
+
+        <div class="login-options">
+          <label class="remember">
+            <input type="checkbox" id="rememberMe" checked />
+            تذكرني
+          </label>
+          <a href="#" class="forgot">نسيت كلمة المرور؟</a>
+        </div>
+
+        <button type="submit" class="btn-login">
+          <i class="fas fa-arrow-left"></i> تسجيل الدخول
+        </button>
+      </form>
+
+      <!-- تذييل -->
+      <div class="login-footer">
+        <div class="company"><i class="fas fa-code"></i> تكنوفا للبرمجيات</div>
+        <div class="copy">
+          <i class="far fa-copyright"></i> 2024 · جميع الحقوق محفوظة
+        </div>
+        <div class="version">شواطئ عدن v2.0</div>
+      </div>
+    </div>
+  </body>
+</html>
