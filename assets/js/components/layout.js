@@ -41,7 +41,7 @@ const Layout = (function () {
     bookings: { type: "link", url: "booking-form.html" },
     "booking-new": { type: "hidden" },
     customers: { type: "modal", modalId: "addCustomerModal" },
-    "customer-view": { type: "modal", modalId: "transactionModal" },
+    "customer-view": { type: "modal", modalId: "customers-transactionModal" },
     suppliers: { type: "modal", modalId: "supplierModal" },
     "supplier-view": { type: "modal", modalId: "transactionModal" },
     items: { type: "modal", modalId: "itemModal" },
