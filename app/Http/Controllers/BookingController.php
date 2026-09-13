@@ -10,6 +10,7 @@ use App\Models\Booking;
 use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
@@ -20,11 +21,15 @@ class BookingController extends Controller
 
     /**
      * قائمة الحجوزات.
+     *
+     * يتم جلب مجموع الدفعات لكل حجز مباشرة من قاعدة البيانات
+     * حتى تتمكن BookingResource من حساب المدفوع والمتبقي بشكل صحيح.
      */
     public function index(Request $request): JsonResponse
     {
         $bookings = Booking::query()
             ->with('customer')
+            ->withSum('payments', 'amount')
 
             ->when(
                 $request->filled('search'),
@@ -202,20 +207,37 @@ class BookingController extends Controller
 
     /**
      * حذف الحجز.
+     *
+     * عند حذف الحجز يتم حذف جميع الدفعات المرتبطة
+     * بهذا الحجز فقط، ثم حذف الحجز نفسه.
+     *
+     * تتم العمليتان داخل Transaction واحدة لضمان
+     * عدم حدوث حذف جزئي في حال وقوع خطأ.
      */
     public function destroy(Booking $booking): JsonResponse
     {
-        /*
-         * حذف الحجز يحذف عناصره تلقائيًا.
-         *
-         * أما دفعات العميل فـ booking_id يصبح NULL
-         * حسب علاقة قاعدة البيانات.
-         */
-        $booking->delete();
+        DB::transaction(function () use ($booking) {
+            /*
+             * حذف دفعات هذا الحجز فقط.
+             *
+             * لا يتم حذف أي دفعات أخرى تخص العميل
+             * إذا كانت مرتبطة بحجوزات أخرى أو غير مرتبطة
+             * بأي حجز.
+             */
+            $booking->payments()->delete();
+
+            /*
+             * حذف الحجز.
+             *
+             * عناصر الحجز تستمر في الاعتماد على
+             * إعدادات قاعدة البيانات الحالية لحذفها.
+             */
+            $booking->delete();
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'تم حذف الحجز بنجاح.',
+            'message' => 'تم حذف الحجز وجميع الدفعات المرتبطة به بنجاح.',
         ]);
     }
 
@@ -227,6 +249,7 @@ class BookingController extends Controller
         $bookings = Booking::query()
             ->whereDate('event_date', $date)
             ->with('customer')
+            ->withSum('payments', 'amount')
             ->orderBy('delivery_time')
             ->get();
 
@@ -256,6 +279,7 @@ class BookingController extends Controller
                 now()->addDays($days)->toDateString(),
             ])
             ->with('customer')
+            ->withSum('payments', 'amount')
             ->orderBy('event_date')
             ->orderBy('delivery_time')
             ->get();

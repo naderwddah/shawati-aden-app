@@ -93,7 +93,7 @@ class ReportController extends Controller
     }
 
     /**
-     * الملخص المالي.
+     * الملخص المالي حسب فترة زمنية.
      *
      * ?from_date=2026-09-01&to_date=2026-09-30
      */
@@ -101,7 +101,11 @@ class ReportController extends Controller
     {
         $validated = $request->validate([
             'from_date' => ['nullable', 'date'],
-            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'to_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:from_date',
+            ],
         ]);
 
         return response()->json([
