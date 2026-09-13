@@ -37,7 +37,7 @@ const Layout = (function () {
   // FAB_CONFIG – التحكم في الزر العائم حسب الصفحة
   // ============================================================
   const FAB_CONFIG = {
-    dashboard: { type: "link", url: "hidden" },
+    dashboard: { type: "link", url: "booking-form.html" },
     bookings: { type: "link", url: "booking-form.html" },
     "booking-new": { type: "hidden" },
     customers: { type: "modal", modalId: "addCustomerModal" },

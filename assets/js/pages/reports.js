@@ -1,31 +1,69 @@
-"use strict";
+ "use strict";
 
 (() => {
-    let allBookings = [];
-    let allCustomers = [];
-    let currentRows = [];
-    let currentPeriod = "day";
-    let currentRange = {
-        start: "",
-        end: ""
-    };
+    /*
+     * ============================================================
+     * Reports Page
+     * العملاء + الموردون + الحجوزات + الحركة المالية
+     *
+     * مطابق مباشرةً لـ reports.html الحالي.
+     * لا يتم عرض الأصناف أو الكميات.
+     * ============================================================
+     */
 
-    // الإحصائيات المجمعة من financialSummary
-    let financialStats = {
-        sales_total: 0,
-        customer_payments_total: 0,
-        customer_balance: 0,
-        purchases_total: 0,
-        supplier_payments_total: 0,
-        supplier_balance: 0
+    const state = {
+        period: "day",
+        range: {
+            start: "",
+            end: "",
+        },
+
+        customers: [],
+        suppliers: [],
+        bookings: [],
+        customerPayments: [],
+        supplierInvoices: [],
+        supplierPayments: [],
+
+        financial: {
+            sales_total: 0,
+            customer_payments_total: 0,
+            customer_balance: 0,
+            purchases_total: 0,
+            supplier_payments_total: 0,
+            supplier_balance: 0,
+            net_sales_minus_purchases: 0,
+        },
+
+        financialLoaded: false,
+        loading: false,
     };
 
     const STATUS_LABELS = {
         new: "جديد",
         confirmed: "مؤكد",
         completed: "مكتمل",
-        cancelled: "ملغي"
+        cancelled: "ملغي",
+        pending: "معلق",
     };
+
+    const STATUS_ICONS = {
+        new: "fa-circle-plus",
+        confirmed: "fa-circle-check",
+        completed: "fa-check-double",
+        cancelled: "fa-circle-xmark",
+        pending: "fa-clock",
+    };
+
+    const STATUS_CLASS_MAP = {
+        new: "new",
+        confirmed: "confirmed",
+        completed: "completed",
+        cancelled: "cancelled",
+        pending: "new",
+    };
+
+    const PAYMENT_METHOD_FALLBACK = "غير محددة";
 
     document.addEventListener("DOMContentLoaded", init);
 
@@ -33,26 +71,49 @@
         setupPeriodButtons();
         setupDateInputs();
         setupActions();
-        setupFab();
+
         setDefaultPeriod();
+        updateSelectedPeriodLabel();
+
         await loadReport();
     }
 
+    /* ============================================================
+       Filters / Actions
+    ============================================================ */
+
     function setupPeriodButtons() {
-        document.querySelectorAll("[data-period]").forEach(button => {
+        document.querySelectorAll("[data-period]").forEach((button) => {
             button.addEventListener("click", async () => {
-                document.querySelectorAll("[data-period]").forEach(item => {
-                    item.classList.remove("active");
-                });
+                document
+                    .querySelectorAll("[data-period]")
+                    .forEach((item) => item.classList.remove("active"));
+
                 button.classList.add("active");
-                currentPeriod = button.dataset.period;
-                const customPanel = document.getElementById("customDateRange");
-                if (currentPeriod === "custom") {
-                    if (customPanel) customPanel.style.display = "";
+
+                state.period = button.dataset.period || "day";
+
+                const customPanel =
+                    document.getElementById("customDateRange");
+
+                if (state.period === "custom") {
+                    if (customPanel) {
+                        customPanel.classList.remove("hidden");
+                        customPanel.style.display = "";
+                    }
+
+                    updateSelectedPeriodLabel();
                     return;
                 }
-                if (customPanel) customPanel.style.display = "none";
-                setRangeFromPeriod(currentPeriod);
+
+                if (customPanel) {
+                    customPanel.classList.add("hidden");
+                    customPanel.style.display = "none";
+                }
+
+                setRangeFromPeriod(state.period);
+                updateSelectedPeriodLabel();
+
                 await loadReport();
             });
         });
@@ -61,61 +122,189 @@
     function setupDateInputs() {
         const start = document.getElementById("reportStartDate");
         const end = document.getElementById("reportEndDate");
-        if (start) start.addEventListener("change", async () => {
-            if (currentPeriod === "custom") await loadCustomReportIfValid();
-        });
-        if (end) end.addEventListener("change", async () => {
-            if (currentPeriod === "custom") await loadCustomReportIfValid();
-        });
+
+        const validateCustomRange = () => {
+            if (state.period !== "custom") return true;
+
+            const startValue = start?.value || "";
+            const endValue = end?.value || "";
+
+            if (!startValue || !endValue) return false;
+
+            if (startValue > endValue) {
+                showToast("تاريخ البداية يجب أن يكون قبل تاريخ النهاية");
+                return false;
+            }
+
+            state.range.start = startValue;
+            state.range.end = endValue;
+            updateSelectedPeriodLabel();
+
+            return true;
+        };
+
+        if (start) {
+            start.addEventListener("change", validateCustomRange);
+        }
+
+        if (end) {
+            end.addEventListener("change", validateCustomRange);
+        }
     }
 
     function setupActions() {
-        const csvButton = document.getElementById("exportCsvBtn");
-        const jsonButton = document.getElementById("exportJsonBtn");
-        const shareButton = document.getElementById("shareReportBtn");
-        if (csvButton) csvButton.addEventListener("click", exportCSV);
-        if (jsonButton) jsonButton.addEventListener("click", exportJSON);
-        if (shareButton) shareButton.addEventListener("click", shareReport);
-    }
+        const applyButton =
+            document.getElementById("applyReportBtn");
 
-    function setupFab() {
-        const fab = document.getElementById("fab");
-        if (fab) fab.addEventListener("click", () => {
-            window.location.href = "booking-new.html";
-        });
+        const resetButton =
+            document.getElementById("resetReportBtn");
+
+        const shareButton =
+            document.getElementById("shareReportBtn");
+
+        const printButton =
+            document.getElementById("printReportBtn");
+
+        const csvButton =
+            document.getElementById("exportCsvBtn");
+
+        const jsonButton =
+            document.getElementById("exportJsonBtn");
+
+        if (applyButton) {
+            applyButton.addEventListener("click", async () => {
+                if (state.period === "custom") {
+                    const start =
+                        document.getElementById("reportStartDate")?.value || "";
+
+                    const end =
+                        document.getElementById("reportEndDate")?.value || "";
+
+                    if (!start || !end) {
+                        showToast("حدد تاريخ البداية والنهاية أولاً");
+                        return;
+                    }
+
+                    if (start > end) {
+                        showToast(
+                            "تاريخ البداية يجب أن يكون قبل تاريخ النهاية"
+                        );
+                        return;
+                    }
+
+                    state.range.start = start;
+                    state.range.end = end;
+                }
+
+                await loadReport();
+            });
+        }
+
+        if (resetButton) {
+            resetButton.addEventListener("click", async () => {
+                setDefaultPeriod();
+                updateSelectedPeriodLabel();
+                await loadReport();
+            });
+        }
+
+        if (shareButton) {
+            shareButton.addEventListener("click", shareReport);
+        }
+
+        if (printButton) {
+            printButton.addEventListener("click", () => {
+                window.print();
+            });
+        }
+
+        if (csvButton) {
+            csvButton.addEventListener("click", exportCSV);
+        }
+
+        if (jsonButton) {
+            jsonButton.addEventListener("click", exportJSON);
+        }
     }
 
     function setDefaultPeriod() {
-        currentPeriod = "day";
+        state.period = "day";
+
+        document
+            .querySelectorAll("[data-period]")
+            .forEach((button) => {
+                button.classList.toggle(
+                    "active",
+                    button.dataset.period === "day"
+                );
+            });
+
         setRangeFromPeriod("day");
-        const customPanel = document.getElementById("customDateRange");
-        if (customPanel) customPanel.style.display = "none";
+
+        const customPanel =
+            document.getElementById("customDateRange");
+
+        if (customPanel) {
+            customPanel.classList.add("hidden");
+            customPanel.style.display = "none";
+        }
     }
 
     function setRangeFromPeriod(period) {
         const today = new Date();
-        const end = new Date(today);
-        const start = new Date(today);
-        if (period === "week") start.setDate(start.getDate() - 6);
-        if (period === "month") start.setDate(start.getDate() - 29);
-        currentRange.start = formatDate(start);
-        currentRange.end = formatDate(end);
-        setInputValue("reportStartDate", currentRange.start);
-        setInputValue("reportEndDate", currentRange.end);
+
+        let start = new Date(today);
+        let end = new Date(today);
+
+        if (period === "yesterday") {
+            start.setDate(start.getDate() - 1);
+            end = new Date(start);
+        } else if (period === "week") {
+            start.setDate(start.getDate() - 6);
+        } else if (period === "month") {
+            start.setDate(start.getDate() - 29);
+        }
+
+        state.range.start = formatDate(start);
+        state.range.end = formatDate(end);
+
+        setInputValue("reportStartDate", state.range.start);
+        setInputValue("reportEndDate", state.range.end);
     }
 
-    async function loadCustomReportIfValid() {
-        const start = document.getElementById("reportStartDate")?.value || "";
-        const end = document.getElementById("reportEndDate")?.value || "";
-        if (!start || !end) return;
-        if (start > end) {
-            showToast("تاريخ البداية يجب أن يكون قبل تاريخ النهاية");
+    function updateSelectedPeriodLabel() {
+        const label =
+            document.getElementById("selectedReportPeriod");
+
+        if (!label) return;
+
+        if (state.period === "day") {
+            label.textContent = "تقرير اليوم";
             return;
         }
-        currentRange.start = start;
-        currentRange.end = end;
-        await loadReport();
+
+        if (state.period === "yesterday") {
+            label.textContent = "تقرير أمس";
+            return;
+        }
+
+        if (state.period === "week") {
+            label.textContent = "تقرير هذا الأسبوع";
+            return;
+        }
+
+        if (state.period === "month") {
+            label.textContent = "تقرير هذا الشهر";
+            return;
+        }
+
+        label.textContent =
+            `فترة مخصصة: ${formatDateDisplay(state.range.start)} - ${formatDateDisplay(state.range.end)}`;
     }
+
+    /* ============================================================
+       Loading
+    ============================================================ */
 
     async function loadReport() {
         if (!window.API) {
@@ -123,91 +312,222 @@
             return;
         }
 
-        if (!currentRange.start || !currentRange.end) {
-            setRangeFromPeriod(currentPeriod);
+        if (!state.range.start || !state.range.end) {
+            setRangeFromPeriod(state.period);
         }
 
+        state.loading = true;
         renderLoading();
+        updateStatus("جاري إنشاء التقرير...", "يتم تحميل بيانات الفترة المحددة.");
 
         try {
-            // 1. جلب الإحصائيات المجمعة من financialSummary
-            const statsResult = await window.API.reports.financialSummary(
-                currentRange.start,
-                currentRange.end
+            const results = await Promise.allSettled([
+                loadFinancialSummary(),
+                loadCustomers(),
+                loadSuppliers(),
+                loadBookings(),
+                loadCustomerPayments(),
+                loadSupplierInvoices(),
+                loadSupplierPayments(),
+            ]);
+
+            const [
+                financialResult,
+                customersResult,
+                suppliersResult,
+                bookingsResult,
+                customerPaymentsResult,
+                supplierInvoicesResult,
+                supplierPaymentsResult,
+            ] = results;
+
+            state.financialLoaded =
+                financialResult.status === "fulfilled";
+
+            state.financial = normalizeFinancial(
+                financialResult.status === "fulfilled"
+                    ? financialResult.value
+                    : null
             );
-            console.log('📦 إحصائيات التقرير:', statsResult);
 
-            // تحديث الإحصائيات
-            financialStats = {
-                sales_total: number(statsResult?.sales_total ?? 0),
-                customer_payments_total: number(statsResult?.customer_payments_total ?? 0),
-                customer_balance: number(statsResult?.customer_balance ?? 0),
-                purchases_total: number(statsResult?.purchases_total ?? 0),
-                supplier_payments_total: number(statsResult?.supplier_payments_total ?? 0),
-                supplier_balance: number(statsResult?.supplier_balance ?? 0)
-            };
+            state.customers = extractArray(
+                customersResult.status === "fulfilled"
+                    ? customersResult.value
+                    : []
+            );
 
-            // 2. جلب قائمة الحجوزات من API.getBookings
-            let bookingsData = [];
-            try {
-                // محاولة بمعاملات from_date / to_date
-                const bookingsResponse = await window.API.getBookings({
-                    from_date: currentRange.start,
-                    to_date: currentRange.end
-                });
-                bookingsData = extractArray(bookingsResponse);
-                console.log('📦 الحجوزات (from/to):', bookingsData);
-            } catch (e1) {
-                console.warn('محاولة أولى فشلت، نحاول بصيغة start/end', e1);
-                try {
-                    const bookingsResponse = await window.API.getBookings({
-                        start_date: currentRange.start,
-                        end_date: currentRange.end
-                    });
-                    bookingsData = extractArray(bookingsResponse);
-                    console.log('📦 الحجوزات (start/end):', bookingsData);
-                } catch (e2) {
-                    console.error('فشل جلب الحجوزات بكل الصيغ:', e2);
-                    throw new Error('تعذر جلب قائمة الحجوزات');
-                }
+            state.suppliers = extractArray(
+                suppliersResult.status === "fulfilled"
+                    ? suppliersResult.value
+                    : []
+            );
+
+            state.bookings = filterBookingsByRange(
+                extractArray(
+                    bookingsResult.status === "fulfilled"
+                        ? bookingsResult.value
+                        : []
+                )
+            );
+
+            state.customerPayments =
+                filterCustomerPaymentsByRange(
+                    extractArray(
+                        customerPaymentsResult.status === "fulfilled"
+                            ? customerPaymentsResult.value
+                            : []
+                    )
+                );
+
+            state.supplierInvoices =
+                filterSupplierInvoicesByRange(
+                    extractArray(
+                        supplierInvoicesResult.status === "fulfilled"
+                            ? supplierInvoicesResult.value
+                            : []
+                    )
+                );
+
+            state.supplierPayments =
+                filterSupplierPaymentsByRange(
+                    extractArray(
+                        supplierPaymentsResult.status === "fulfilled"
+                            ? supplierPaymentsResult.value
+                            : []
+                    )
+                );
+
+            /*
+             * إذا فشل financial-summary، نحسب القيم من البيانات
+             * التي تم تحميلها فعليًا حتى لا تظهر الصفحة فارغة.
+             */
+            if (!state.financialLoaded) {
+                state.financial = buildFinancialFallback();
             }
 
-            // 3. فلترة الحجوزات حسب النطاق الزمني (للتأكد)
-            allBookings = bookingsData.filter(booking => {
-                const date = booking.event_date || booking.eventDate || booking.invoice_date || '';
-                return isDateInRange(String(date).substring(0, 10), currentRange.start, currentRange.end);
+            renderAll();
+
+            const failedEndpoints =
+                results.filter(
+                    (result) => result.status === "rejected"
+                ).length;
+
+            updateStatus(
+                "التقرير جاهز",
+                failedEndpoints
+                    ? "تم إنشاء التقرير مع تعذر تحميل بعض البيانات."
+                    : "يتم عرض بيانات الفترة المحددة."
+            );
+
+            setText(
+                "reportGeneratedAt",
+                `آخر تحديث: ${new Date().toLocaleTimeString("ar-SA", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                })}`
+            );
+
+            setText(
+                "printReportPeriod",
+                `${formatDateDisplay(state.range.start)} - ${formatDateDisplay(state.range.end)}`
+            );
+
+            console.log("📊 Report loaded successfully", {
+                range: state.range,
+                customers: state.customers.length,
+                suppliers: state.suppliers.length,
+                bookings: state.bookings.length,
+                customerPayments: state.customerPayments.length,
+                supplierInvoices: state.supplierInvoices.length,
+                supplierPayments: state.supplierPayments.length,
+                financial: state.financial,
             });
-
-            // 4. تحميل العملاء
-            await loadCustomers();
-
-            // 5. بناء الصفوف
-            currentRows = buildRows(allBookings);
-
-            // 6. عرض البيانات
-            renderSummary(currentRows);
-            renderChart(currentRows);
-            renderStatusDistribution(currentRows);
-            renderTopCustomers(currentRows);
-            renderDetails(currentRows);
-
         } catch (error) {
-            console.error('Reports Error:', error);
-            renderError(error?.message || 'تعذر تحميل التقرير');
+            console.error("Reports Error:", error);
+            renderError(error?.message || "تعذر تحميل التقرير");
+        } finally {
+            state.loading = false;
         }
+    }
+
+    async function loadFinancialSummary() {
+        if (
+            !window.API.reports ||
+            typeof window.API.reports.financialSummary !== "function"
+        ) {
+            throw new Error("واجهة الملخص المالي غير متاحة");
+        }
+
+        return window.API.reports.financialSummary(
+            state.range.start,
+            state.range.end
+        );
     }
 
     async function loadCustomers() {
-        try {
-            const result = await window.API.getCustomers();
-            allCustomers = extractArray(result);
-        } catch (error) {
-            console.error('Customers Error:', error);
-            allCustomers = [];
+        if (typeof window.API.getCustomers !== "function") {
+            throw new Error("واجهة العملاء غير متاحة");
         }
+
+        return window.API.getCustomers();
     }
 
-    // ----- دوال مساعدة للبيانات -----
+    async function loadSuppliers() {
+        if (typeof window.API.getSuppliers !== "function") {
+            throw new Error("واجهة الموردين غير متاحة");
+        }
+
+        return window.API.getSuppliers();
+    }
+
+    async function loadBookings() {
+        if (typeof window.API.getBookings !== "function") {
+            throw new Error("واجهة الحجوزات غير متاحة");
+        }
+
+        return window.API.getBookings({
+            from_date: state.range.start,
+            to_date: state.range.end,
+        });
+    }
+
+    async function loadCustomerPayments() {
+        if (typeof window.API.getCustomerPayments !== "function") {
+            throw new Error("واجهة دفعات العملاء غير متاحة");
+        }
+
+        return window.API.getCustomerPayments({
+            from_date: state.range.start,
+            to_date: state.range.end,
+        });
+    }
+
+    async function loadSupplierInvoices() {
+        if (typeof window.API.getSupplierInvoices !== "function") {
+            throw new Error("واجهة فواتير الموردين غير متاحة");
+        }
+
+        return window.API.getSupplierInvoices({
+            from_date: state.range.start,
+            to_date: state.range.end,
+        });
+    }
+
+    async function loadSupplierPayments() {
+        if (typeof window.API.getSupplierPayments !== "function") {
+            throw new Error("واجهة دفعات الموردين غير متاحة");
+        }
+
+        return window.API.getSupplierPayments({
+            from_date: state.range.start,
+            to_date: state.range.end,
+        });
+    }
+
+    /* ============================================================
+       Normalization / Filtering
+    ============================================================ */
+
     function extractArray(value) {
         if (Array.isArray(value)) return value;
         if (Array.isArray(value?.data)) return value.data;
@@ -218,463 +538,1828 @@
         return [];
     }
 
-    function buildRows(bookings) {
-        return bookings.map(booking => {
-            const customer = booking.customer || findCustomer(booking.customer_id);
-            const total = number(booking.total_amount ?? booking.totalAmount ?? 0);
-            const paid = getPaidAmount(booking);
-            const remaining = Math.max(0, total - paid);
-            const date = String(booking.event_date || booking.eventDate || booking.invoice_date || "").substring(0, 10);
-            return {
-                id: booking.id,
-                type: "booking",
-                typeLabel: "حجز",
-                name: customer?.name || booking.customer_name || "عميل غير معروف",
-                phone: customer?.phone || booking.customer_phone || "",
+    function normalizeFinancial(value) {
+        return {
+            sales_total: number(
+                value?.sales_total ??
+                value?.salesTotal ??
+                value?.total_sales ??
+                0
+            ),
+
+            customer_payments_total: number(
+                value?.customer_payments_total ??
+                value?.customerPaymentsTotal ??
+                0
+            ),
+
+            customer_balance: number(
+                value?.customer_balance ??
+                value?.customerBalance ??
+                0
+            ),
+
+            purchases_total: number(
+                value?.purchases_total ??
+                value?.purchasesTotal ??
+                0
+            ),
+
+            supplier_payments_total: number(
+                value?.supplier_payments_total ??
+                value?.supplierPaymentsTotal ??
+                0
+            ),
+
+            supplier_balance: number(
+                value?.supplier_balance ??
+                value?.supplierBalance ??
+                0
+            ),
+
+            net_sales_minus_purchases: number(
+                value?.net_sales_minus_purchases ??
+                value?.netSalesMinusPurchases ??
+                0
+            ),
+        };
+    }
+
+    function buildFinancialFallback() {
+        const sales =
+            sumBy(state.bookings, (booking) =>
+                number(
+                    booking?.total_amount ??
+                    booking?.totalAmount
+                )
+            );
+
+        const customerPayments =
+            sumBy(state.customerPayments, (payment) =>
+                number(payment?.amount)
+            );
+
+        const purchases =
+            sumBy(state.supplierInvoices, (invoice) =>
+                number(
+                    invoice?.total_amount ??
+                    invoice?.totalAmount ??
+                    invoice?.amount
+                )
+            );
+
+        const supplierPayments =
+            sumBy(state.supplierPayments, (payment) =>
+                number(payment?.amount)
+            );
+
+        return {
+            sales_total: sales,
+            customer_payments_total: customerPayments,
+            customer_balance: Math.max(0, sales - customerPayments),
+            purchases_total: purchases,
+            supplier_payments_total: supplierPayments,
+            supplier_balance: Math.max(0, purchases - supplierPayments),
+            net_sales_minus_purchases: sales - purchases,
+        };
+    }
+
+    function filterBookingsByRange(bookings) {
+        return bookings.filter((booking) => {
+            const date = normalizeDate(
+                booking?.event_date ??
+                booking?.eventDate ??
+                booking?.invoice_date ??
+                ""
+            );
+
+            return isDateInRange(
                 date,
-                total,
-                paid,
-                remaining,
-                deposit: number(booking.plate_deposit),
-                status: booking.status || "new",
-                raw: booking
-            };
+                state.range.start,
+                state.range.end
+            );
         });
     }
 
-    function getPaidAmount(booking) {
-        const payments = booking.payments || booking.customer_payments || booking.customerPayments;
-        if (Array.isArray(payments)) {
-            return payments.reduce((sum, payment) => sum + number(payment.amount), 0);
-        }
-        return number(booking.paid_amount ?? booking.paidAmount ?? booking.total_paid ?? booking.totalPaid ?? 0);
+    function filterCustomerPaymentsByRange(payments) {
+        return payments.filter((payment) => {
+            const date = normalizeDate(
+                payment?.payment_date ??
+                payment?.paymentDate ??
+                ""
+            );
+
+            return isDateInRange(
+                date,
+                state.range.start,
+                state.range.end
+            );
+        });
     }
 
-    function findCustomer(id) {
-        return allCustomers.find(customer => String(customer.id) === String(id));
+    function filterSupplierInvoicesByRange(invoices) {
+        return invoices.filter((invoice) => {
+            const date = normalizeDate(
+                invoice?.invoice_date ??
+                invoice?.invoiceDate ??
+                ""
+            );
+
+            return isDateInRange(
+                date,
+                state.range.start,
+                state.range.end
+            );
+        });
     }
 
-    function isDateInRange(date, start, end) {
-        return date >= start && date <= end;
+    function filterSupplierPaymentsByRange(payments) {
+        return payments.filter((payment) => {
+            const date = normalizeDate(
+                payment?.payment_date ??
+                payment?.paymentDate ??
+                ""
+            );
+
+            return isDateInRange(
+                date,
+                state.range.start,
+                state.range.end
+            );
+        });
     }
 
-    // ----- دوال العرض -----
-    function renderSummary(rows) {
-        const container = document.getElementById("reportSummary");
-        if (!container) return;
+    /* ============================================================
+       Main Render
+    ============================================================ */
 
-        // نستخدم الإحصائيات من financialStats إن وجدت، وإلا نحسبها من rows
-        const totalRevenue = financialStats.sales_total > 0 ? financialStats.sales_total : rows.reduce((sum, row) => sum + row.total, 0);
-        const totalPaid = financialStats.customer_payments_total > 0 ? financialStats.customer_payments_total : rows.reduce((sum, row) => sum + row.paid, 0);
-        const totalRemaining = financialStats.customer_balance > 0 ? financialStats.customer_balance : rows.reduce((sum, row) => sum + row.remaining, 0);
-        const totalDeposits = rows.reduce((sum, row) => sum + row.deposit, 0);
-        const collectionRate = totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0;
-
-        container.innerHTML = `
-            ${createKpi("إجمالي الإيرادات", formatMoney(totalRevenue), "ر.س", "fa-sack-dollar", "#8f1720", "rgba(143,23,32,.10)")}
-            ${createKpi("إجمالي المدفوعات", formatMoney(totalPaid), "ر.س", "fa-money-bill-wave", "#16855b", "rgba(22,133,91,.10)")}
-            ${createKpi("المبالغ المتبقية", formatMoney(totalRemaining), "ر.س", "fa-hourglass-half", "#b4232f", "rgba(180,35,47,.10)")}
-            ${createKpi("عدد الحجوزات", formatNumber(rows.length), "حجز", "fa-calendar-check", "#356ea8", "rgba(53,110,168,.10)")}
-            ${createKpi("تأمين الصحون", formatMoney(totalDeposits), "ر.س", "fa-shield-halved", "#c77718", "rgba(199,119,24,.10)")}
-            ${createKpi("نسبة التحصيل", collectionRate.toFixed(1), "%", "fa-chart-line", "#16855b", "rgba(22,133,91,.10)")}
-            ${createKpi("فواتير مكتملة", formatNumber(rows.filter(row => row.status === "completed").length), "حجز", "fa-circle-check", "#16855b", "rgba(22,133,91,.10)")}
-            ${createKpi("حجوزات مؤجلة", formatNumber(rows.filter(row => row.remaining > 0).length), "حجز", "fa-clock", "#c77718", "rgba(199,119,24,.10)")}
-        `;
+    function renderAll() {
+        renderMainSummary();
+        renderDetailedFinancialSummary();
+        renderOperationalSummary();
+        renderBookings();
+        renderSupplierSummary();
+        renderSupplierInvoices();
+        renderCustomerPayments();
+        renderSupplierPayments();
+        renderFinalFinancialSummary();
     }
 
-    function createKpi(label, value, unit, icon, color, soft) {
-        return `
-            <div class="report-kpi" style="--kpi-color:${color};--kpi-soft:${soft};">
-                <div class="report-kpi-icon"><i class="fas ${icon}"></i></div>
-                <div class="report-kpi-label">${escapeHtml(label)}</div>
-                <div class="report-kpi-value">${escapeHtml(value)} <span class="report-kpi-unit">${escapeHtml(unit)}</span></div>
-            </div>
-        `;
+    /* ============================================================
+       Main Financial KPIs
+    ============================================================ */
+
+    function renderMainSummary() {
+        const financial = state.financial;
+
+        setText(
+            "totalInvoicesAmount",
+            `${formatMoney(financial.sales_total)} ر.س`
+        );
+
+        setText(
+            "totalCustomerPayments",
+            `${formatMoney(financial.customer_payments_total)} ر.س`
+        );
+
+        setText(
+            "totalCustomerRemaining",
+            `${formatMoney(Math.max(0, financial.customer_balance))} ر.س`
+        );
+
+        setText(
+            "totalSupplierInvoices",
+            `${formatMoney(financial.purchases_total)} ر.س`
+        );
     }
 
-    function renderChart(rows) {
-        const container = document.getElementById("monthlyChart");
-        if (!container) return;
+    /* ============================================================
+       Detailed Financial Summary
+    ============================================================ */
 
-        if (!rows.length) {
-            container.innerHTML = emptyHtml("لا توجد بيانات", "لا توجد إيرادات في الفترة المحددة", "fa-chart-column");
-            return;
-        }
+    function renderDetailedFinancialSummary() {
+        const financial = state.financial;
 
-        const groups = buildChartGroups(rows);
-        const max = Math.max(...groups.map(item => item.value), 1);
+        const customerInvoicesTotal =
+            number(financial.sales_total);
 
-        container.innerHTML = groups.map(group => {
-            const height = group.value > 0 ? Math.max(5, (group.value / max) * 100) : 2;
-            return `
-                <div class="chart-column">
-                    <div class="chart-value">${formatMoneyCompact(group.value)}</div>
-                    <div class="chart-bar-track">
-                        <div class="chart-bar" style="height:${height}%" title="${escapeAttribute(formatMoney(group.value) + ' ر.س')}"></div>
-                    </div>
-                    <div class="chart-label">${escapeHtml(group.label)}</div>
-                </div>
-            `;
-        }).join("");
+        const customerPaymentsTotal =
+            number(financial.customer_payments_total);
+
+        const customerRemainingTotal =
+            Math.max(
+                0,
+                number(financial.customer_balance)
+            );
+
+        const supplierInvoicesTotal =
+            number(financial.purchases_total);
+
+        const supplierPaymentsTotal =
+            number(financial.supplier_payments_total);
+
+        const supplierRemainingTotal =
+            Math.max(
+                0,
+                number(financial.supplier_balance)
+            );
+
+        setText(
+            "customerInvoicesTotal",
+            `${formatMoney(customerInvoicesTotal)} ر.س`
+        );
+
+        setText(
+            "customerInvoicesCount",
+            `${formatNumber(state.bookings.length)} حجز`
+        );
+
+        setText(
+            "customerPaymentsTotal",
+            `${formatMoney(customerPaymentsTotal)} ر.س`
+        );
+
+        setText(
+            "customerPaymentsCount",
+            `${formatNumber(state.customerPayments.length)} دفعة`
+        );
+
+        setText(
+            "customerRemainingTotal",
+            `${formatMoney(customerRemainingTotal)} ر.س`
+        );
+
+        const remainingCustomers =
+            countCustomersWithRemaining();
+
+        setText(
+            "customerRemainingCount",
+            `${formatNumber(remainingCustomers)} عميل`
+        );
+
+        setText(
+            "supplierInvoicesTotal",
+            `${formatMoney(supplierInvoicesTotal)} ر.س`
+        );
+
+        setText(
+            "supplierInvoicesCount",
+            `${formatNumber(state.supplierInvoices.length)} فاتورة`
+        );
+
+        setText(
+            "supplierPaymentsTotal",
+            `${formatMoney(supplierPaymentsTotal)} ر.س`
+        );
+
+        setText(
+            "supplierPaymentsCount",
+            `${formatNumber(state.supplierPayments.length)} دفعة`
+        );
+
+        setText(
+            "supplierRemainingTotal",
+            `${formatMoney(supplierRemainingTotal)} ر.س`
+        );
+
+        setText(
+            "supplierRemainingCount",
+            `${formatNumber(countSuppliersWithRemaining())} مورد`
+        );
     }
 
-    function buildChartGroups(rows) {
-        const start = parseLocalDate(currentRange.start);
-        const end = parseLocalDate(currentRange.end);
-        const days = Math.floor((end - start) / 86400000) + 1;
+    function countCustomersWithRemaining() {
+        const map = new Map();
 
-        if (days <= 1) {
-            return [{ label: "اليوم", value: rows.reduce((sum, row) => sum + row.total, 0) }];
-        }
-        if (days <= 14) {
-            const groups = [];
-            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-                const key = formatDate(date);
-                groups.push({
-                    label: `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`,
-                    value: rows.filter(row => row.date === key).reduce((sum, row) => sum + row.total, 0)
-                });
-            }
-            return groups;
-        }
+        state.bookings.forEach((booking) => {
+            const customerId =
+                booking?.customer_id ??
+                booking?.customerId ??
+                booking?.customer?.id;
 
-        const groups = [];
-        const cursor = new Date(start);
-        while (cursor <= end) {
-            const year = cursor.getFullYear();
-            const month = cursor.getMonth();
-            const monthRows = rows.filter(row => {
-                const date = parseLocalDate(row.date);
-                return date.getFullYear() === year && date.getMonth() === month;
-            });
-            groups.push({
-                label: `${month + 1}/${String(year).slice(-2)}`,
-                value: monthRows.reduce((sum, row) => sum + row.total, 0)
-            });
-            cursor.setMonth(cursor.getMonth() + 1);
-        }
-        return groups;
-    }
+            if (!customerId) return;
 
-    function renderStatusDistribution(rows) {
-        const container = document.getElementById("statusDistribution");
-        if (!container) return;
+            const total =
+                number(
+                    booking?.total_amount ??
+                    booking?.totalAmount
+                );
 
-        if (!rows.length) {
-            container.innerHTML = emptyHtml("لا توجد بيانات", "لا توجد حجوزات لعرض الحالات", "fa-chart-pie");
-            return;
-        }
+            const paid =
+                getBookingPaidAmount(booking);
 
-        const statuses = ["new", "confirmed", "completed", "cancelled"];
-        const counts = {};
-        statuses.forEach(status => { counts[status] = rows.filter(row => row.status === status).length; });
-        const max = Math.max(...Object.values(counts), 1);
+            const current =
+                map.get(String(customerId)) || 0;
 
-        container.innerHTML = statuses.map(status => {
-            const count = counts[status];
-            const width = count > 0 ? Math.max(4, (count / max) * 100) : 0;
-            return `
-                <div class="status-row">
-                    <div class="status-row-header">
-                        <span class="status-name">${escapeHtml(STATUS_LABELS[status] || status)}</span>
-                        <span class="status-count">${count} حجز</span>
-                    </div>
-                    <div class="status-progress">
-                        <div class="status-progress-fill" style="width:${width}%"></div>
-                    </div>
-                </div>
-            `;
-        }).join("");
-    }
-
-    function renderTopCustomers(rows) {
-        const container = document.getElementById("topHalls");
-        if (!container) return;
-
-        if (!rows.length) {
-            container.innerHTML = emptyHtml("لا توجد بيانات", "لا توجد حجوزات لعرض أفضل العملاء", "fa-users");
-            return;
-        }
-
-        const customers = {};
-        rows.forEach(row => {
-            const key = row.customerId || `${row.name}-${row.phone}`;
-            if (!customers[key]) {
-                customers[key] = { name: row.name, phone: row.phone, total: 0, bookings: 0 };
-            }
-            customers[key].total += row.total;
-            customers[key].bookings++;
+            map.set(
+                String(customerId),
+                current + Math.max(0, total - paid)
+            );
         });
 
-        const top = Object.values(customers).sort((a, b) => b.total - a.total).slice(0, 5);
-        if (!top.length) {
-            container.innerHTML = emptyHtml("لا توجد بيانات", "لا توجد بيانات للعملاء", "fa-users");
-            return;
-        }
+        let count = 0;
 
-        container.innerHTML = `
-            <div class="top-customer-list">
-                ${top.map((customer, index) => `
-                    <div class="top-customer">
-                        <div class="top-customer-rank">${index + 1}</div>
-                        <div class="top-customer-info">
-                            <div class="top-customer-name">${escapeHtml(customer.name)}</div>
-                            <div class="top-customer-meta">${customer.bookings} حجوزات${customer.phone ? ' · ' + escapeHtml(customer.phone) : ''}</div>
-                        </div>
-                        <div class="top-customer-total">${formatMoney(customer.total)} ر.س</div>
-                    </div>
-                `).join("")}
-            </div>
-        `;
+        map.forEach((balance) => {
+            if (balance > 0.009) count++;
+        });
+
+        return count;
     }
 
-    function renderDetails(rows) {
-        const tbody = document.getElementById("reportDetailTable");
+    function countSuppliersWithRemaining() {
+        const invoiceMap = new Map();
+        const paymentMap = new Map();
+
+        state.supplierInvoices.forEach((invoice) => {
+            const supplierId =
+                invoice?.supplier_id ??
+                invoice?.supplierId ??
+                invoice?.supplier?.id;
+
+            if (!supplierId) return;
+
+            const total =
+                number(
+                    invoice?.total_amount ??
+                    invoice?.totalAmount ??
+                    invoice?.amount
+                );
+
+            const key = String(supplierId);
+            invoiceMap.set(
+                key,
+                (invoiceMap.get(key) || 0) + total
+            );
+        });
+
+        state.supplierPayments.forEach((payment) => {
+            const supplierId =
+                payment?.supplier_id ??
+                payment?.supplierId ??
+                payment?.supplier?.id;
+
+            if (!supplierId) return;
+
+            const amount =
+                number(payment?.amount);
+
+            const key = String(supplierId);
+            paymentMap.set(
+                key,
+                (paymentMap.get(key) || 0) + amount
+            );
+        });
+
+        let count = 0;
+
+        invoiceMap.forEach((invoiceTotal, key) => {
+            const paid =
+                paymentMap.get(key) || 0;
+
+            if (invoiceTotal - paid > 0.009) {
+                count++;
+            }
+        });
+
+        return count;
+    }
+
+    /* ============================================================
+       Operational Summary
+    ============================================================ */
+
+    function renderOperationalSummary() {
+        const bookings = state.bookings;
+
+        const bookingTotal =
+            sumBy(bookings, (booking) =>
+                number(
+                    booking?.total_amount ??
+                    booking?.totalAmount
+                )
+            );
+
+        const confirmed =
+            bookings.filter(
+                (booking) =>
+                    normalizeStatus(booking?.status) === "confirmed"
+            ).length;
+
+        const completed =
+            bookings.filter(
+                (booking) =>
+                    normalizeStatus(booking?.status) === "completed"
+            ).length;
+
+        const cancelled =
+            bookings.filter(
+                (booking) =>
+                    normalizeStatus(booking?.status) === "cancelled"
+            ).length;
+
+        const activeCustomerIds = new Set();
+
+        bookings.forEach((booking) => {
+            const id =
+                booking?.customer_id ??
+                booking?.customerId ??
+                booking?.customer?.id;
+
+            if (id) activeCustomerIds.add(String(id));
+        });
+
+        state.customerPayments.forEach((payment) => {
+            const id =
+                payment?.customer_id ??
+                payment?.customerId ??
+                payment?.customer?.id;
+
+            if (id) activeCustomerIds.add(String(id));
+        });
+
+        setText(
+            "bookingsSummaryCount",
+            `${formatNumber(bookings.length)} حجز`
+        );
+
+        setText(
+            "bookingsCount",
+            formatNumber(bookings.length)
+        );
+
+        setText(
+            "bookingsTotalAmount",
+            `${formatMoney(bookingTotal)} ر.س`
+        );
+
+        setText(
+            "confirmedBookingsCount",
+            formatNumber(confirmed)
+        );
+
+        setText(
+            "completedBookingsCount",
+            formatNumber(completed)
+        );
+
+        setText(
+            "cancelledBookingsCount",
+            formatNumber(cancelled)
+        );
+
+        setText(
+            "customersSummaryCount",
+            `${formatNumber(activeCustomerIds.size)} عميل`
+        );
+
+        setText(
+            "activeCustomersCount",
+            formatNumber(activeCustomerIds.size)
+        );
+
+        setText(
+            "customerInvoicesSummaryCount",
+            formatNumber(bookings.length)
+        );
+
+        setText(
+            "customerPaymentsSummaryCount",
+            formatNumber(state.customerPayments.length)
+        );
+
+        setText(
+            "customerRemainingSummary",
+            `${formatMoney(Math.max(0, state.financial.customer_balance))} ر.س`
+        );
+    }
+
+    /* ============================================================
+       Bookings
+    ============================================================ */
+
+    function renderBookings() {
+        const tbody =
+            document.getElementById("bookingsReportTable");
+
         if (!tbody) return;
 
-        if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="5">${emptyHtml("لا توجد بيانات", "لا توجد حجوزات في الفترة المحددة", "fa-file-invoice")}</td></tr>`;
+        setText(
+            "bookingsTableCount",
+            formatNumber(state.bookings.length)
+        );
+
+        if (!state.bookings.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        ${emptyHtml(
+                            "لا توجد حجوزات",
+                            "لا توجد حجوزات في الفترة المحددة",
+                            "fa-calendar-xmark"
+                        )}
+                    </td>
+                </tr>
+            `;
             return;
         }
 
-        const sorted = [...rows].sort((a, b) => String(b.date).localeCompare(String(a.date)));
-        tbody.innerHTML = sorted.map(row => `
-            <tr>
-                <td><span class="report-type"><i class="fas fa-calendar-check"></i> ${escapeHtml(row.typeLabel)}</span></td>
-                <td>
-                    <div style="font-weight:700;">${escapeHtml(row.name)}</div>
-                    ${row.phone ? `<div style="color:var(--text-secondary,#64748b);font-size:10px;margin-top:2px;">${escapeHtml(row.phone)}</div>` : ""}
-                </td>
-                <td>${formatDateDisplay(row.date)}</td>
-                <td><span class="report-amount">${formatMoney(row.total)} ر.س</span></td>
-                <td><span class="report-status ${escapeAttribute(row.status)}">${escapeHtml(STATUS_LABELS[row.status] || row.status || "-")}</span></td>
-            </tr>
-        `).join("");
+        const rows =
+            [...state.bookings].sort((a, b) =>
+                String(
+                    normalizeDate(
+                        b?.event_date ??
+                        b?.eventDate
+                    )
+                ).localeCompare(
+                    String(
+                        normalizeDate(
+                            a?.event_date ??
+                            a?.eventDate
+                        )
+                    )
+                )
+            );
+
+        tbody.innerHTML = rows.map((booking) => {
+            const customer =
+                booking?.customer ||
+                findCustomer(
+                    booking?.customer_id ??
+                    booking?.customerId
+                );
+
+            const customerName =
+                customer?.name ||
+                booking?.customer_name ||
+                booking?.customerName ||
+                "عميل غير معروف";
+
+            const customerPhone =
+                customer?.phone ||
+                booking?.customer_phone ||
+                booking?.customerPhone ||
+                "";
+
+            const eventName =
+                booking?.mark ||
+                booking?.event_name ||
+                booking?.eventName ||
+                "مناسبة";
+
+            const eventDate =
+                normalizeDate(
+                    booking?.event_date ??
+                    booking?.eventDate
+                );
+
+            const total =
+                number(
+                    booking?.total_amount ??
+                    booking?.totalAmount
+                );
+
+            const paid =
+                getBookingPaidAmount(booking);
+
+            const remaining =
+                Math.max(0, total - paid);
+
+            return `
+                <tr>
+                    <td>
+                        <span class="report-id">
+                            #${escapeHtml(booking?.id ?? "-")}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="report-customer">
+                            <div class="report-avatar">
+                                ${escapeHtml(
+                                    String(customerName).trim().charAt(0) || "ع"
+                                )}
+                            </div>
+
+                            <div class="report-customer-info">
+                                <div class="report-customer-name">
+                                    ${escapeHtml(customerName)}
+                                </div>
+
+                                ${
+                                    customerPhone
+                                        ? `
+                                            <div class="report-customer-phone">
+                                                ${escapeHtml(customerPhone)}
+                                            </div>
+                                        `
+                                        : ""
+                                }
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="report-event">
+                            <div class="report-event-title">
+                                ${escapeHtml(eventName)}
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span>
+                            ${formatDateDisplay(eventDate)}
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="money-cell">
+                            ${formatMoney(total)} ر.س
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="money-cell paid">
+                            ${formatMoney(paid)} ر.س
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="money-cell remaining">
+                            ${formatMoney(remaining)} ر.س
+                        </span>
+                    </td>
+
+                    <td>
+                        ${statusBadge(booking?.status)}
+                    </td>
+                </tr>
+            `;
+        }).join("");
     }
 
-    // ----- دوال التحميل والرسائل -----
+    /* ============================================================
+       Supplier Summary
+    ============================================================ */
+
+    function renderSupplierSummary() {
+        const invoiceTotal =
+            sumBy(state.supplierInvoices, (invoice) =>
+                number(
+                    invoice?.total_amount ??
+                    invoice?.totalAmount ??
+                    invoice?.amount
+                )
+            );
+
+        const paymentTotal =
+            sumBy(state.supplierPayments, (payment) =>
+                number(payment?.amount)
+            );
+
+        const remaining =
+            Math.max(0, invoiceTotal - paymentTotal);
+
+        setText(
+            "suppliersInvoicesAmount",
+            `${formatMoney(invoiceTotal)} ر.س`
+        );
+
+        setText(
+            "suppliersPaymentsAmount",
+            `${formatMoney(paymentTotal)} ر.س`
+        );
+
+        setText(
+            "suppliersRemainingAmount",
+            `${formatMoney(remaining)} ر.س`
+        );
+    }
+
+    /* ============================================================
+       Supplier Invoices
+    ============================================================ */
+
+    function renderSupplierInvoices() {
+        const tbody =
+            document.getElementById("supplierInvoicesReportTable");
+
+        if (!tbody) return;
+
+        setText(
+            "supplierInvoicesTableCount",
+            formatNumber(state.supplierInvoices.length)
+        );
+
+        if (!state.supplierInvoices.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        ${emptyHtml(
+                            "لا توجد فواتير",
+                            "لا توجد فواتير موردين في الفترة المحددة",
+                            "fa-file-invoice"
+                        )}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML =
+            state.supplierInvoices.map((invoice) => {
+                const supplier =
+                    invoice?.supplier ||
+                    findSupplier(
+                        invoice?.supplier_id ??
+                        invoice?.supplierId
+                    );
+
+                const supplierName =
+                    supplier?.name ||
+                    invoice?.supplier_name ||
+                    "مورد غير معروف";
+
+                const supplierPhone =
+                    supplier?.phone ||
+                    invoice?.supplier_phone ||
+                    "";
+
+                const invoiceNumber =
+                    invoice?.invoice_number ??
+                    invoice?.invoiceNumber ??
+                    `#${invoice?.id ?? "-"}`;
+
+                const date =
+                    normalizeDate(
+                        invoice?.invoice_date ??
+                        invoice?.invoiceDate
+                    );
+
+                const amount =
+                    number(
+                        invoice?.total_amount ??
+                        invoice?.totalAmount ??
+                        invoice?.amount
+                    );
+
+                const status =
+                    invoice?.status ??
+                    invoice?.invoice_status ??
+                    invoice?.invoiceStatus ??
+                    "completed";
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>
+                                ${escapeHtml(invoiceNumber)}
+                            </strong>
+                        </td>
+
+                        <td>
+                            <div class="report-main-cell">
+                                ${escapeHtml(supplierName)}
+                            </div>
+
+                            ${
+                                supplierPhone
+                                    ? `
+                                        <div class="report-sub-cell">
+                                            ${escapeHtml(supplierPhone)}
+                                        </div>
+                                    `
+                                    : ""
+                            }
+                        </td>
+
+                        <td>
+                            ${formatDateDisplay(date)}
+                        </td>
+
+                        <td>
+                            <span class="money-cell">
+                                ${formatMoney(amount)} ر.س
+                            </span>
+                        </td>
+
+                        <td>
+                            ${statusBadge(status)}
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+    }
+
+    /* ============================================================
+       Customer Payments
+    ============================================================ */
+
+    function renderCustomerPayments() {
+        const tbody =
+            document.getElementById("customerPaymentsReportTable");
+
+        if (!tbody) return;
+
+        setText(
+            "customerPaymentsTableCount",
+            formatNumber(state.customerPayments.length)
+        );
+
+        if (!state.customerPayments.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        ${emptyHtml(
+                            "لا توجد دفعات",
+                            "لا توجد دفعات عملاء في الفترة المحددة",
+                            "fa-money-bill-wave"
+                        )}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        const rows =
+            [...state.customerPayments].sort((a, b) =>
+                String(
+                    normalizeDate(
+                        b?.payment_date ??
+                        b?.paymentDate
+                    )
+                ).localeCompare(
+                    String(
+                        normalizeDate(
+                            a?.payment_date ??
+                            a?.paymentDate
+                        )
+                    )
+                )
+            );
+
+        tbody.innerHTML = rows.map((payment) => {
+            const customer =
+                payment?.customer ||
+                findCustomer(
+                    payment?.customer_id ??
+                    payment?.customerId
+                );
+
+            const customerName =
+                customer?.name ||
+                payment?.customer_name ||
+                "عميل غير معروف";
+
+            const booking =
+                payment?.booking ||
+                findBooking(
+                    payment?.booking_id ??
+                    payment?.bookingId
+                );
+
+            const bookingId =
+                payment?.booking_id ??
+                payment?.bookingId ??
+                null;
+
+            const date =
+                normalizeDate(
+                    payment?.payment_date ??
+                    payment?.paymentDate
+                );
+
+            const amount =
+                number(payment?.amount);
+
+            return `
+                <tr>
+                    <td>
+                        ${formatDateDisplay(date)}
+                    </td>
+
+                    <td>
+                        <div class="report-main-cell">
+                            ${escapeHtml(customerName)}
+                        </div>
+
+                        ${
+                            customer?.phone
+                                ? `
+                                    <div class="report-sub-cell">
+                                        ${escapeHtml(customer.phone)}
+                                    </div>
+                                `
+                                : ""
+                        }
+                    </td>
+
+                    <td>
+                        ${
+                            bookingId
+                                ? `
+                                    <span class="report-reference">
+                                        #${escapeHtml(bookingId)}
+                                    </span>
+                                `
+                                : "بدون حجز"
+                        }
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            getPaymentMethodName(payment)
+                        )}
+                    </td>
+
+                    <td>
+                        <span class="money-cell paid">
+                            ${formatMoney(amount)} ر.س
+                        </span>
+                    </td>
+
+                    <td>
+                        ${
+                            payment?.notes
+                                ? escapeHtml(payment.notes)
+                                : "-"
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    /* ============================================================
+       Supplier Payments
+    ============================================================ */
+
+    function renderSupplierPayments() {
+        const tbody =
+            document.getElementById("supplierPaymentsReportTable");
+
+        if (!tbody) return;
+
+        setText(
+            "supplierPaymentsTableCount",
+            formatNumber(state.supplierPayments.length)
+        );
+
+        if (!state.supplierPayments.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        ${emptyHtml(
+                            "لا توجد دفعات",
+                            "لا توجد دفعات موردين في الفترة المحددة",
+                            "fa-money-check-dollar"
+                        )}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        const rows =
+            [...state.supplierPayments].sort((a, b) =>
+                String(
+                    normalizeDate(
+                        b?.payment_date ??
+                        b?.paymentDate
+                    )
+                ).localeCompare(
+                    String(
+                        normalizeDate(
+                            a?.payment_date ??
+                            a?.paymentDate
+                        )
+                    )
+                )
+            );
+
+        tbody.innerHTML = rows.map((payment) => {
+            const supplier =
+                payment?.supplier ||
+                findSupplier(
+                    payment?.supplier_id ??
+                    payment?.supplierId
+                );
+
+            const supplierName =
+                supplier?.name ||
+                payment?.supplier_name ||
+                "مورد غير معروف";
+
+            const date =
+                normalizeDate(
+                    payment?.payment_date ??
+                    payment?.paymentDate
+                );
+
+            const amount =
+                number(payment?.amount);
+
+            return `
+                <tr>
+                    <td>
+                        ${formatDateDisplay(date)}
+                    </td>
+
+                    <td>
+                        <div class="report-main-cell">
+                            ${escapeHtml(supplierName)}
+                        </div>
+
+                        ${
+                            supplier?.phone
+                                ? `
+                                    <div class="report-sub-cell">
+                                        ${escapeHtml(supplier.phone)}
+                                    </div>
+                                `
+                                : ""
+                        }
+                    </td>
+
+                    <td>
+                        <span class="money-cell paid">
+                            ${formatMoney(amount)} ر.س
+                        </span>
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            getPaymentMethodName(payment)
+                        )}
+                    </td>
+
+                    <td>
+                        ${
+                            payment?.notes
+                                ? escapeHtml(payment.notes)
+                                : "-"
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    /* ============================================================
+       Final Summary
+    ============================================================ */
+
+    function renderFinalFinancialSummary() {
+        const customerReceipts =
+            number(
+                state.financial.customer_payments_total
+            );
+
+        const supplierPayments =
+            number(
+                state.financial.supplier_payments_total
+            );
+
+        const netMovement =
+            customerReceipts -
+            supplierPayments;
+
+        setText(
+            "footerCustomerPayments",
+            `${formatMoney(customerReceipts)} ر.س`
+        );
+
+        setText(
+            "footerSupplierPayments",
+            `${formatMoney(supplierPayments)} ر.س`
+        );
+
+        setText(
+            "footerNetMovement",
+            `${formatMoney(netMovement)} ر.س`
+        );
+    }
+
+    /* ============================================================
+       Booking Payment Calculation
+    ============================================================ */
+
+    function getBookingPaidAmount(booking) {
+        if (
+            booking?.paid_amount !== undefined &&
+            booking?.paid_amount !== null
+        ) {
+            return number(booking.paid_amount);
+        }
+
+        if (
+            booking?.paidAmount !== undefined &&
+            booking?.paidAmount !== null
+        ) {
+            return number(booking.paidAmount);
+        }
+
+        if (
+            booking?.payments_sum_amount !== undefined &&
+            booking?.payments_sum_amount !== null
+        ) {
+            return number(
+                booking.payments_sum_amount
+            );
+        }
+
+        const payments =
+            booking?.payments ||
+            booking?.customer_payments ||
+            booking?.customerPayments;
+
+        if (Array.isArray(payments)) {
+            return payments.reduce(
+                (total, payment) =>
+                    total + number(payment?.amount),
+                0
+            );
+        }
+
+        if (booking?.id) {
+            return state.customerPayments.reduce(
+                (total, payment) => {
+                    const bookingId =
+                        payment?.booking_id ??
+                        payment?.bookingId;
+
+                    return String(bookingId) ===
+                        String(booking.id)
+                        ? total + number(payment?.amount)
+                        : total;
+                },
+                0
+            );
+        }
+
+        return 0;
+    }
+
+    /* ============================================================
+       Lookups
+    ============================================================ */
+
+    function findCustomer(id) {
+        if (!id) return null;
+
+        return state.customers.find(
+            (customer) =>
+                String(customer?.id) === String(id)
+        ) || null;
+    }
+
+    function findSupplier(id) {
+        if (!id) return null;
+
+        return state.suppliers.find(
+            (supplier) =>
+                String(supplier?.id) === String(id)
+        ) || null;
+    }
+
+    function findBooking(id) {
+        if (!id) return null;
+
+        return state.bookings.find(
+            (booking) =>
+                String(booking?.id) === String(id)
+        ) || null;
+    }
+
+    function getPaymentMethodName(payment) {
+        return (
+            payment?.payment_method?.name ||
+            payment?.payment_method?.title ||
+            payment?.paymentMethod?.name ||
+            payment?.paymentMethod?.title ||
+            payment?.payment_method_name ||
+            PAYMENT_METHOD_FALLBACK
+        );
+    }
+
+    /* ============================================================
+       Status
+    ============================================================ */
+
+    function normalizeStatus(value) {
+        const raw =
+            String(value ?? "")
+                .trim()
+                .toLowerCase();
+
+        if (raw === "جديد") return "new";
+        if (raw === "مؤكد") return "confirmed";
+        if (raw === "مكتمل") return "completed";
+        if (raw === "ملغي" || raw === "ملغى") {
+            return "cancelled";
+        }
+        if (raw === "معلق") return "pending";
+
+        return STATUS_LABELS[raw]
+            ? raw
+            : "new";
+    }
+
+    function statusBadge(value) {
+        const status =
+            normalizeStatus(value);
+
+        const label =
+            STATUS_LABELS[status] ||
+            String(value || "-");
+
+        const icon =
+            STATUS_ICONS[status] ||
+            "fa-circle";
+
+        const className =
+            STATUS_CLASS_MAP[status] ||
+            "new";
+
+        return `
+            <span class="report-status ${escapeAttribute(className)}">
+                <i class="fas ${escapeAttribute(icon)}"></i>
+                ${escapeHtml(label)}
+            </span>
+        `;
+    }
+
+    /* ============================================================
+       Loading / Error / Status
+    ============================================================ */
+
     function renderLoading() {
-        const elements = [
-            document.getElementById("reportSummary"),
-            document.getElementById("monthlyChart"),
-            document.getElementById("statusDistribution"),
-            document.getElementById("topHalls"),
-            document.getElementById("reportDetailTable")
+        const ids = [
+            "bookingsReportTable",
+            "supplierInvoicesReportTable",
+            "customerPaymentsReportTable",
+            "supplierPaymentsReportTable",
         ];
-        const loadingHtml = `<div class="report-loading"><i class="fas fa-spinner fa-spin"></i><div>جاري التحميل...</div></div>`;
-        elements.forEach(el => {
-            if (el) {
-                if (el.tagName === 'TBODY') {
-                    el.innerHTML = `<tr><td colspan="5">${loadingHtml}</td></tr>`;
-                } else {
-                    el.innerHTML = loadingHtml;
-                }
-            }
+
+        const loadingHtml = `
+            <div class="report-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <strong>جاري تحميل التقرير...</strong>
+            </div>
+        `;
+
+        ids.forEach((id) => {
+            const element =
+                document.getElementById(id);
+
+            if (!element) return;
+
+            const colspan =
+                element
+                    .closest("table")
+                    ?.querySelectorAll("thead th")
+                    .length || 5;
+
+            element.innerHTML = `
+                <tr>
+                    <td colspan="${colspan}">
+                        ${loadingHtml}
+                    </td>
+                </tr>
+            `;
+        });
+
+        const valueIds = [
+            "totalInvoicesAmount",
+            "totalCustomerPayments",
+            "totalCustomerRemaining",
+            "totalSupplierInvoices",
+            "customerInvoicesTotal",
+            "customerPaymentsTotal",
+            "customerRemainingTotal",
+            "supplierInvoicesTotal",
+            "supplierPaymentsTotal",
+            "supplierRemainingTotal",
+            "bookingsCount",
+            "bookingsTotalAmount",
+            "confirmedBookingsCount",
+            "completedBookingsCount",
+            "cancelledBookingsCount",
+            "activeCustomersCount",
+            "customerInvoicesSummaryCount",
+            "customerPaymentsSummaryCount",
+            "customerRemainingSummary",
+            "suppliersInvoicesAmount",
+            "suppliersPaymentsAmount",
+            "suppliersRemainingAmount",
+            "footerCustomerPayments",
+            "footerSupplierPayments",
+            "footerNetMovement",
+        ];
+
+        valueIds.forEach((id) => {
+            setText(id, "—");
         });
     }
 
     function renderError(message) {
-        const elements = [
-            document.getElementById("reportSummary"),
-            document.getElementById("monthlyChart"),
-            document.getElementById("statusDistribution"),
-            document.getElementById("topHalls"),
-            document.getElementById("reportDetailTable")
+        const ids = [
+            "bookingsReportTable",
+            "supplierInvoicesReportTable",
+            "customerPaymentsReportTable",
+            "supplierPaymentsReportTable",
         ];
-        const errorHtml = emptyHtml("تعذر تحميل التقرير", message, "fa-triangle-exclamation");
-        elements.forEach(el => {
-            if (el) {
-                if (el.tagName === 'TBODY') {
-                    el.innerHTML = `<tr><td colspan="5">${errorHtml}</td></tr>`;
-                } else {
-                    el.innerHTML = errorHtml;
-                }
-            }
+
+        ids.forEach((id) => {
+            const element =
+                document.getElementById(id);
+
+            if (!element) return;
+
+            const colspan =
+                element
+                    .closest("table")
+                    ?.querySelectorAll("thead th")
+                    .length || 5;
+
+            element.innerHTML = `
+                <tr>
+                    <td colspan="${colspan}">
+                        ${emptyHtml(
+                            "تعذر تحميل التقرير",
+                            message,
+                            "fa-triangle-exclamation"
+                        )}
+                    </td>
+                </tr>
+            `;
         });
+
+        updateStatus(
+            "تعذر تحميل التقرير",
+            message
+        );
+    }
+
+    function updateStatus(title, description) {
+        setText("reportStatusTitle", title);
+        setText(
+            "reportStatusDescription",
+            description
+        );
     }
 
     function emptyHtml(title, description, icon) {
         return `
             <div class="report-empty">
-                <i class="fas ${icon}"></i>
-                <strong>${escapeHtml(title)}</strong>
-                <span>${escapeHtml(description)}</span>
+                <div class="report-empty-icon">
+                    <i class="fas ${escapeAttribute(icon)}"></i>
+                </div>
+
+                <strong>
+                    ${escapeHtml(title)}
+                </strong>
+
+                <span>
+                    ${escapeHtml(description)}
+                </span>
             </div>
         `;
     }
 
-    // ----- دوال التصدير والمشاركة -----
-    function exportCSV() {
-        if (!currentRows.length) {
-            showToast("لا توجد بيانات لتصديرها");
-            return;
-        }
-        const headers = ["النوع", "الاسم", "الهاتف", "التاريخ", "إجمالي الفاتورة", "المدفوع", "المتبقي", "تأمين الصحون", "الحالة"];
-        const lines = [headers.map(csvCell).join(",")];
-        currentRows.forEach(row => {
-            lines.push([
-                row.typeLabel,
-                row.name,
-                row.phone,
-                row.date,
-                row.total,
-                row.paid,
-                row.remaining,
-                row.deposit,
-                STATUS_LABELS[row.status] || row.status
-            ].map(csvCell).join(","));
-        });
-        const csv = "\uFEFF" + lines.join("\r\n");
-        downloadFile(csv, `report-${currentRange.start}-${currentRange.end}.csv`, "text/csv;charset=utf-8");
-        showToast("تم تصدير التقرير");
-    }
-
-    function exportJSON() {
-        if (!currentRows.length) {
-            showToast("لا توجد بيانات لتصديرها");
-            return;
-        }
-        const data = {
-            period: { from: currentRange.start, to: currentRange.end },
-            summary: {
-                bookings: currentRows.length,
-                total: sumRows("total"),
-                paid: sumRows("paid"),
-                remaining: sumRows("remaining"),
-                deposits: sumRows("deposit")
-            },
-            bookings: currentRows.map(row => ({
-                id: row.id,
-                customer: row.name,
-                phone: row.phone,
-                date: row.date,
-                total_amount: row.total,
-                paid_amount: row.paid,
-                remaining_amount: row.remaining,
-                plate_deposit: row.deposit,
-                status: row.status
-            }))
-        };
-        downloadFile(JSON.stringify(data, null, 2), `report-${currentRange.start}-${currentRange.end}.json`, "application/json;charset=utf-8");
-        showToast("تم تصدير التقرير");
-    }
+    /* ============================================================
+       Share / Export
+    ============================================================ */
 
     async function shareReport() {
-        if (!currentRows.length) {
-            showToast("لا توجد بيانات للمشاركة");
-            return;
-        }
         const text = buildShareText();
-        if (navigator.share && typeof navigator.share === "function") {
+
+        if (
+            navigator.share &&
+            typeof navigator.share === "function"
+        ) {
             try {
-                await navigator.share({ title: "تقرير شواطئ عدن", text });
+                await navigator.share({
+                    title: "تقرير شواطئ عدن",
+                    text,
+                });
                 return;
             } catch (error) {
-                if (error?.name === "AbortError") return;
+                if (error?.name === "AbortError") {
+                    return;
+                }
             }
         }
+
         try {
             await navigator.clipboard.writeText(text);
             showToast("تم نسخ التقرير للمشاركة");
-        } catch (error) {
+        } catch {
             showToast("تعذر مشاركة التقرير");
         }
     }
 
     function buildShareText() {
+        const f = state.financial;
+
         return [
             "تقرير شواطئ عدن",
-            `الفترة: ${formatDateDisplay(currentRange.start)} - ${formatDateDisplay(currentRange.end)}`,
+            `الفترة: ${formatDateDisplay(state.range.start)} - ${formatDateDisplay(state.range.end)}`,
             "",
-            `عدد الحجوزات: ${currentRows.length}`,
-            `إجمالي الإيرادات: ${formatMoney(sumRows("total"))} ر.س`,
-            `إجمالي المدفوعات: ${formatMoney(sumRows("paid"))} ر.س`,
-            `المتبقي: ${formatMoney(sumRows("remaining"))} ر.س`
+            "الحجوزات",
+            `عدد الحجوزات: ${formatNumber(state.bookings.length)}`,
+            `إجمالي الفواتير: ${formatMoney(f.sales_total)} ر.س`,
+            `المقبوض من العملاء: ${formatMoney(f.customer_payments_total)} ر.س`,
+            `المتبقي على العملاء: ${formatMoney(Math.max(0, f.customer_balance))} ر.س`,
+            "",
+            "الموردون",
+            `عدد فواتير الموردين: ${formatNumber(state.supplierInvoices.length)}`,
+            `إجمالي الفواتير: ${formatMoney(f.purchases_total)} ر.س`,
+            `المدفوع للموردين: ${formatMoney(f.supplier_payments_total)} ر.س`,
+            `المتبقي للموردين: ${formatMoney(Math.max(0, f.supplier_balance))} ر.س`,
+            "",
+            "الحركة المالية",
+            `صافي الحركة: ${formatMoney(f.customer_payments_total - f.supplier_payments_total)} ر.س`,
         ].join("\n");
     }
 
-    function sumRows(field) {
-        return currentRows.reduce((sum, row) => sum + number(row[field]), 0);
+    function exportCSV() {
+        const rows = [];
+
+        state.bookings.forEach((booking) => {
+            rows.push([
+                "حجز",
+                booking.id,
+                getCustomerDisplayName(booking),
+                normalizeDate(
+                    booking.event_date ??
+                    booking.eventDate
+                ),
+                number(
+                    booking.total_amount ??
+                    booking.totalAmount
+                ),
+                getBookingPaidAmount(booking),
+                Math.max(
+                    0,
+                    number(
+                        booking.total_amount ??
+                        booking.totalAmount
+                    ) -
+                    getBookingPaidAmount(booking)
+                ),
+                STATUS_LABELS[
+                    normalizeStatus(booking.status)
+                ] || booking.status,
+            ]);
+        });
+
+        state.supplierInvoices.forEach((invoice) => {
+            rows.push([
+                "فاتورة مورد",
+                invoice.id,
+                getSupplierDisplayName(invoice),
+                normalizeDate(
+                    invoice.invoice_date ??
+                    invoice.invoiceDate
+                ),
+                number(
+                    invoice.total_amount ??
+                    invoice.totalAmount ??
+                    invoice.amount
+                ),
+                "",
+                "",
+                invoice.status || "",
+            ]);
+        });
+
+        state.customerPayments.forEach((payment) => {
+            rows.push([
+                "دفعة عميل",
+                payment.id,
+                getCustomerDisplayName(payment),
+                normalizeDate(
+                    payment.payment_date ??
+                    payment.paymentDate
+                ),
+                number(payment.amount),
+                "",
+                "",
+                getPaymentMethodName(payment),
+            ]);
+        });
+
+        state.supplierPayments.forEach((payment) => {
+            rows.push([
+                "دفعة مورد",
+                payment.id,
+                getSupplierDisplayName(payment),
+                normalizeDate(
+                    payment.payment_date ??
+                    payment.paymentDate
+                ),
+                number(payment.amount),
+                "",
+                "",
+                getPaymentMethodName(payment),
+            ]);
+        });
+
+        if (!rows.length) {
+            showToast("لا توجد بيانات لتصديرها");
+            return;
+        }
+
+        const header = [
+            "النوع",
+            "الرقم",
+            "الاسم",
+            "التاريخ",
+            "المبلغ",
+            "المدفوع",
+            "المتبقي",
+            "الحالة / طريقة الدفع",
+        ];
+
+        const csv = "\uFEFF" +
+            [header, ...rows]
+                .map((row) =>
+                    row.map(csvCell).join(",")
+                )
+                .join("\r\n");
+
+        downloadFile(
+            csv,
+            `report-${state.range.start}-${state.range.end}.csv`,
+            "text/csv;charset=utf-8"
+        );
+
+        showToast("تم تصدير التقرير بصيغة CSV");
     }
 
-    // ----- دوال مساعدة عامة -----
+    function exportJSON() {
+        const data = {
+            report: "banquet-kitchen",
+            period: {
+                from: state.range.start,
+                to: state.range.end,
+            },
+            financial: {
+                ...state.financial,
+            },
+            statistics: {
+                bookings: state.bookings.length,
+                customers: getActiveCustomerCount(),
+                suppliers: getActiveSupplierCount(),
+                customer_payments:
+                    state.customerPayments.length,
+                supplier_invoices:
+                    state.supplierInvoices.length,
+                supplier_payments:
+                    state.supplierPayments.length,
+            },
+            bookings: state.bookings,
+            customer_payments: state.customerPayments,
+            supplier_invoices: state.supplierInvoices,
+            supplier_payments: state.supplierPayments,
+        };
+
+        downloadFile(
+            JSON.stringify(data, null, 2),
+            `report-${state.range.start}-${state.range.end}.json`,
+            "application/json;charset=utf-8"
+        );
+
+        showToast("تم تصدير التقرير بصيغة JSON");
+    }
+
+    /* ============================================================
+       Helpers
+    ============================================================ */
+
+    function getCustomerDisplayName(record) {
+        const customer =
+            record?.customer ||
+            findCustomer(
+                record?.customer_id ??
+                record?.customerId
+            );
+
+        return (
+            customer?.name ||
+            record?.customer_name ||
+            record?.customerName ||
+            "عميل غير معروف"
+        );
+    }
+
+    function getSupplierDisplayName(record) {
+        const supplier =
+            record?.supplier ||
+            findSupplier(
+                record?.supplier_id ??
+                record?.supplierId
+            );
+
+        return (
+            supplier?.name ||
+            record?.supplier_name ||
+            record?.supplierName ||
+            "مورد غير معروف"
+        );
+    }
+
+    function getActiveCustomerCount() {
+        const ids = new Set();
+
+        state.bookings.forEach((booking) => {
+            const id =
+                booking?.customer_id ??
+                booking?.customerId ??
+                booking?.customer?.id;
+
+            if (id) ids.add(String(id));
+        });
+
+        state.customerPayments.forEach((payment) => {
+            const id =
+                payment?.customer_id ??
+                payment?.customerId ??
+                payment?.customer?.id;
+
+            if (id) ids.add(String(id));
+        });
+
+        return ids.size;
+    }
+
+    function getActiveSupplierCount() {
+        const ids = new Set();
+
+        state.supplierInvoices.forEach((invoice) => {
+            const id =
+                invoice?.supplier_id ??
+                invoice?.supplierId ??
+                invoice?.supplier?.id;
+
+            if (id) ids.add(String(id));
+        });
+
+        state.supplierPayments.forEach((payment) => {
+            const id =
+                payment?.supplier_id ??
+                payment?.supplierId ??
+                payment?.supplier?.id;
+
+            if (id) ids.add(String(id));
+        });
+
+        return ids.size;
+    }
+
+    function setText(id, value) {
+        const element =
+            document.getElementById(id);
+
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    function setInputValue(id, value) {
+        const input =
+            document.getElementById(id);
+
+        if (input) {
+            input.value = value;
+        }
+    }
+
     function formatDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
+        return [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, "0"),
+            String(date.getDate()).padStart(2, "0"),
+        ].join("-");
     }
 
-    function parseLocalDate(value) {
-        if (!value) return new Date();
-        const parts = String(value).substring(0, 10).split("-").map(Number);
-        return new Date(parts[0], parts[1] - 1, parts[2]);
+    function normalizeDate(value) {
+        if (!value) return "";
+
+        return String(value)
+            .trim()
+            .substring(0, 10);
+    }
+
+    function isDateInRange(date, start, end) {
+        if (!date || !start || !end) return false;
+
+        return date >= start && date <= end;
     }
 
     function formatDateDisplay(value) {
-        if (!value) return "-";
-        const parts = String(value).substring(0, 10).split("-");
-        if (parts.length !== 3) return value;
+        if (!value) return "—";
+
+        const parts =
+            String(value)
+                .substring(0, 10)
+                .split("-");
+
+        if (parts.length !== 3) {
+            return escapeHtml(value);
+        }
+
         return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
 
     function formatMoney(value) {
-        return new Intl.NumberFormat("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number(value));
-    }
-
-    function formatMoneyCompact(value) {
-        const amount = number(value);
-        if (amount >= 1000000) return (amount / 1000000).toFixed(1).replace(".0", "") + "م";
-        if (amount >= 1000) return (amount / 1000).toFixed(1).replace(".0", "") + "k";
-        return formatMoney(amount);
+        return new Intl.NumberFormat("ar-SA", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(number(value));
     }
 
     function formatNumber(value) {
-        return new Intl.NumberFormat("ar-SA").format(number(value));
+        return new Intl.NumberFormat("ar-SA")
+            .format(number(value));
     }
 
     function number(value) {
         const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : 0;
+
+        return Number.isFinite(parsed)
+            ? parsed
+            : 0;
+    }
+
+    function sumBy(items, callback) {
+        return items.reduce(
+            (total, item) =>
+                total + number(callback(item)),
+            0
+        );
     }
 
     function escapeHtml(value) {
-        return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
     }
 
     function escapeAttribute(value) {
         return escapeHtml(value);
     }
 
-    function setInputValue(id, value) {
-        const input = document.getElementById(id);
-        if (input) input.value = value;
-    }
-
-    function downloadFile(content, filename, type) {
-        const blob = new Blob([content], { type });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        URL.revokeObjectURL(url);
-    }
-
     function csvCell(value) {
         return `"${String(value ?? "").replaceAll('"', '""')}"`;
     }
 
+    function downloadFile(content, filename, type) {
+        const blob =
+            new Blob([content], { type });
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const anchor =
+            document.createElement("a");
+
+        anchor.href = url;
+        anchor.download = filename;
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        URL.revokeObjectURL(url);
+    }
+
     function showToast(message) {
-        if (window.Utils && typeof window.Utils.showToast === "function") {
+        if (
+            window.Utils &&
+            typeof window.Utils.showToast === "function"
+        ) {
             window.Utils.showToast(message);
             return;
         }
-        const container = document.getElementById("toastContainer");
+
+        const container =
+            document.getElementById("toastContainer");
+
         if (!container) return;
-        container.innerHTML = `<div class="toast">${escapeHtml(message)}</div>`;
-        setTimeout(() => { container.innerHTML = ""; }, 3000);
+
+        container.innerHTML = `
+            <div class="toast">
+                ${escapeHtml(message)}
+            </div>
+        `;
+
+        setTimeout(() => {
+            container.innerHTML = "";
+        }, 3000);
     }
 })();

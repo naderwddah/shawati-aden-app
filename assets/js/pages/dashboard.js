@@ -55,23 +55,43 @@ const Dashboard = {
             return;
         }
 
-        const results = await Promise.allSettled(
-            customers.map(customer =>
-                API.getCustomerAccount(customer.id)
-                    .then(account => ({
-                        customer,
-                        account: account || {}
-                    }))
-                    .catch(() => ({
-                        customer,
-                        account: {}
-                    }))
-            )
-        );
+        try {
+            const accountsResponse = await API.getCustomerAccounts();
 
-        this.state.accounts = results
-            .filter(result => result.status === 'fulfilled')
-            .map(result => result.value);
+            const accounts = this.normalizeArray(accountsResponse);
+
+            this.state.accounts = accounts
+                .map(entry => {
+                    const account = entry?.account || entry || {};
+                    const customerData = entry?.customer || null;
+
+                    const customerId =
+                        customerData?.id ??
+                        entry?.customer_id ??
+                        entry?.customerId ??
+                        account?.customer_id ??
+                        account?.customerId;
+
+                    const customer = customers.find(
+                        item =>
+                            String(item.id) ===
+                            String(customerId)
+                    );
+
+                    return {
+                        customer:
+                            customerData ||
+                            customer ||
+                            {},
+                        account
+                    };
+                })
+                .filter(entry => entry.customer?.id);
+        } catch (error) {
+            console.error('Customer accounts error:', error);
+
+            this.state.accounts = [];
+        }
     },
 
     render() {

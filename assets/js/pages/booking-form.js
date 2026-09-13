@@ -1,1116 +1,1480 @@
-"use strict";
+/* =========================================================
+ * Banquet Kitchen - Booking Form
+ * =========================================================
+ * Supports:
+ * 1. Booking for an existing customer
+ * 2. Creating a new customer and then creating the booking
+ * 3. Initial payment linked to the created booking/customer
+ * 4. Booking items from the items catalog
+ * 5. Creating and updating bookings
+ *
+ * UI: works with the mobile-first booking-form.html layout
+ * ========================================================= */
 
-let editingBookingId = null;
-let selectedCustomer = null;
-let itemsCatalog = [];
-let paymentMethods = [];
+(function () {
+  "use strict";
 
-document.addEventListener("DOMContentLoaded", async () => {
-    editingBookingId = getBookingIdFromUrl();
+  /* =========================================================
+   * State
+   * ========================================================= */
 
-    setupCustomerMode();
-    setupCustomerSearch();
-    setupBookingEvents();
-    setupItemEvents();
+  const state = {
+    mode: "existing",
 
-    setDefaultDates();
+    customers: [],
+    items: [],
+    paymentMethods: [],
 
-    await loadCustomers();
-    await loadItems();
-    await loadPaymentMethods();
+    selectedCustomer: null,
 
-    if (editingBookingId) {
-        await loadBookingForEdit(editingBookingId);
+    bookingId: null,
+    editing: false,
+
+    bookingItems: [],
+
+    saving: false,
+
+    // Preserved when editing because the fields are hidden
+    // in the simplified UI.
+    editingBookingStatus: null,
+    editingPlateReturned: null,
+
+    customerSearchTimer: null
+  };
+
+
+  /* =========================================================
+   * DOM helpers
+   * ========================================================= */
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) =>
+    Array.from(root.querySelectorAll(selector));
+
+
+  /* =========================================================
+   * General helpers
+   * ========================================================= */
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function normalizeNumber(value, fallback = 0) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return number;
+  }
+
+  function roundMoney(value) {
+    return Math.round((normalizeNumber(value) + Number.EPSILON) * 100) / 100;
+  }
+
+  function formatCurrency(value) {
+    const amount = normalizeNumber(value);
+    try {
+      return new Intl.NumberFormat("ar-SA", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount) + " ر.س";
+    } catch (error) {
+      return amount.toFixed(2) + " ر.س";
+    }
+  }
+
+  function todayDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function getApiData(response) {
+    if (response && typeof response === "object" && "data" in response) {
+      return response.data;
+    }
+    return response;
+  }
+
+  function getCollection(response) {
+    const data = getApiData(response);
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+  }
+
+  function getCustomerId(customer) {
+    if (!customer) return null;
+    return customer.id ?? customer.customer_id ?? null;
+  }
+
+  function getItemId(item) {
+    if (!item) return null;
+    return item.id ?? item.item_id ?? null;
+  }
+
+  function getItemName(item) {
+    if (!item) return "";
+    return item.name ?? item.item_name ?? item.title ?? "";
+  }
+
+  function getItemPrice(item) {
+    if (!item) return 0;
+    return normalizeNumber(
+      item.default_price ?? item.price ?? item.unit_price ?? 0
+    );
+  }
+
+  function getPaymentMethodId(method) {
+    if (!method) return null;
+    return method.id ?? method.payment_method_id ?? null;
+  }
+
+  function getPaymentMethodName(method) {
+    if (!method) return "";
+    return method.name ?? method.title ?? method.method_name ?? "";
+  }
+
+
+  /* =========================================================
+   * Alert helpers
+   * ========================================================= */
+
+  function showAlert(message, type = "error") {
+    const alert = $("#formAlert");
+    if (!alert) return;
+
+    if (!message) {
+      alert.textContent = "";
+      alert.style.background = "";
+      alert.style.color = "";
+      alert.style.borderColor = "";
+      return;
+    }
+
+    alert.textContent = message;
+
+    if (type === "success") {
+      alert.style.background = "var(--success-soft, #e6f4ea)";
+      alert.style.color = "var(--success, #155724)";
+      alert.style.borderColor = "var(--success, #155724)";
     } else {
-        addItemRow();
-        calculateTotals();
-    }
-});
-
-function getBookingIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("id");
-}
-
-function setupCustomerMode() {
-    const existingBtn = document.getElementById("existingCustomerBtn");
-    const newBtn = document.getElementById("newCustomerBtn");
-    const existingSection = document.getElementById("existingCustomerSection");
-    const newSection = document.getElementById("newCustomerSection");
-
-    const showExisting = () => {
-        if (existingBtn) existingBtn.classList.add("active");
-        if (newBtn) newBtn.classList.remove("active");
-        if (existingSection) existingSection.style.display = "";
-        if (newSection) newSection.style.display = "none";
-    };
-
-    const showNew = () => {
-        if (newBtn) newBtn.classList.add("active");
-        if (existingBtn) existingBtn.classList.remove("active");
-        if (existingSection) existingSection.style.display = "none";
-        if (newSection) newSection.style.display = "";
-        selectedCustomer = null;
-    };
-
-    if (existingBtn) existingBtn.addEventListener("click", showExisting);
-    if (newBtn) newBtn.addEventListener("click", showNew);
-
-    showExisting();
-}
-
-function setupCustomerSearch() {
-    const searchInput = document.getElementById("customerSearch");
-    const results = document.getElementById("customerResults");
-    const changeBtn = document.getElementById("changeCustomerBtn");
-
-    if (searchInput) {
-        searchInput.addEventListener("input", () => {
-            const value = searchInput.value.trim().toLowerCase();
-
-            if (!value) {
-                if (results) {
-                    results.innerHTML = "";
-                    results.style.display = "none";
-                }
-                return;
-            }
-
-            const customers = window.__bookingCustomers || [];
-
-            const filtered = customers.filter(customer => {
-                const name = String(customer.name || "").toLowerCase();
-                const phone = String(customer.phone || "").toLowerCase();
-
-                return name.includes(value) || phone.includes(value);
-            });
-
-            renderCustomerResults(filtered);
-        });
+      alert.style.background = "";
+      alert.style.color = "";
+      alert.style.borderColor = "";
     }
 
-    if (changeBtn) {
-        changeBtn.addEventListener("click", () => {
-            selectedCustomer = null;
+    alert.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
-            const selectedBox = document.getElementById("selectedCustomer");
-            const searchBox = document.getElementById("customerSearch");
+  function hideAlert() {
+    showAlert("");
+  }
 
-            if (selectedBox) selectedBox.style.display = "none";
-            if (searchBox) {
-                searchBox.value = "";
-                searchBox.style.display = "";
-                searchBox.focus();
-            }
+  function clearFieldErrors() {
+    $$(".field-error").forEach((element) => element.remove());
+    $$(".is-invalid").forEach((element) =>
+      element.classList.remove("is-invalid")
+    );
+  }
 
-            if (results) {
-                results.innerHTML = "";
-                results.style.display = "none";
-            }
-        });
+  function markFieldInvalid(input, message) {
+    if (!input) return;
+
+    input.classList.add("is-invalid");
+
+    const field =
+      input.closest(".form-group") ||
+      input.closest(".financial-row") ||
+      input.parentElement;
+
+    if (!field) return;
+
+    let error = $(".field-error", field);
+    if (!error) {
+      error = document.createElement("div");
+      error.className = "field-error";
+      error.style.cssText =
+        "color:var(--danger);font-size:12px;margin-top:4px;font-weight:700;";
+      field.appendChild(error);
     }
-}
+    error.textContent = message;
+  }
 
-function renderCustomerResults(customers) {
-    const results = document.getElementById("customerResults");
 
+  /* =========================================================
+   * Customer mode (existing / new)
+   * ========================================================= */
+
+  function setCustomerMode(mode) {
+    state.mode = mode === "new" ? "new" : "existing";
+
+    const existingSection = $("#existingCustomerSection");
+    const newSection = $("#newCustomerSection");
+    const existingButton = $("#existingCustomerBtn");
+    const newButton = $("#newCustomerBtn");
+
+    if (existingSection) {
+      existingSection.style.display =
+        state.mode === "existing" ? "block" : "none";
+    }
+
+    if (newSection) {
+      newSection.style.display =
+        state.mode === "new" ? "block" : "none";
+    }
+
+    if (existingButton) {
+      existingButton.classList.toggle(
+        "active",
+        state.mode === "existing"
+      );
+      existingButton.setAttribute(
+        "aria-selected",
+        state.mode === "existing" ? "true" : "false"
+      );
+    }
+
+    if (newButton) {
+      newButton.classList.toggle("active", state.mode === "new");
+      newButton.setAttribute(
+        "aria-selected",
+        state.mode === "new" ? "true" : "false"
+      );
+    }
+
+    if (state.mode === "existing") {
+      clearNewCustomerFields();
+    } else {
+      clearExistingCustomerSelection();
+    }
+
+    hideAlert();
+    clearFieldErrors();
+  }
+
+  function clearNewCustomerFields() {
+    const name = $("#customerName");
+    const phone = $("#customerPhone");
+    const notes = $("#customerNotes");
+
+    if (name) name.value = "";
+    if (phone) phone.value = "";
+    if (notes) notes.value = "";
+  }
+
+  function clearExistingCustomerSelection() {
+    state.selectedCustomer = null;
+
+    const search = $("#customerSearch");
+    const selectedCustomer = $("#selectedCustomer");
+    const selectedName = $("#selectedCustomerName");
+    const selectedPhone = $("#selectedCustomerPhone");
+    const selectedAvatar = $("#selectedCustomerAvatar");
+    const results = $("#customerResults");
+
+    if (search) search.value = "";
+    if (selectedCustomer) selectedCustomer.style.display = "none";
+    if (selectedName) selectedName.textContent = "";
+    if (selectedPhone) selectedPhone.textContent = "";
+    if (selectedAvatar) selectedAvatar.textContent = "ع";
+    if (results) {
+      results.innerHTML = "";
+      results.style.display = "none";
+    }
+  }
+
+
+  /* =========================================================
+   * Existing customer search
+   * ========================================================= */
+
+  function renderCustomerResults(customers) {
+    const results = $("#customerResults");
     if (!results) return;
 
     if (!customers.length) {
-        results.innerHTML = `
-            <div class="customer-result-empty">
-                لا يوجد عميل مطابق
-            </div>
-        `;
-        results.style.display = "";
-        return;
+      results.innerHTML = `
+        <div class="customer-result-empty">
+          لا توجد نتائج مطابقة.
+        </div>`;
+      results.style.display = "block";
+      return;
     }
 
-    results.innerHTML = customers.map(customer => `
-        <button type="button"
-                class="customer-result"
-                data-id="${customer.id}">
-            <span class="customer-result-name">${escapeHtml(customer.name || "")}</span>
-            <span class="customer-result-phone">${escapeHtml(customer.phone || "")}</span>
-        </button>
-    `).join("");
+    results.innerHTML = customers
+      .map((customer) => {
+        const id = getCustomerId(customer);
+        const name = customer.name ?? "بدون اسم";
+        const phone = customer.phone ?? "";
 
-    results.style.display = "";
+        return `
+          <button type="button"
+                  class="customer-result"
+                  data-customer-id="${escapeHtml(id)}">
+            <span class="customer-result-name">
+              ${escapeHtml(name)}
+            </span>
+            ${
+              phone
+                ? `<span class="customer-result-phone">${escapeHtml(phone)}</span>`
+                : ""
+            }
+          </button>`;
+      })
+      .join("");
 
-    results.querySelectorAll("[data-id]").forEach(button => {
-        button.addEventListener("click", () => {
-            const customer = customers.find(
-                item => String(item.id) === String(button.dataset.id)
-            );
+    results.style.display = "block";
+  }
 
-            if (customer) selectCustomer(customer);
-        });
-    });
-}
+  function selectCustomer(customer) {
+    if (!customer) return;
 
-function selectCustomer(customer) {
-    selectedCustomer = customer;
+    state.selectedCustomer = customer;
 
-    const searchInput = document.getElementById("customerSearch");
-    const results = document.getElementById("customerResults");
-    const selectedBox = document.getElementById("selectedCustomer");
-    const avatar = document.getElementById("selectedCustomerAvatar");
-    const name = document.getElementById("selectedCustomerName");
-    const phone = document.getElementById("selectedCustomerPhone");
+    const search = $("#customerSearch");
+    const results = $("#customerResults");
+    const selectedCustomer = $("#selectedCustomer");
+    const selectedName = $("#selectedCustomerName");
+    const selectedPhone = $("#selectedCustomerPhone");
+    const selectedAvatar = $("#selectedCustomerAvatar");
 
-    if (searchInput) {
-        searchInput.value = "";
-        searchInput.style.display = "none";
-    }
+    const name = customer.name ?? "";
+    const phone = customer.phone ?? "";
 
+    if (search) search.value = "";
     if (results) {
-        results.innerHTML = "";
+      results.innerHTML = "";
+      results.style.display = "none";
+    }
+
+    if (selectedCustomer) {
+      selectedCustomer.style.display = "flex";
+    }
+
+    if (selectedName) selectedName.textContent = name || "بدون اسم";
+    if (selectedPhone) selectedPhone.textContent = phone || "—";
+    if (selectedAvatar) {
+      selectedAvatar.textContent =
+        String(name).trim().charAt(0) || "ع";
+    }
+
+    hideAlert();
+  }
+
+  function bindCustomerSearch() {
+    const search = $("#customerSearch");
+    const results = $("#customerResults");
+    if (!search) return;
+
+    search.addEventListener("input", () => {
+      clearTimeout(state.customerSearchTimer);
+      const query = search.value.trim().toLowerCase();
+
+      if (!query) {
+        if (results) {
+          results.innerHTML = "";
+          results.style.display = "none";
+        }
+        return;
+      }
+
+      state.customerSearchTimer = setTimeout(() => {
+        const filtered = state.customers.filter((customer) => {
+          const name = String(customer.name ?? "").toLowerCase();
+          const phone = String(customer.phone ?? "").toLowerCase();
+          return name.includes(query) || phone.includes(query);
+        });
+        renderCustomerResults(filtered);
+      }, 150);
+    });
+
+    search.addEventListener("focus", () => {
+      if (search.value.trim()) {
+        search.dispatchEvent(new Event("input"));
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!results) return;
+      if (
+        !results.contains(event.target) &&
+        event.target !== search
+      ) {
         results.style.display = "none";
-    }
+      }
+    });
+  }
 
-    if (selectedBox) selectedBox.style.display = "";
+  function bindCustomerResultClicks() {
+    const results = $("#customerResults");
+    if (!results) return;
 
-    if (avatar) {
-        avatar.textContent = getInitials(customer.name);
-    }
+    results.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-customer-id]");
+      if (!button) return;
 
-    if (name) name.textContent = customer.name || "";
-    if (phone) phone.textContent = customer.phone || "";
-}
+      const id = Number(button.dataset.customerId);
+      const customer = state.customers.find(
+        (item) => Number(getCustomerId(item)) === id
+      );
 
-async function loadCustomers() {
+      if (customer) selectCustomer(customer);
+    });
+  }
+
+  function bindChangeCustomerButton() {
+    const button = $("#changeCustomerBtn");
+    if (!button) return;
+
+    button.addEventListener("click", () => {
+      state.selectedCustomer = null;
+
+      const selectedCustomer = $("#selectedCustomer");
+      if (selectedCustomer) selectedCustomer.style.display = "none";
+
+      const search = $("#customerSearch");
+      if (search) {
+        search.value = "";
+        search.focus();
+      }
+    });
+  }
+
+
+  /* =========================================================
+   * Loading data
+   * ========================================================= */
+
+  async function loadCustomers() {
     try {
-        const response = await window.API.getCustomers();
-        const customers = extractArray(response);
-
-        window.__bookingCustomers = customers;
+      const response = await API.getCustomers();
+      state.customers = getCollection(response);
+      return state.customers;
     } catch (error) {
-        console.error(error);
-        window.__bookingCustomers = [];
-        showError("تعذر تحميل العملاء");
+      console.error("Failed to load customers:", error);
+      state.customers = [];
+      throw error;
     }
-}
+  }
 
-async function loadItems() {
+  async function loadItems() {
     try {
-        const response = await window.API.getItems();
-        itemsCatalog = extractArray(response);
+      const response = await API.getItems();
+      state.items = getCollection(response);
+      return state.items;
     } catch (error) {
-        console.error(error);
-        itemsCatalog = [];
-        showError("تعذر تحميل الأصناف");
+      console.error("Failed to load items:", error);
+      state.items = [];
+      throw error;
     }
-}
+  }
 
-async function loadPaymentMethods() {
+  async function loadPaymentMethods() {
     try {
-        const response = await window.API.getPaymentMethods({
-            is_active: 1
-        });
+      let response;
 
-        paymentMethods = extractArray(response);
+      if (
+        API.paymentMethods &&
+        typeof API.paymentMethods.list === "function"
+      ) {
+        response = await API.paymentMethods.list();
+      } else if (typeof API.getPaymentMethods === "function") {
+        response = await API.getPaymentMethods();
+      } else {
+        state.paymentMethods = [];
+        renderPaymentMethods();
+        return [];
+      }
 
-        if (!paymentMethods.length) {
-            paymentMethods = [
-                { id: 1, name: "نقدي" },
-                { id: 2, name: "تحويل بنكي" },
-                { id: 3, name: "شبكة" }
-            ];
-        }
+      state.paymentMethods = getCollection(response);
+      renderPaymentMethods();
+      return state.paymentMethods;
     } catch (error) {
-        console.error(error);
-
-        paymentMethods = [
-            { id: 1, name: "نقدي" },
-            { id: 2, name: "تحويل بنكي" },
-            { id: 3, name: "شبكة" }
-        ];
+      console.error("Failed to load payment methods:", error);
+      state.paymentMethods = [];
+      renderPaymentMethods();
+      return [];
     }
+  }
 
-    renderPaymentMethods();
-}
-
-function renderPaymentMethods() {
-    const container = document.getElementById("paymentMethods");
-
+  function renderPaymentMethods() {
+    const container = $("#paymentMethods");
     if (!container) return;
 
-    container.innerHTML = paymentMethods.map((method, index) => `
-        <label class="payment-method-option">
-            <input
-                type="radio"
-                name="payment_method_id"
-                value="${method.id}"
-                ${index === 0 ? "checked" : ""}
-            >
-            <span>${escapeHtml(method.name || "")}</span>
-        </label>
-    `).join("");
-}
-function setupFinanceEvents() {
-    const initialPayment = document.getElementById("initialPayment");
-    const plateDeposit = document.getElementById("plateDeposit");
-    const plateReturned = document.getElementById("plateReturned");
-
-    if (initialPayment) {
-        initialPayment.addEventListener("input", () => {
-            calculateTotals();
-        });
+    if (!state.paymentMethods.length) {
+      container.innerHTML = `
+        <select class="form-select" disabled>
+          <option>لا توجد طرق دفع</option>
+        </select>`;
+      return;
     }
 
-    if (plateDeposit) {
-        plateDeposit.addEventListener("input", () => {
-            calculateTotals();
-        });
-    }
-
-    if (plateReturned) {
-        plateReturned.addEventListener("input", () => {
-            calculateTotals();
-        });
-    }
-
-    document.addEventListener("change", event => {
-        if (event.target.matches('input[name="payment_method_id"]')) {
-            updateRemainingPreview();
-        }
-    });
-}
-
-function setupBookingEvents() {
-    const saveBtn = document.getElementById("saveBookingBtn");
-    const addItemBtn = document.getElementById("addItemBtn");
-
-    if (saveBtn) {
-        saveBtn.addEventListener("click", saveBooking);
-    }
-
-    if (addItemBtn) {
-        addItemBtn.addEventListener("click", () => {
-            addItemRow();
-            calculateTotals();
-        });
-    }
-
-    const initialPayment = document.getElementById("initialPayment");
-
-    if (initialPayment) {
-        initialPayment.addEventListener("input", updateRemainingPreview);
-    }
-
-    [
-        "plateDeposit",
-        "plateReturned"
-    ].forEach(id => {
-        const input = document.getElementById(id);
-
-        if (input) {
-            input.addEventListener("input", calculateTotals);
-        }
-    });
-}
-
-function setupItemEvents() {
-    const container = document.getElementById("itemsContainer");
-
-    if (!container) return;
-
-    container.addEventListener("input", event => {
-        if (
-            event.target.matches(".item-quantity") ||
-            event.target.matches(".item-unit-price")
-        ) {
-            updateItemRowTotal(event.target.closest(".booking-item-row"));
-            calculateTotals();
-        }
-    });
-
-    container.addEventListener("change", event => {
-        if (event.target.matches(".item-select")) {
-            const row = event.target.closest(".booking-item-row");
-            const itemId = event.target.value;
-
-            const item = itemsCatalog.find(
-                catalogItem => String(catalogItem.id) === String(itemId)
-            );
-
-            if (item && row) {
-                const priceInput = row.querySelector(".item-unit-price");
-
-                if (priceInput && !priceInput.value) {
-                    priceInput.value = Number(item.default_price || 0);
-                }
-
-                updateItemRowTotal(row);
-                calculateTotals();
-            }
-        }
-    });
-
-    container.addEventListener("click", event => {
-        const removeButton = event.target.closest(".remove-item-btn");
-
-        if (!removeButton) return;
-
-        const rows = container.querySelectorAll(".booking-item-row");
-
-        if (rows.length <= 1) {
-            const row = removeButton.closest(".booking-item-row");
-
-            if (row) {
-                const select = row.querySelector(".item-select");
-                const quantity = row.querySelector(".item-quantity");
-                const price = row.querySelector(".item-unit-price");
-                const total = row.querySelector(".item-total");
-
-                if (select) select.value = "";
-                if (quantity) quantity.value = 1;
-                if (price) price.value = "";
-                if (total) total.value = "0";
-            }
-        } else {
-            const row = removeButton.closest(".booking-item-row");
-            if (row) row.remove();
-        }
-
-        calculateTotals();
-    });
-}
-
-function addItemRow(item = null) {
-    const container = document.getElementById("itemsContainer");
-
-    if (!container) return;
-
-    const row = document.createElement("div");
-    row.className = "booking-item-row";
-
-    const options = [
-        `<option value="">اختر الصنف</option>`,
-        ...itemsCatalog.map(catalogItem => `
-            <option
-                value="${catalogItem.id}"
-                ${item && item.item_id && String(item.item_id) === String(catalogItem.id) ? "selected" : ""}
-            >
-                ${escapeHtml(catalogItem.name || "")}
-            </option>
-        `)
-    ].join("");
-
-    const selectedName = item?.item_name || item?.name || "";
-
-    if (selectedName && !item?.item_id) {
-        options.concat("");
-    }
-
-    row.innerHTML = `
-        <div class="item-field item-name-field">
-            <label>الصنف</label>
-            <select class="item-select">
-                ${options}
-            </select>
-            <input
-                type="text"
-                class="item-name-input"
-                value="${escapeAttribute(selectedName)}"
-                placeholder="اسم الصنف"
-                style="${selectedName && !item?.item_id ? "" : "display:none;"}"
-            >
-        </div>
-
-        <div class="item-field">
-            <label>الكمية</label>
-            <input
-                type="number"
-                class="item-quantity"
-                min="1"
-                step="1"
-                value="${Number(item?.quantity || 1)}"
-            >
-        </div>
-
-        <div class="item-field">
-            <label>سعر الوحدة</label>
-            <input
-                type="number"
-                class="item-unit-price"
-                min="0"
-                step="0.01"
-                value="${item?.unit_price != null ? Number(item.unit_price) : ""}"
-            >
-        </div>
-
-        <div class="item-field">
-            <label>الإجمالي</label>
-            <input
-                type="number"
-                class="item-total"
-                value="${Number(item?.total_price || 0)}"
-                readonly
-            >
-        </div>
-
-        <button
-            type="button"
-            class="remove-item-btn"
-            aria-label="حذف الصنف"
-        >
-            ×
-        </button>
-    `;
-
-    container.appendChild(row);
-
-    const select = row.querySelector(".item-select");
-    const nameInput = row.querySelector(".item-name-input");
-
-    if (select) {
-        select.addEventListener("change", () => {
-            if (!nameInput) return;
-
-            const selected = itemsCatalog.find(
-                catalogItem => String(catalogItem.id) === String(select.value)
-            );
-
-            if (selected) {
-                nameInput.style.display = "none";
-                nameInput.value = selected.name || "";
-            } else {
-                nameInput.style.display = "";
-                nameInput.value = "";
-            }
-        });
-    }
-
-    updateItemRowTotal(row);
-}
-
-function updateItemRowTotal(row) {
-    if (!row) return;
-
-    const quantityInput = row.querySelector(".item-quantity");
-    const priceInput = row.querySelector(".item-unit-price");
-    const totalInput = row.querySelector(".item-total");
-
-    const quantity = Math.max(
-        0,
-        Number(quantityInput?.value || 0)
-    );
-
-    const price = Math.max(
-        0,
-        Number(priceInput?.value || 0)
-    );
-
-    const total = quantity * price;
-
-    if (totalInput) {
-        totalInput.value = total.toFixed(2);
-    }
-}
-
-function collectItems() {
-    const container = document.getElementById("itemsContainer");
-
-    if (!container) return [];
-
-    const rows = container.querySelectorAll(".booking-item-row");
-    const items = [];
-
-    rows.forEach(row => {
-        const select = row.querySelector(".item-select");
-        const nameInput = row.querySelector(".item-name-input");
-        const quantityInput = row.querySelector(".item-quantity");
-        const priceInput = row.querySelector(".item-unit-price");
-
-        const selectedCatalogItem = itemsCatalog.find(
-            item => String(item.id) === String(select?.value)
-        );
-
-        const itemName =
-            selectedCatalogItem?.name ||
-            nameInput?.value?.trim() ||
-            "";
-
-        const quantity = Number(quantityInput?.value || 0);
-        const unitPrice = Number(priceInput?.value || 0);
-        const totalPrice = quantity * unitPrice;
-
-        if (!itemName || quantity <= 0) return;
-
-        items.push({
-            item_name: itemName,
-            quantity,
-            unit_price: unitPrice,
-            total_price: totalPrice
-        });
-    });
-
-    return items;
-}
-
-function calculateTotals() {
-    const items = collectItems();
-
-    const itemsTotal = items.reduce(
-        (sum, item) => sum + Number(item.total_price || 0),
-        0
-    );
-
-    const deposit = Number(
-        document.getElementById("plateDeposit")?.value || 0
-    );
-
-    const initialPayment = Number(
-        document.getElementById("initialPayment")?.value || 0
-    );
-
-    const grandTotal = itemsTotal;
-    const remaining = Math.max(
-        0,
-        grandTotal - initialPayment
-    );
-
-    setText("itemsTotal", formatCurrency(itemsTotal));
-    setText("grandTotal", formatCurrency(grandTotal));
-    setText("remainingAmount", formatCurrency(remaining));
-
-    const plateDisplay = document.getElementById("bookingPlateDisplay");
-
-    if (plateDisplay) {
-        plateDisplay.textContent =
-            deposit > 0 ? formatCurrency(deposit) : "لا يوجد";
-    }
-
-    updateRemainingPreview();
-
+    const options = state.paymentMethods
+      .map((method, index) => {
+        const id = getPaymentMethodId(method);
+        const name = getPaymentMethodName(method);
+        return `
+          <option value="${escapeHtml(id)}" ${index === 0 ? "selected" : ""}>
+            ${escapeHtml(name)}
+          </option>`;
+      })
+      .join("");
+
+    container.innerHTML = `
+      <select id="paymentMethodSelect"
+              name="payment_method_id"
+              class="form-select">
+        ${options}
+      </select>`;
+  }
+
+  function getSelectedPaymentMethodId() {
+    const select = $("#paymentMethodSelect");
+    if (!select) return null;
+    return select.value ? Number(select.value) : null;
+  }
+
+
+  /* =========================================================
+   * Booking items
+   * ========================================================= */
+
+  function createEmptyBookingItem() {
     return {
-        itemsTotal,
-        grandTotal,
-        deposit,
-        initialPayment,
-        remaining
+      id: null,
+      item_id: null,
+      name: "",
+      quantity: 1,
+      unit_price: 0,
+      total: 0
     };
-}
+  }
 
-function updateRemainingPreview() {
-    const grandTotal = calculateItemsTotalOnly();
-
-    const initialPayment = Number(
-        document.getElementById("initialPayment")?.value || 0
+  function calculateBookingItemTotal(item) {
+    return roundMoney(
+      normalizeNumber(item.quantity, 0) *
+        normalizeNumber(item.unit_price, 0)
     );
+  }
 
-    const remaining = Math.max(
-        0,
-        grandTotal - initialPayment
-    );
-
-    setText(
-        "remainingAmount",
-        formatCurrency(remaining)
-    );
-}
-
-function calculateItemsTotalOnly() {
-    return collectItems().reduce(
-        (sum, item) => sum + Number(item.total_price || 0),
+  function calculateBookingTotal() {
+    return roundMoney(
+      state.bookingItems.reduce(
+        (sum, item) => sum + calculateBookingItemTotal(item),
         0
+      )
     );
-}
+  }
 
-async function saveBooking() {
-    if (editingBookingId) {
-        await updateExistingBooking();
+  function renderItems() {
+    const container = $("#itemsContainer");
+    if (!container) return;
+
+    if (!state.bookingItems.length) {
+      container.innerHTML = `
+        <div style="padding:22px 12px;text-align:center;color:var(--text-muted);font-size:13px;">
+          لم تتم إضافة أصناف بعد. اضغط على "إضافة صنف" للبدء.
+        </div>`;
+      updateFinancialDisplay();
+      return;
+    }
+
+    container.innerHTML = state.bookingItems
+      .map((item, index) => {
+        const selectedItemId = item.item_id ?? "";
+
+        const options = state.items
+          .map((catalogItem) => {
+            const id = getItemId(catalogItem);
+            const name = getItemName(catalogItem);
+            return `
+              <option value="${escapeHtml(id)}"
+                      ${String(id) === String(selectedItemId) ? "selected" : ""}>
+                ${escapeHtml(name)}
+              </option>`;
+          })
+          .join("");
+
+        return `
+          <div class="booking-item-row" data-item-index="${index}">
+            <select class="item-select" data-action="item-select">
+              <option value="">اختر الصنف</option>
+              ${options}
+            </select>
+            <input type="number"
+                   class="item-qty"
+                   data-action="quantity"
+                   min="0.01"
+                   step="0.01"
+                   value="${escapeHtml(item.quantity)}">
+            <input type="number"
+                   class="item-price"
+                   data-action="unit-price"
+                   min="0"
+                   step="0.01"
+                   value="${escapeHtml(item.unit_price)}">
+            <button type="button"
+                    class="remove-item-btn"
+                    data-action="remove"
+                    title="حذف الصنف">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>`;
+      })
+      .join("");
+
+    updateFinancialDisplay();
+  }
+
+  function addBookingItem(item = null) {
+    if (item) {
+      state.bookingItems.push({
+        id: item.id ?? null,
+        item_id: item.item_id ?? item.item?.id ?? null,
+        name: item.name ?? item.item?.name ?? "",
+        quantity: normalizeNumber(item.quantity, 1),
+        unit_price: normalizeNumber(item.unit_price ?? item.price, 0),
+        total: 0
+      });
     } else {
-        await saveNewBooking();
-    }
-}
-
-async function saveNewBooking() {
-    try {
-        const customerData = await resolveCustomer();
-
-        if (!customerData) return;
-
-        const payload = collectBookingPayload(customerData);
-
-        validateBookingPayload(payload);
-
-        const response = await window.API.createBooking(payload);
-
-        if (response) {
-            showSuccess("تم حفظ الحجز بنجاح");
-            setTimeout(() => {
-                window.location.href = "bookings.html";
-            }, 500);
-        }
-    } catch (error) {
-        console.error(error);
-        showError(error?.message || "تعذر حفظ الحجز");
-    }
-}
-
-async function updateExistingBooking() {
-    try {
-        const customerData = await resolveCustomer();
-
-        if (!customerData) return;
-
-        const payload = collectBookingPayload(customerData);
-
-        validateBookingPayload(payload);
-
-        const response = await window.API.updateBooking(
-            editingBookingId,
-            payload
-        );
-
-        if (response) {
-            showSuccess("تم تحديث الحجز بنجاح");
-
-            setTimeout(() => {
-                window.location.href = "bookings.html";
-            }, 500);
-        }
-    } catch (error) {
-        console.error(error);
-        showError(error?.message || "تعذر تحديث الحجز");
-    }
-}
-
-async function resolveCustomer() {
-    const selectedExisting = selectedCustomer;
-
-    if (selectedExisting?.id) {
-        return {
-            customer_id: selectedExisting.id
-        };
+      state.bookingItems.push(createEmptyBookingItem());
     }
 
-    const nameInput = document.getElementById("customerName");
-    const phoneInput = document.getElementById("customerPhone");
-    const notesInput = document.getElementById("customerNotes");
+    const last = state.bookingItems[state.bookingItems.length - 1];
+    last.total = calculateBookingItemTotal(last);
 
-    const name = nameInput?.value?.trim() || "";
-    const phone = phoneInput?.value?.trim() || "";
-    const notes = notesInput?.value?.trim() || "";
+    renderItems();
+  }
 
-    if (!name) {
-        throw new Error("اسم العميل مطلوب");
+  function removeBookingItem(index) {
+    if (index < 0 || index >= state.bookingItems.length) return;
+    state.bookingItems.splice(index, 1);
+    renderItems();
+  }
+
+  function handleItemSelect(row, value) {
+    const index = Number(row.dataset.itemIndex);
+    const item = state.bookingItems[index];
+    if (!item) return;
+
+    if (!value) {
+      item.item_id = null;
+      item.name = "";
+      item.unit_price = 0;
+
+      const priceInput = row.querySelector('[data-action="unit-price"]');
+      if (priceInput) priceInput.value = "0";
+
+      updateFinancialDisplay();
+      return;
     }
 
-    const existingCustomers = window.__bookingCustomers || [];
+    const catalogItem = state.items.find(
+      (candidate) =>
+        String(getItemId(candidate)) === String(value)
+    );
+    if (!catalogItem) return;
 
-    const existing = existingCustomers.find(customer => {
-        if (!phone) return false;
+    item.item_id = getItemId(catalogItem);
+    item.name = getItemName(catalogItem);
+    item.unit_price = getItemPrice(catalogItem);
 
-        return String(customer.phone || "").trim() === phone;
+    const priceInput = row.querySelector('[data-action="unit-price"]');
+    if (priceInput) priceInput.value = item.unit_price;
+
+    updateFinancialDisplay();
+  }
+
+  function bindItemsEvents() {
+    const container = $("#itemsContainer");
+    if (!container) return;
+
+    container.addEventListener("change", (event) => {
+      const target = event.target;
+      const row = target.closest(".booking-item-row");
+      if (!row) return;
+
+      const index = Number(row.dataset.itemIndex);
+      const item = state.bookingItems[index];
+      if (!item) return;
+
+      const action = target.dataset.action;
+
+      if (action === "item-select") {
+        handleItemSelect(row, target.value);
+      } else if (action === "quantity") {
+        item.quantity = normalizeNumber(target.value, 0);
+        updateFinancialDisplay();
+      } else if (action === "unit-price") {
+        item.unit_price = normalizeNumber(target.value, 0);
+        updateFinancialDisplay();
+      }
+    });
+
+    container.addEventListener("input", (event) => {
+      const target = event.target;
+      const action = target.dataset.action;
+
+      if (action !== "quantity" && action !== "unit-price") return;
+
+      const row = target.closest(".booking-item-row");
+      if (!row) return;
+
+      const index = Number(row.dataset.itemIndex);
+      const item = state.bookingItems[index];
+      if (!item) return;
+
+      if (action === "quantity") {
+        item.quantity = normalizeNumber(target.value, 0);
+      } else {
+        item.unit_price = normalizeNumber(target.value, 0);
+      }
+
+      updateFinancialDisplay();
+    });
+
+    container.addEventListener("click", (event) => {
+      const removeButton = event.target.closest('[data-action="remove"]');
+      if (!removeButton) return;
+
+      const row = removeButton.closest(".booking-item-row");
+      if (!row) return;
+
+      removeBookingItem(Number(row.dataset.itemIndex));
+    });
+  }
+
+
+  /* =========================================================
+   * Financial display
+   * ========================================================= */
+
+  function getInitialPaymentValue() {
+    const input = $("#initialPayment");
+    if (!input) return 0;
+    return normalizeNumber(input.value, 0);
+  }
+
+  function getPlateDepositValue() {
+    const input = $("#plateDeposit");
+    if (!input) return 0;
+    return normalizeNumber(input.value, 0);
+  }
+
+  function updateFinancialDisplay() {
+    const itemsTotal = calculateBookingTotal();
+    const deposit = getPlateDepositValue();
+    const grandTotal = roundMoney(itemsTotal + deposit);
+    const initialPayment = getInitialPaymentValue();
+    const remaining = Math.max(0, roundMoney(grandTotal - initialPayment));
+
+    const itemsTotalEl = $("#itemsTotal");
+    if (itemsTotalEl) itemsTotalEl.textContent = formatCurrency(itemsTotal);
+
+    const grandTotalEl = $("#grandTotal");
+    if (grandTotalEl) grandTotalEl.textContent = formatCurrency(grandTotal);
+
+    const mobileGrandTotalEl = $("#mobileGrandTotal");
+    if (mobileGrandTotalEl) {
+      mobileGrandTotalEl.textContent = formatCurrency(grandTotal);
+    }
+
+    const remainingEl = $("#remainingAmount");
+    if (remainingEl) remainingEl.textContent = formatCurrency(remaining);
+  }
+
+  function bindFinancialEvents() {
+    const depositInput = $("#plateDeposit");
+    if (depositInput) {
+      depositInput.addEventListener("input", updateFinancialDisplay);
+      depositInput.addEventListener("change", updateFinancialDisplay);
+    }
+
+    const paymentInput = $("#initialPayment");
+    if (paymentInput) {
+      paymentInput.addEventListener("input", updateFinancialDisplay);
+      paymentInput.addEventListener("change", updateFinancialDisplay);
+    }
+  }
+
+
+  /* =========================================================
+   * Customer creation
+   * ========================================================= */
+
+  function getNewCustomerData() {
+    const name = $("#customerName")?.value.trim() ?? "";
+    const phone = $("#customerPhone")?.value.trim() ?? "";
+    const notes = $("#customerNotes")?.value.trim() ?? "";
+    return { name, phone, notes };
+  }
+
+  async function createNewCustomer() {
+    const data = getNewCustomerData();
+
+    const existing = state.customers.find((customer) => {
+      if (!data.phone) return false;
+      return String(customer.phone ?? "").trim() === data.phone;
     });
 
     if (existing) {
-        selectedCustomer = existing;
+      const useExisting = window.confirm(
+        "يوجد عميل مسجل بنفس رقم الجوال.\n\n" +
+        "هل تريد استخدام العميل الموجود بدل إنشاء عميل جديد؟"
+      );
 
-        return {
-            customer_id: existing.id
-        };
+      if (useExisting) return existing;
+
+      throw new Error("يوجد عميل مسجل مسبقًا بنفس رقم الجوال.");
     }
 
-    const response = await window.API.createCustomer({
-        name,
-        phone,
-        notes
-    });
-
-    const customer = response?.data ?? response;
-
-    if (!customer?.id) {
-        throw new Error("تعذر إنشاء العميل");
+    if (typeof API.createCustomer !== "function") {
+      throw new Error("واجهة إنشاء العملاء غير متاحة.");
     }
 
-    selectedCustomer = customer;
+    const response = await API.createCustomer(data);
+    const created = getApiData(response);
+    const customer = created?.data ?? created?.customer ?? created;
 
-    window.__bookingCustomers = [
-        ...existingCustomers,
-        customer
-    ];
+    if (!customer || !getCustomerId(customer)) {
+      throw new Error(
+        "تم إنشاء العميل ولكن لم يتم استلام بياناته بشكل صحيح."
+      );
+    }
 
-    return {
-        customer_id: customer.id
-    };
-}
+    state.customers.push(customer);
+    return customer;
+  }
 
-function collectBookingPayload(customerData) {
-    const date = document.getElementById("invoiceDate")?.value || "";
-    const eventDate = document.getElementById("eventDate")?.value || "";
-    const deliveryTime = document.getElementById("deliveryTime")?.value || "";
-    const deliveryPeriod = document.getElementById("deliveryPeriod")?.value || "";
-    const deliveryAddress = document.getElementById("deliveryAddress")?.value?.trim() || "";
-    const mark = document.getElementById("mark")?.value?.trim() || "";
-    const status = document.getElementById("status")?.value || "new";
-    const notes = document.getElementById("bookingNotes")?.value?.trim() || "";
 
-    const plateDeposit = Number(
-        document.getElementById("plateDeposit")?.value || 0
-    );
+  /* =========================================================
+   * Booking payload
+   * ========================================================= */
 
-    const plateReturnedInput =
-        document.getElementById("plateReturned");
+  function getFieldValue(id) {
+    return $(`#${id}`)?.value.trim() ?? "";
+  }
 
-    const plateReturnedValue =
-        plateReturnedInput?.value === ""
-            ? null
-            : Number(plateReturnedInput.value);
+  function collectBookingPayload(customerId) {
+    const totalAmount = calculateBookingTotal();
 
-    const items = collectItems();
-
-    const totalAmount = items.reduce(
-        (sum, item) => sum + Number(item.total_price || 0),
-        0
-    );
-
-    const initialPayment = Number(
-        document.getElementById("initialPayment")?.value || 0
-    );
-
-    const paymentMethodInput = document.querySelector(
-        'input[name="payment_method_id"]:checked'
-    );
-
-    const paymentMethodId = paymentMethodInput
-        ? Number(paymentMethodInput.value)
-        : null;
-
-    const paymentNotes =
-        document.getElementById("paymentNotes")?.value?.trim() || "";
+    // Invoice date is always set to today (no field in the UI).
+    const invoiceDate = todayDate();
+    const eventDate = getFieldValue("eventDate");
+    const deliveryTime = getFieldValue("deliveryTime");
+    const deliveryPeriod = getFieldValue("deliveryPeriod");
+    const deliveryAddress = getFieldValue("deliveryAddress");
+    const mark = getFieldValue("mark");
+    const bookingNotes = getFieldValue("bookingNotes");
+    const plateDeposit = getPlateDepositValue();
 
     const payload = {
-        ...customerData,
-        invoice_date: date || null,
-        event_date: eventDate || null,
-        delivery_time: deliveryTime || null,
-        delivery_period: deliveryPeriod || null,
-        delivery_address: deliveryAddress || null,
-        mark: mark || null,
-        total_amount: totalAmount,
-        plate_deposit: plateDeposit > 0 ? plateDeposit : null,
-        plate_deposit_returned:
-            plateReturnedValue != null
-                ? plateReturnedValue
-                : null,
-        status,
-        notes: notes || null,
-        items
+      customer_id: Number(customerId),
+      invoice_date: invoiceDate,
+      event_date: eventDate,
+      delivery_time: deliveryTime,
+      delivery_period: deliveryPeriod,
+      delivery_address: deliveryAddress,
+      mark: mark || null,
+      total_amount: totalAmount,
+      plate_deposit: plateDeposit > 0 ? plateDeposit : null,
+      notes: bookingNotes || null,
+      items: state.bookingItems.map((item) => {
+        const quantity = normalizeNumber(item.quantity, 0);
+        const unitPrice = normalizeNumber(item.unit_price, 0);
+        const totalPrice = roundMoney(quantity * unitPrice);
+
+        const row = {
+          item_name: String(item.name ?? "").trim(),
+          quantity: quantity,
+          unit_price: unitPrice,
+          total_price: totalPrice
+        };
+
+        if (item.item_id) {
+          row.item_id = Number(item.item_id);
+        }
+
+        return row;
+      })
     };
 
-    if (!editingBookingId && initialPayment > 0) {
+    if (!state.editing) {
+      const initialPayment = getInitialPaymentValue();
+
+      if (initialPayment > 0) {
         payload.initial_payment = initialPayment;
-        payload.payment_method_id = paymentMethodId;
-        payload.payment_date =
-            document.getElementById("invoiceDate")?.value || null;
-        payload.payment_notes = paymentNotes || null;
+        payload.payment_method_id = getSelectedPaymentMethodId();
+        payload.payment_date = invoiceDate;
+        payload.payment_notes = null;
+      }
+    }
+
+    if (state.editing) {
+      if (
+        state.editingBookingStatus !== null &&
+        state.editingBookingStatus !== undefined
+      ) {
+        payload.status = state.editingBookingStatus;
+      }
+
+      if (
+        state.editingPlateReturned !== null &&
+        state.editingPlateReturned !== undefined
+      ) {
+        payload.plate_deposit_returned = state.editingPlateReturned;
+      }
     }
 
     return payload;
-}
+  }
 
-function validateBookingPayload(payload) {
-    if (!payload.customer_id) {
-        throw new Error("يجب اختيار العميل");
+
+  /* =========================================================
+   * Validation
+   * ========================================================= */
+
+  function validateCustomer() {
+    if (state.mode === "existing") {
+      if (
+        !state.selectedCustomer ||
+        !getCustomerId(state.selectedCustomer)
+      ) {
+        showAlert("يرجى اختيار العميل أولًا.");
+        return false;
+      }
+      return true;
     }
 
-    if (!payload.event_date) {
-        throw new Error("تاريخ المناسبة مطلوب");
+    const name = $("#customerName");
+    const phone = $("#customerPhone");
+
+    const customerName = name?.value.trim() ?? "";
+    const customerPhone = phone?.value.trim() ?? "";
+
+    if (!customerName) {
+      markFieldInvalid(name, "اسم العميل مطلوب.");
+      showAlert("يرجى إدخال اسم العميل.");
+      name?.focus();
+      return false;
     }
 
-    if (!payload.items.length) {
-        throw new Error("أضف صنفًا واحدًا على الأقل");
+    if (!customerPhone) {
+      markFieldInvalid(phone, "رقم الجوال مطلوب.");
+      showAlert("يرجى إدخال رقم جوال العميل.");
+      phone?.focus();
+      return false;
     }
 
-    if (
-        payload.plate_deposit_returned !== null &&
-        payload.plate_deposit_returned >
-        Number(payload.plate_deposit || 0)
-    ) {
-        throw new Error(
-            "قيمة المبلغ المرتجع لا يمكن أن تتجاوز عربون الصحون"
+    return true;
+  }
+
+  function validateBookingFields() {
+    const requiredFields = [
+      { id: "eventDate", message: "تاريخ المناسبة مطلوب." },
+      { id: "deliveryTime", message: "وقت التوصيل مطلوب." },
+      { id: "deliveryPeriod", message: "فترة التوصيل مطلوبة." },
+      { id: "deliveryAddress", message: "عنوان التوصيل مطلوب." }
+    ];
+
+    for (const field of requiredFields) {
+      const input = $(`#${field.id}`);
+      const value = input?.value.trim() ?? "";
+      if (!value) {
+        markFieldInvalid(input, field.message);
+        showAlert(field.message);
+        input?.focus();
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function validateItems() {
+    if (!state.bookingItems.length) {
+      showAlert("يجب إضافة صنف واحد على الأقل للحجز.");
+      return false;
+    }
+
+    for (let index = 0; index < state.bookingItems.length; index++) {
+      const item = state.bookingItems[index];
+      const quantity = normalizeNumber(item.quantity, 0);
+      const price = normalizeNumber(item.unit_price, 0);
+
+      if (!item.item_id && !String(item.name ?? "").trim()) {
+        showAlert(`يرجى اختيار الصنف في السطر ${index + 1}.`);
+        return false;
+      }
+
+      if (quantity <= 0) {
+        showAlert(
+          `كمية الصنف في السطر ${index + 1} يجب أن تكون أكبر من صفر.`
         );
-    }
+        return false;
+      }
 
-    const initialPayment = Number(
-        document.getElementById("initialPayment")?.value || 0
-    );
-
-    if (
-        !editingBookingId &&
-        initialPayment > Number(payload.total_amount || 0)
-    ) {
-        throw new Error(
-            "الدفعة الأولية لا يمكن أن تتجاوز إجمالي الفاتورة"
+      if (price < 0) {
+        showAlert(
+          `سعر الصنف في السطر ${index + 1} لا يمكن أن يكون سالبًا.`
         );
+        return false;
+      }
     }
-}
 
-async function loadBookingForEdit(id) {
+    return true;
+  }
+
+  function validatePayment() {
+    if (state.editing) return true;
+
+    const payment = getInitialPaymentValue();
+    const total = calculateBookingTotal();
+
+    if (payment < 0) {
+      showAlert("الدفعة الأولى لا يمكن أن تكون سالبة.");
+      return false;
+    }
+
+    if (payment > total) {
+      showAlert("الدفعة الأولى لا يمكن أن تتجاوز إجمالي الحجز.");
+      return false;
+    }
+
+    if (payment > 0) {
+      const methodId = getSelectedPaymentMethodId();
+      if (!methodId) {
+        showAlert("يرجى اختيار طريقة الدفع للدفعة الأولى.");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function validateForm() {
+    clearFieldErrors();
+    hideAlert();
+
+    if (!validateCustomer()) return false;
+    if (!validateBookingFields()) return false;
+    if (!validateItems()) return false;
+    if (!validatePayment()) return false;
+
+    return true;
+  }
+
+
+  /* =========================================================
+   * Save
+   * ========================================================= */
+
+  async function resolveCustomerForBooking() {
+    if (state.mode === "existing") return state.selectedCustomer;
+    return createNewCustomer();
+  }
+
+  async function saveBooking() {
+    if (state.saving) return;
+    if (!validateForm()) return;
+
+    state.saving = true;
+    setSaveButtonLoading(true);
+    hideAlert();
+
     try {
-        const response = await window.API.getBooking(id);
-        const booking = response?.data ?? response;
+      const customer = await resolveCustomerForBooking();
+      const customerId = getCustomerId(customer);
 
-        if (!booking) {
-            throw new Error("الحجز غير موجود");
+      if (!customerId) {
+        throw new Error("تعذر تحديد العميل المرتبط بالحجز.");
+      }
+
+      const payload = collectBookingPayload(customerId);
+
+      let response;
+
+      if (state.editing && state.bookingId) {
+        if (typeof API.updateBooking !== "function") {
+          throw new Error("واجهة تحديث الحجوزات غير متاحة.");
         }
-
-        fillBookingForm(booking);
-
-        const saveBtn = document.getElementById("saveBookingBtn");
-
-        if (saveBtn) {
-            saveBtn.textContent = "حفظ التعديلات";
+        response = await API.updateBooking(state.bookingId, payload);
+      } else {
+        if (typeof API.createBooking !== "function") {
+          throw new Error("واجهة إنشاء الحجوزات غير متاحة.");
         }
+        response = await API.createBooking(payload);
+      }
 
-        setText(
-            "pageTitle",
-            "تعديل الحجز"
-        );
+      const data = getApiData(response);
+      console.log("Booking saved successfully:", data);
 
-        setText(
-            "pageSubtitle",
-            `تعديل الحجز رقم ${booking.id}`
-        );
+      showAlert(
+        state.editing
+          ? "تم تحديث الحجز بنجاح."
+          : "تم إنشاء الحجز بنجاح.",
+        "success"
+      );
+
+      setTimeout(() => {
+        window.location.href = "bookings.html";
+      }, 700);
     } catch (error) {
-        console.error(error);
-        showError(error?.message || "تعذر تحميل بيانات الحجز");
+      console.error("Failed to save booking:", error);
+      showAlert(extractApiErrorMessage(error), "error");
+    } finally {
+      state.saving = false;
+      setSaveButtonLoading(false);
     }
-}
+  }
 
-function fillBookingForm(booking) {
-    setInputValue("invoiceDate", normalizeDate(booking.invoice_date));
-    setInputValue("eventDate", normalizeDate(booking.event_date));
-    setInputValue("deliveryTime", normalizeTime(booking.delivery_time));
-    setInputValue("deliveryPeriod", booking.delivery_period || "");
-    setInputValue("deliveryAddress", booking.delivery_address || "");
-    setInputValue("mark", booking.mark || "");
-    setInputValue("status", booking.status || "new");
-    setInputValue("bookingNotes", booking.notes || "");
 
-    setInputValue(
-        "plateDeposit",
-        booking.plate_deposit ?? ""
-    );
+  /* =========================================================
+   * API errors
+   * ========================================================= */
 
-    setInputValue(
-        "plateReturned",
-        booking.plate_deposit_returned ?? ""
-    );
+  function extractApiErrorMessage(error) {
+    if (!error) return "حدث خطأ غير متوقع أثناء حفظ الحجز.";
+    if (typeof error === "string") return error;
 
+    const response = error.response ?? error;
+    const data = response?.data ?? response;
+
+    if (data?.message) return data.message;
+    if (data?.error) return data.error;
+
+    if (data?.errors) {
+      const messages = [];
+      Object.values(data.errors).forEach((value) => {
+        if (Array.isArray(value)) {
+          value.forEach((message) => messages.push(message));
+        } else if (value) {
+          messages.push(String(value));
+        }
+      });
+      if (messages.length) return messages.join("\n");
+    }
+
+    if (error.message) return error.message;
+    return "تعذر حفظ الحجز. يرجى المحاولة مرة أخرى.";
+  }
+
+
+  /* =========================================================
+   * Save buttons (desktop + mobile sticky bar)
+   * ========================================================= */
+
+  function setSaveButtonLoading(loading) {
+    const buttons = [$("#saveBookingBtn"), $("#mobileSaveBtn")];
+
+    buttons.forEach((button) => {
+      if (!button) return;
+
+      button.disabled = loading;
+
+      if (loading) {
+        if (!button.dataset.originalHtml) {
+          button.dataset.originalHtml = button.innerHTML;
+        }
+        button.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> جارٍ الحفظ...';
+      } else if (button.dataset.originalHtml) {
+        button.innerHTML = button.dataset.originalHtml;
+      }
+    });
+  }
+
+
+  /* =========================================================
+   * Edit mode
+   * ========================================================= */
+
+  function getBookingIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("id") || params.get("booking_id");
+  }
+
+  async function loadBookingForEdit(id) {
+    if (typeof API.getBooking !== "function") {
+      throw new Error("واجهة جلب الحجز غير متاحة.");
+    }
+
+    const response = await API.getBooking(id);
+    const data = getApiData(response);
+    const booking = data?.data ?? data?.booking ?? data;
+
+    if (!booking) throw new Error("لم يتم العثور على الحجز.");
+
+    state.bookingId = booking.id ?? id;
+    state.editing = true;
+    state.editingBookingStatus = booking.status ?? null;
+    state.editingPlateReturned = booking.plate_deposit_returned ?? null;
+
+    populateBookingForm(booking);
+  }
+
+  function populateBookingForm(booking) {
     const customer =
-        booking.customer ||
-        findCustomerById(booking.customer_id);
+      booking.customer ??
+      state.customers.find(
+        (item) =>
+          Number(getCustomerId(item)) ===
+          Number(booking.customer_id)
+      );
 
     if (customer) {
-        selectCustomer(customer);
+      state.selectedCustomer = customer;
+      setCustomerMode("existing");
+      selectCustomer(customer);
     }
 
-    const container = document.getElementById("itemsContainer");
+    setInputValue("eventDate", formatDateForInput(booking.event_date));
+    setInputValue("deliveryTime", formatTimeForInput(booking.delivery_time));
+    setInputValue("deliveryPeriod", booking.delivery_period);
+    setInputValue("deliveryAddress", booking.delivery_address);
+    setInputValue("mark", booking.mark);
+    setInputValue("bookingNotes", booking.notes);
+    setInputValue("plateDeposit", booking.plate_deposit);
 
-    if (container) {
-        container.innerHTML = "";
+    state.bookingItems = Array.isArray(booking.items)
+      ? booking.items.map((item) => ({
+          id: item.id ?? null,
+          item_id: item.item_id ?? item.item?.id ?? null,
+          name: item.name ?? item.item?.name ?? "",
+          quantity: normalizeNumber(item.quantity, 1),
+          unit_price: normalizeNumber(
+            item.unit_price ?? item.price,
+            0
+          ),
+          total: 0
+        }))
+      : [];
 
-        const bookingItems = Array.isArray(booking.items)
-            ? booking.items
-            : Array.isArray(booking.booking_items)
-                ? booking.booking_items
-                : [];
+    state.bookingItems.forEach((item) => {
+      item.total = calculateBookingItemTotal(item);
+    });
 
-        if (bookingItems.length) {
-            bookingItems.forEach(item => {
-                const catalogItem = itemsCatalog.find(
-                    catalog =>
-                        String(catalog.id) === String(item.item_id)
-                );
+    renderItems();
+    updateFinancialDisplay();
+    disablePaymentForEdit();
+    updatePageForEditMode();
+  }
 
-                addItemRow({
-                    ...item,
-                    item_id: item.item_id || catalogItem?.id || null,
-                    item_name:
-                        item.item_name ||
-                        item.name ||
-                        catalogItem?.name ||
-                        ""
-                });
-            });
-        } else {
-            addItemRow();
-        }
-    }
+  function setInputValue(id, value) {
+    const input = $(`#${id}`);
+    if (!input) return;
+    input.value =
+      value === null || value === undefined ? "" : String(value);
+  }
 
-    calculateTotals();
-}
-
-function findCustomerById(id) {
-    const customers = window.__bookingCustomers || [];
-
-    return customers.find(
-        customer => String(customer.id) === String(id)
-    );
-}
-
-function setDefaultDates() {
-    const today = new Date();
-    const dateString = formatDateForInput(today);
-
-    const invoiceDate = document.getElementById("invoiceDate");
-
-    if (invoiceDate && !invoiceDate.value) {
-        invoiceDate.value = dateString;
-    }
-}
-
-function normalizeDate(value) {
+  function formatDateForInput(value) {
     if (!value) return "";
+    return String(value).slice(0, 10);
+  }
 
-    return String(value).substring(0, 10);
-}
-
-function normalizeTime(value) {
+  function formatTimeForInput(value) {
     if (!value) return "";
+    return String(value).slice(0, 5);
+  }
 
-    return String(value).substring(0, 5);
-}
+  function disablePaymentForEdit() {
+    const initialPayment = document.querySelector("#initialPayment");
+    const paymentMethodSelect = document.querySelector("#paymentMethodSelect");
 
-function formatDateForInput(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    if (initialPayment) initialPayment.disabled = true;
+    if (paymentMethodSelect) paymentMethodSelect.disabled = true;
 
-    return `${year}-${month}-${day}`;
-}
+    // Dim the financial rows that relate to payment.
+    const paymentRow = initialPayment?.closest(".financial-row");
+    if (paymentRow) paymentRow.style.opacity = "0.55";
 
-function extractArray(response) {
-    if (Array.isArray(response)) {
-        return response;
+    const methodRow = paymentMethodSelect?.closest(".financial-row");
+    if (methodRow) methodRow.style.opacity = "0.55";
+  }
+
+  function updatePageForEditMode() {
+    const title = $("#pageTitle");
+    const subtitle = document.querySelector(".page-subtitle");
+    const saveButton = $("#saveBookingBtn");
+
+    if (title) title.textContent = "تعديل الحجز";
+
+    if (subtitle) {
+      subtitle.textContent =
+        "تعديل بيانات الحجز مع الحفاظ على الحالة الحالية.";
     }
 
-    if (Array.isArray(response?.data)) {
-        return response.data;
+    if (saveButton) {
+      saveButton.innerHTML =
+        '<i class="fas fa-save"></i> حفظ التعديلات';
+    }
+  }
+
+
+  /* =========================================================
+   * Form reset
+   * ========================================================= */
+
+  function resetBookingForm() {
+    const form = $("#bookingForm");
+    if (form) form.reset();
+
+    state.selectedCustomer = null;
+    state.bookingItems = [];
+    state.bookingId = null;
+    state.editing = false;
+    state.editingBookingStatus = null;
+    state.editingPlateReturned = null;
+
+    setCustomerMode("existing");
+    renderItems();
+    updateFinancialDisplay();
+
+    const selectedCustomer = $("#selectedCustomer");
+    if (selectedCustomer) selectedCustomer.style.display = "none";
+
+    hideAlert();
+    clearFieldErrors();
+
+    const initialPayment = document.querySelector("#initialPayment");
+    const paymentMethodSelect = document.querySelector("#paymentMethodSelect");
+
+    if (initialPayment) {
+      initialPayment.disabled = false;
+      const row = initialPayment.closest(".financial-row");
+      if (row) row.style.opacity = "";
     }
 
-    if (Array.isArray(response?.items)) {
-        return response.items;
+    if (paymentMethodSelect) {
+      paymentMethodSelect.disabled = false;
+      const row = paymentMethodSelect.closest(".financial-row");
+      if (row) row.style.opacity = "";
     }
 
-    if (Array.isArray(response?.data?.data)) {
-        return response.data.data;
+    setDefaultDates();
+  }
+
+
+  /* =========================================================
+   * Bindings
+   * ========================================================= */
+
+  function bindCustomerModeButtons() {
+    const existingButton = $("#existingCustomerBtn");
+    const newButton = $("#newCustomerBtn");
+
+    if (existingButton) {
+      existingButton.addEventListener("click", () =>
+        setCustomerMode("existing")
+      );
     }
 
-    return [];
-}
+    if (newButton) {
+      newButton.addEventListener("click", () =>
+        setCustomerMode("new")
+      );
+    }
+  }
 
-function getInitials(name) {
-    const value = String(name || "").trim();
+  function bindAddItemButton() {
+    const button = $("#addItemBtn");
+    if (!button) return;
+    button.addEventListener("click", () => addBookingItem());
+  }
 
-    if (!value) return "؟";
-
-    const parts = value.split(/\s+/).filter(Boolean);
-
-    if (parts.length === 1) {
-        return parts[0].substring(0, 2);
+  function bindFormSubmit() {
+    const form = $("#bookingForm");
+    if (form) {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        saveBooking();
+      });
+      return;
     }
 
-    return (
-        parts[0].substring(0, 1) +
-        parts[1].substring(0, 1)
-    );
-}
-
-function formatCurrency(value) {
-    const amount = Number(value || 0);
-
-    if (
-        window.API &&
-        typeof window.API.formatCurrency === "function"
-    ) {
-        return window.API.formatCurrency(amount);
+    const button = $("#saveBookingBtn");
+    if (button) {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        saveBooking();
+      });
     }
+  }
 
-    return new Intl.NumberFormat("ar-SA", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-    }).format(amount);
-}
+  function bindMobileSaveButton() {
+    const button = $("#mobileSaveBtn");
+    if (!button) return;
 
-function setText(id, value) {
-    const element = document.getElementById(id);
+    // The button uses form="bookingForm" so it triggers submit,
+    // but we add a guard in case it is clicked outside the form scope.
+    button.addEventListener("click", (event) => {
+      if (!button.form) {
+        event.preventDefault();
+        saveBooking();
+      }
+    });
+  }
 
-    if (element) {
-        element.textContent = value;
+  function setDefaultDates() {
+    if (state.editing) return;
+
+    const eventDate = $("#eventDate");
+    if (eventDate && !eventDate.value) {
+      eventDate.value = todayDate();
     }
-}
+  }
 
-function setInputValue(id, value) {
-    const element = document.getElementById(id);
 
-    if (element) {
-        element.value = value ?? "";
+  /* =========================================================
+   * Initialize
+   * ========================================================= */
+
+  async function initialize() {
+    try {
+      hideAlert();
+
+      await Promise.all([
+        loadCustomers(),
+        loadItems(),
+        loadPaymentMethods()
+      ]);
+
+      bindCustomerModeButtons();
+      bindCustomerSearch();
+      bindCustomerResultClicks();
+      bindChangeCustomerButton();
+
+      bindAddItemButton();
+      bindItemsEvents();
+      bindFinancialEvents();
+
+      bindFormSubmit();
+      bindMobileSaveButton();
+
+      renderItems();
+      setDefaultDates();
+      updateFinancialDisplay();
+
+      const bookingId = getBookingIdFromUrl();
+      if (bookingId) {
+        await loadBookingForEdit(bookingId);
+      }
+    } catch (error) {
+      console.error("Booking form initialization failed:", error);
+      showAlert(extractApiErrorMessage(error));
     }
-}
+  }
 
-function escapeHtml(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function escapeAttribute(value) {
-    return escapeHtml(value);
-}
-
-function showSuccess(message) {
-    if (
-        window.Utils &&
-        typeof window.Utils.showToast === "function"
-    ) {
-        window.Utils.showToast(message, "success");
-        return;
-    }
-
-    if (
-        typeof window.showToast === "function"
-    ) {
-        window.showToast(message, "success");
-        return;
-    }
-
-    alert(message);
-}
-
-function showError(message) {
-    if (
-        window.Utils &&
-        typeof window.Utils.showToast === "function"
-    ) {
-        window.Utils.showToast(message, "error");
-        return;
-    }
-
-    if (
-        typeof window.showToast === "function"
-    ) {
-        window.showToast(message, "error");
-        return;
-    }
-
-    alert(message);
-}
-
-window.BookingForm = {
-    loadCustomers,
-    loadItems,
-    loadPaymentMethods,
-    addItemRow,
-    calculateTotals,
-    collectItems,
-    saveBooking
-};
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initialize);
+  } else {
+    initialize();
+  }
+})();

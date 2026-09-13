@@ -3,20 +3,30 @@
 
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=5.0"
     >
+
     <meta name="theme-color" content="#8F1720">
-    <meta name="description" content="التقارير والإحصائيات - شواطئ عدن">
+
+    <meta
+        name="description"
+        content="التقارير الشاملة - شواطئ عدن"
+    >
 
     <title>التقارير - شواطئ عدن</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
 
     <link
-        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
 
@@ -35,365 +45,718 @@
             --reports-primary: #8f1720;
             --reports-primary-dark: #72121a;
             --reports-primary-soft: rgba(143, 23, 32, 0.08);
+
             --reports-green: #16855b;
             --reports-green-soft: rgba(22, 133, 91, 0.10);
-            --reports-orange: #c77718;
-            --reports-orange-soft: rgba(199, 119, 24, 0.10);
+
             --reports-blue: #356ea8;
             --reports-blue-soft: rgba(53, 110, 168, 0.10);
+
+            --reports-orange: #c77718;
+            --reports-orange-soft: rgba(199, 119, 24, 0.10);
+
             --reports-danger: #b4232f;
             --reports-danger-soft: rgba(180, 35, 47, 0.10);
+
+            --reports-purple: #7653a8;
+            --reports-purple-soft: rgba(118, 83, 168, 0.10);
+
+            --reports-border: #e8e8eb;
+            --reports-muted: #667085;
+            --reports-text: #20242c;
+            --reports-surface: #ffffff;
+            --reports-surface-soft: #fafafa;
+
+            --reports-radius: 16px;
+            --reports-shadow:
+                0 3px 12px rgba(15, 23, 42, 0.045);
         }
 
-        [data-page="reports"] .report-toolbar {
+        [data-page="reports"] * {
+            box-sizing: border-box;
+        }
+
+        /* =========================================================
+           PAGE HEADER
+        ========================================================= */
+
+        [data-page="reports"] .reports-page-header {
             display: flex;
-            flex-direction: column;
-            gap: 18px;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 24px;
         }
 
-        [data-page="reports"] .filter-chips {
+        [data-page="reports"] .reports-page-title {
+            margin: 0;
+            color: var(--reports-text);
+            font-size: 27px;
+            font-weight: 800;
+            line-height: 1.4;
+        }
+
+        [data-page="reports"] .reports-page-subtitle {
+            margin: 6px 0 0;
+            color: var(--reports-muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        [data-page="reports"] .reports-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* =========================================================
+           REPORT FILTER
+        ========================================================= */
+
+        [data-page="reports"] .report-filter-card {
+            margin-bottom: 22px;
+            padding: 0;
+            overflow: hidden;
+            background: var(--reports-surface);
+            border: 1px solid var(--reports-border);
+            border-radius: var(--reports-radius);
+            box-shadow: var(--reports-shadow);
+        }
+
+        [data-page="reports"] .report-filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--reports-border);
+        }
+
+        [data-page="reports"] .report-filter-heading {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        [data-page="reports"] .report-filter-icon {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 11px;
+            background: var(--reports-primary-soft);
+            color: var(--reports-primary);
+        }
+
+        [data-page="reports"] .report-filter-heading h2 {
+            margin: 0;
+            color: var(--reports-text);
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .report-filter-heading p {
+            margin: 2px 0 0;
+            color: var(--reports-muted);
+            font-size: 11px;
+        }
+
+        [data-page="reports"] .report-filter-body {
+            padding: 18px 20px;
+        }
+
+        [data-page="reports"] .period-buttons {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            margin-bottom: 16px;
         }
 
-        [data-page="reports"] .chip {
-            border: 1px solid var(--border-color, #e5e7eb);
-            background: var(--surface, #fff);
-            color: var(--text-secondary, #64748b);
-            border-radius: 12px;
-            padding: 9px 18px;
+        [data-page="reports"] .period-button {
+            min-height: 40px;
+            padding: 8px 17px;
+            border: 1px solid var(--reports-border);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--reports-muted);
             font-family: inherit;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             cursor: pointer;
-            transition: .2s ease;
+            transition:
+                background .18s ease,
+                color .18s ease,
+                border-color .18s ease,
+                transform .18s ease;
         }
 
-        [data-page="reports"] .chip:hover {
+        [data-page="reports"] .period-button:hover {
             border-color: var(--reports-primary);
             color: var(--reports-primary);
         }
 
-        [data-page="reports"] .chip.active {
-            background: var(--reports-primary);
+        [data-page="reports"] .period-button:active {
+            transform: translateY(1px);
+        }
+
+        [data-page="reports"] .period-button.active {
             border-color: var(--reports-primary);
+            background: var(--reports-primary);
             color: #fff;
-            box-shadow: 0 5px 14px rgba(143, 23, 32, .16);
+            box-shadow: 0 5px 14px rgba(143, 23, 32, .15);
         }
 
         [data-page="reports"] .date-range-panel {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 14px;
             padding: 14px;
-            background: #fafafa;
-            border: 1px solid #eeeeee;
-            border-radius: 14px;
+            border: 1px solid var(--reports-border);
+            border-radius: 13px;
+            background: var(--reports-surface-soft);
         }
 
-        [data-page="reports"] .form-group.compact {
+        [data-page="reports"] .date-range-panel.hidden {
+            display: none;
+        }
+
+        [data-page="reports"] .date-field {
             margin: 0;
         }
 
-        [data-page="reports"] .toolbar-actions {
+        [data-page="reports"] .date-field label {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--reports-text);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        [data-page="reports"] .date-field input {
+            width: 100%;
+            min-height: 42px;
+        }
+
+        [data-page="reports"] .filter-footer {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        [data-page="reports"] .selected-period {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            color: var(--reports-muted);
+            font-size: 11px;
+        }
+
+        [data-page="reports"] .selected-period i {
+            color: var(--reports-primary);
+        }
+
+        [data-page="reports"] .filter-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             flex-wrap: wrap;
+        }
+
+        /* =========================================================
+           REPORT STATUS BAR
+        ========================================================= */
+
+        [data-page="reports"] .report-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+            padding: 13px 16px;
+            border: 1px solid var(--reports-border);
+            border-radius: 13px;
+            background: var(--reports-surface);
+        }
+
+        [data-page="reports"] .report-status-info {
+            display: flex;
+            align-items: center;
             gap: 9px;
+            min-width: 0;
         }
 
-        [data-page="reports"] .toolbar-actions .btn {
-            min-width: 110px;
+        [data-page="reports"] .report-status-dot {
+            width: 8px;
+            height: 8px;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            background: var(--reports-green);
         }
 
-        [data-page="reports"] .kpi-grid {
+        [data-page="reports"] .report-status-info strong {
+            color: var(--reports-text);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .report-status-info span {
+            color: var(--reports-muted);
+            font-size: 11px;
+        }
+
+        [data-page="reports"] .report-generated-at {
+            color: var(--reports-muted);
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        /* =========================================================
+           KPI GRID
+        ========================================================= */
+
+        [data-page="reports"] .report-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 24px;
+            gap: 13px;
+            margin-bottom: 22px;
         }
 
         [data-page="reports"] .report-kpi {
             position: relative;
+            min-height: 130px;
             overflow: hidden;
-            padding: 18px;
-            min-height: 125px;
-            border-radius: 16px;
-            background: var(--surface, #fff);
-            border: 1px solid var(--border-color, #e5e7eb);
-            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,.04));
+            padding: 17px;
+            border: 1px solid var(--reports-border);
+            border-radius: var(--reports-radius);
+            background: var(--reports-surface);
+            box-shadow: var(--reports-shadow);
         }
 
         [data-page="reports"] .report-kpi::after {
             content: "";
             position: absolute;
-            width: 90px;
-            height: 90px;
-            left: -32px;
-            bottom: -35px;
+            width: 100px;
+            height: 100px;
+            left: -42px;
+            bottom: -48px;
             border-radius: 50%;
             background: var(--kpi-soft);
+            pointer-events: none;
+        }
+
+        [data-page="reports"] .report-kpi-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
         }
 
         [data-page="reports"] .report-kpi-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+            flex: 0 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 10px;
+            border-radius: 12px;
             background: var(--kpi-soft);
             color: var(--kpi-color);
+            font-size: 16px;
         }
 
         [data-page="reports"] .report-kpi-label {
-            color: var(--text-secondary, #64748b);
-            font-size: 12px;
+            margin-top: 12px;
+            color: var(--reports-muted);
+            font-size: 11px;
             font-weight: 600;
-            margin-bottom: 4px;
         }
 
         [data-page="reports"] .report-kpi-value {
-            color: var(--text-primary, #1f2937);
+            margin-top: 4px;
+            color: var(--reports-text);
             font-size: 22px;
             font-weight: 800;
-            line-height: 1.3;
+            line-height: 1.35;
         }
 
-        [data-page="reports"] .report-kpi-unit {
-            font-size: 11px;
-            color: var(--text-secondary, #64748b);
+        [data-page="reports"] .report-kpi-value small {
+            margin-right: 3px;
+            color: var(--reports-muted);
+            font-size: 10px;
             font-weight: 500;
         }
 
-        [data-page="reports"] .content-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
-            gap: 24px;
-            margin-bottom: 24px;
+        /* =========================================================
+           SECTION HEADER
+        ========================================================= */
+
+        [data-page="reports"] .report-section {
+            margin-bottom: 22px;
         }
 
-        [data-page="reports"] .chart-container {
-            background: var(--surface, #fff);
-            border: 1px solid var(--border-color, #e5e7eb);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,.04));
-        }
-
-        [data-page="reports"] .chart-bars {
-            min-height: 280px;
-            padding: 28px 24px 18px;
+        [data-page="reports"] .report-section-header {
             display: flex;
-            align-items: flex-end;
+            align-items: center;
+            justify-content: space-between;
             gap: 12px;
-            overflow-x: auto;
+            margin-bottom: 11px;
         }
 
-        [data-page="reports"] .chart-column {
-            min-width: 46px;
-            flex: 1;
-            height: 230px;
+        [data-page="reports"] .report-section-title {
             display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
+            align-items: center;
+            gap: 9px;
+            margin: 0;
+            color: var(--reports-text);
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .report-section-title i {
+            color: var(--reports-primary);
+            font-size: 14px;
+        }
+
+        [data-page="reports"] .report-section-subtitle {
+            margin: 3px 0 0;
+            color: var(--reports-muted);
+            font-size: 10px;
+        }
+
+        [data-page="reports"] .report-section-count {
+            min-width: 30px;
+            padding: 5px 9px;
+            border-radius: 99px;
+            background: var(--reports-primary-soft);
+            color: var(--reports-primary);
+            font-size: 10px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        /* =========================================================
+           FINANCIAL SUMMARY
+        ========================================================= */
+
+        [data-page="reports"] .financial-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 13px;
+        }
+
+        [data-page="reports"] .financial-card {
+            padding: 17px;
+            border: 1px solid var(--reports-border);
+            border-radius: 15px;
+            background: var(--reports-surface);
+            box-shadow: var(--reports-shadow);
+        }
+
+        [data-page="reports"] .financial-card-head {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 13px;
+        }
+
+        [data-page="reports"] .financial-card-icon {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--financial-soft);
+            color: var(--financial-color);
+            font-size: 13px;
+        }
+
+        [data-page="reports"] .financial-card-title {
+            color: var(--reports-text);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .financial-card-value {
+            color: var(--reports-text);
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .financial-card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f0f1f3;
+            color: var(--reports-muted);
+            font-size: 10px;
+        }
+
+        [data-page="reports"] .financial-card-meta strong {
+            color: var(--reports-text);
+            font-weight: 800;
+        }
+
+        /* =========================================================
+           TWO COLUMN SUMMARY
+        ========================================================= */
+
+        [data-page="reports"] .summary-columns {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 18px;
+        }
+
+        [data-page="reports"] .summary-panel {
+            overflow: hidden;
+            border: 1px solid var(--reports-border);
+            border-radius: var(--reports-radius);
+            background: var(--reports-surface);
+            box-shadow: var(--reports-shadow);
+        }
+
+        [data-page="reports"] .summary-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 15px 17px;
+            border-bottom: 1px solid var(--reports-border);
+        }
+
+        [data-page="reports"] .summary-panel-header h3 {
+            margin: 0;
+            color: var(--reports-text);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .summary-panel-header span {
+            color: var(--reports-muted);
+            font-size: 10px;
+        }
+
+        [data-page="reports"] .summary-panel-body {
+            padding: 14px 17px;
+        }
+
+        [data-page="reports"] .summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f2f4;
+        }
+
+        [data-page="reports"] .summary-row:last-child {
+            border-bottom: 0;
+        }
+
+        [data-page="reports"] .summary-row-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            color: var(--reports-muted);
+            font-size: 11px;
+        }
+
+        [data-page="reports"] .summary-row-label i {
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border-radius: 8px;
+            background: var(--row-soft);
+            color: var(--row-color);
+            font-size: 10px;
+        }
+
+        [data-page="reports"] .summary-row-value {
+            color: var(--reports-text);
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        /* =========================================================
+           BOOKINGS TABLE
+        ========================================================= */
+
+        [data-page="reports"] .report-table-card {
+            overflow: hidden;
+            border: 1px solid var(--reports-border);
+            border-radius: var(--reports-radius);
+            background: var(--reports-surface);
+            box-shadow: var(--reports-shadow);
+        }
+
+        [data-page="reports"] .report-table-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 15px 17px;
+            border-bottom: 1px solid var(--reports-border);
+        }
+
+        [data-page="reports"] .report-table-toolbar-left {
+            display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        [data-page="reports"] .chart-value {
-            color: var(--text-secondary, #64748b);
-            font-size: 10px;
-            font-weight: 700;
-            white-space: nowrap;
+        [data-page="reports"] .report-table-toolbar-title {
+            color: var(--reports-text);
+            font-size: 13px;
+            font-weight: 800;
         }
 
-        [data-page="reports"] .chart-bar-track {
+        [data-page="reports"] .report-table-toolbar-note {
+            color: var(--reports-muted);
+            font-size: 10px;
+        }
+
+        [data-page="reports"] .table-scroll {
             width: 100%;
-            height: 175px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            background: linear-gradient(
-                to top,
-                rgba(143, 23, 32, .025),
-                rgba(143, 23, 32, 0)
-            );
-            border-radius: 9px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-        [data-page="reports"] .chart-bar {
-            width: min(34px, 70%);
-            min-height: 3px;
-            background: var(--reports-primary);
-            border-radius: 8px 8px 3px 3px;
-            transition: height .45s ease;
+        [data-page="reports"] .report-table {
+            width: 100%;
+            min-width: 850px;
+            border-collapse: collapse;
         }
 
-        [data-page="reports"] .chart-label {
-            color: var(--text-secondary, #64748b);
+        [data-page="reports"] .report-table th {
+            padding: 12px 13px;
+            border-bottom: 1px solid var(--reports-border);
+            background: #fafafa;
+            color: var(--reports-muted);
             font-size: 10px;
-            font-weight: 700;
+            font-weight: 800;
+            text-align: right;
             white-space: nowrap;
         }
 
-        [data-page="reports"] .chart-legend {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 0 24px 20px;
-        }
-
-        [data-page="reports"] .chart-legend-item {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            color: var(--text-secondary, #64748b);
+        [data-page="reports"] .report-table td {
+            padding: 13px;
+            border-bottom: 1px solid #f0f1f3;
+            color: var(--reports-text);
             font-size: 11px;
+            vertical-align: middle;
         }
 
-        [data-page="reports"] .chart-legend-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: var(--reports-primary);
+        [data-page="reports"] .report-table tbody tr:last-child td {
+            border-bottom: 0;
         }
 
-        [data-page="reports"] #statusDistribution {
-            padding: 18px;
+        [data-page="reports"] .report-table tbody tr:hover {
+            background: #fcfcfc;
         }
 
-        [data-page="reports"] .status-row {
-            margin-bottom: 17px;
+        [data-page="reports"] .report-id {
+            color: var(--reports-primary);
+            font-weight: 800;
         }
 
-        [data-page="reports"] .status-row:last-child {
-            margin-bottom: 0;
-        }
-
-        [data-page="reports"] .status-row-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 7px;
-        }
-
-        [data-page="reports"] .status-name {
-            color: var(--text-primary, #1f2937);
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        [data-page="reports"] .status-count {
-            color: var(--text-secondary, #64748b);
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        [data-page="reports"] .status-progress {
-            height: 8px;
-            background: #f0f1f3;
-            border-radius: 99px;
-            overflow: hidden;
-        }
-
-        [data-page="reports"] .status-progress-fill {
-            height: 100%;
-            border-radius: inherit;
-            background: var(--reports-primary);
-            transition: width .4s ease;
-        }
-
-        [data-page="reports"] .top-customer-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        [data-page="reports"] .top-customer {
+        [data-page="reports"] .report-customer {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 13px;
-            background: #fafafa;
-            border: 1px solid #eeeeee;
+            gap: 9px;
+            min-width: 160px;
         }
 
-        [data-page="reports"] .top-customer-rank {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
+        [data-page="reports"] .report-avatar {
+            width: 31px;
+            height: 31px;
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
             background: var(--reports-primary-soft);
             color: var(--reports-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 800;
-            flex: 0 0 auto;
-        }
-
-        [data-page="reports"] .top-customer-info {
-            min-width: 0;
-            flex: 1;
-        }
-
-        [data-page="reports"] .top-customer-name {
-            color: var(--text-primary, #1f2937);
-            font-size: 13px;
-            font-weight: 800;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        [data-page="reports"] .top-customer-meta {
-            color: var(--text-secondary, #64748b);
-            font-size: 10px;
-            margin-top: 2px;
-        }
-
-        [data-page="reports"] .top-customer-total {
-            color: var(--reports-primary);
-            font-size: 12px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        [data-page="reports"] .report-empty {
-            padding: 35px 20px;
-            text-align: center;
-            color: var(--text-secondary, #64748b);
-        }
-
-        [data-page="reports"] .report-empty i {
-            display: block;
-            font-size: 28px;
-            margin-bottom: 10px;
-            opacity: .5;
-        }
-
-        [data-page="reports"] .report-empty strong {
-            display: block;
-            color: var(--text-primary, #1f2937);
-            font-size: 13px;
-            margin-bottom: 4px;
-        }
-
-        [data-page="reports"] .report-empty span {
             font-size: 11px;
+            font-weight: 800;
         }
+
+        [data-page="reports"] .report-customer-info {
+            min-width: 0;
+        }
+
+        [data-page="reports"] .report-customer-name {
+            overflow: hidden;
+            color: var(--reports-text);
+            font-size: 11px;
+            font-weight: 800;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        [data-page="reports"] .report-customer-phone {
+            margin-top: 2px;
+            color: var(--reports-muted);
+            font-size: 9px;
+        }
+
+        [data-page="reports"] .report-event {
+            max-width: 180px;
+        }
+
+        [data-page="reports"] .report-event-title {
+            overflow: hidden;
+            font-weight: 700;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        [data-page="reports"] .report-event-date {
+            margin-top: 3px;
+            color: var(--reports-muted);
+            font-size: 9px;
+        }
+
+        [data-page="reports"] .money-cell {
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        [data-page="reports"] .money-cell.paid {
+            color: var(--reports-green);
+        }
+
+        [data-page="reports"] .money-cell.remaining {
+            color: var(--reports-orange);
+        }
+
+        /* =========================================================
+           STATUS
+        ========================================================= */
 
         [data-page="reports"] .report-status {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 5px;
+            min-width: 65px;
             padding: 5px 9px;
             border-radius: 99px;
-            font-size: 10px;
-            font-weight: 700;
+            font-size: 9px;
+            font-weight: 800;
             white-space: nowrap;
         }
 
@@ -417,113 +780,364 @@
             color: var(--reports-danger);
         }
 
-        [data-page="reports"] .report-type {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: var(--reports-primary);
-            font-size: 11px;
-            font-weight: 700;
+        /* =========================================================
+           SUPPLIERS
+        ========================================================= */
+
+        [data-page="reports"] .supplier-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 13px;
+            margin-bottom: 14px;
         }
 
-        [data-page="reports"] .report-amount {
+        [data-page="reports"] .supplier-summary-card {
+            padding: 16px;
+            border: 1px solid var(--reports-border);
+            border-radius: 14px;
+            background: var(--reports-surface);
+        }
+
+        [data-page="reports"] .supplier-summary-card-label {
+            color: var(--reports-muted);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        [data-page="reports"] .supplier-summary-card-value {
+            margin-top: 5px;
+            color: var(--reports-text);
+            font-size: 19px;
             font-weight: 800;
-            white-space: nowrap;
+        }
+
+        [data-page="reports"] .supplier-summary-card-value.paid {
+            color: var(--reports-green);
+        }
+
+        [data-page="reports"] .supplier-summary-card-value.due {
+            color: var(--reports-orange);
+        }
+
+        /* =========================================================
+           EMPTY / LOADING
+        ========================================================= */
+
+        [data-page="reports"] .report-empty {
+            padding: 46px 20px;
+            text-align: center;
+            color: var(--reports-muted);
+        }
+
+        [data-page="reports"] .report-empty-icon {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            background: var(--reports-primary-soft);
+            color: var(--reports-primary);
+            font-size: 19px;
+        }
+
+        [data-page="reports"] .report-empty strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--reports-text);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        [data-page="reports"] .report-empty span {
+            font-size: 10px;
         }
 
         [data-page="reports"] .report-loading {
-            padding: 50px 20px;
+            padding: 55px 20px;
             text-align: center;
-            color: var(--text-secondary, #64748b);
+            color: var(--reports-muted);
         }
 
         [data-page="reports"] .report-loading i {
-            font-size: 22px;
+            display: block;
             margin-bottom: 10px;
+            color: var(--reports-primary);
+            font-size: 22px;
         }
 
-        @media (max-width: 1000px) {
-            [data-page="reports"] .kpi-grid {
+        [data-page="reports"] .report-loading strong {
+            display: block;
+            color: var(--reports-text);
+            font-size: 12px;
+        }
+
+        /* =========================================================
+           PRINT HEADER
+        ========================================================= */
+
+        [data-page="reports"] .print-header {
+            display: none;
+        }
+
+        /* =========================================================
+           RESPONSIVE
+        ========================================================= */
+
+        @media (max-width: 1050px) {
+            [data-page="reports"] .report-summary {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            [data-page="reports"] .content-grid {
+            [data-page="reports"] .financial-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 800px) {
+            [data-page="reports"] .reports-page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            [data-page="reports"] .reports-header-actions {
+                width: 100%;
+            }
+
+            [data-page="reports"] .reports-header-actions .btn {
+                flex: 1;
+            }
+
+            [data-page="reports"] .summary-columns {
+                grid-template-columns: 1fr;
+            }
+
+            [data-page="reports"] .supplier-summary-grid {
                 grid-template-columns: 1fr;
             }
         }
 
-        @media (max-width: 650px) {
+        @media (max-width: 620px) {
+            [data-page="reports"] .reports-page-title {
+                font-size: 22px;
+            }
+
+            [data-page="reports"] .report-filter-header {
+                padding: 15px;
+            }
+
+            [data-page="reports"] .report-filter-body {
+                padding: 15px;
+            }
+
             [data-page="reports"] .date-range-panel {
                 grid-template-columns: 1fr;
             }
 
-            [data-page="reports"] .toolbar-actions {
+            [data-page="reports"] .filter-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            [data-page="reports"] .filter-actions {
                 display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-columns: 1fr;
             }
 
-            [data-page="reports"] .toolbar-actions .btn {
-                min-width: 0;
-                padding-inline: 8px;
+            [data-page="reports"] .filter-actions .btn {
+                width: 100%;
             }
 
-            [data-page="reports"] .kpi-grid {
+            [data-page="reports"] .report-status-bar {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 7px;
+            }
+
+            [data-page="reports"] .report-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 9px;
             }
 
             [data-page="reports"] .report-kpi {
+                min-height: 115px;
                 padding: 13px;
-                min-height: 112px;
+            }
+
+            [data-page="reports"] .report-kpi-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                font-size: 14px;
+            }
+
+            [data-page="reports"] .report-kpi-label {
+                margin-top: 9px;
+                font-size: 10px;
             }
 
             [data-page="reports"] .report-kpi-value {
-                font-size: 18px;
+                font-size: 17px;
             }
 
-            [data-page="reports"] .chart-bars {
-                padding-inline: 14px;
-            }
-        }
-
-        @media (max-width: 430px) {
-            [data-page="reports"] .toolbar-actions {
+            [data-page="reports"] .financial-grid {
                 grid-template-columns: 1fr;
             }
 
-            [data-page="reports"] .filter-chips {
+            [data-page="reports"] .period-buttons {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            [data-page="reports"] .chip {
+            [data-page="reports"] .period-button {
                 width: 100%;
             }
         }
 
+        @media (max-width: 400px) {
+            [data-page="reports"] .report-summary {
+                grid-template-columns: 1fr;
+            }
+
+            [data-page="reports"] .period-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* =========================================================
+           PRINT
+        ========================================================= */
+
         @media print {
+            @page {
+                size: A4;
+                margin: 12mm;
+            }
+
+            html,
+            body {
+                background: #fff !important;
+            }
+
+            [data-page="reports"] {
+                --reports-border: #d8d8d8;
+                --reports-text: #111;
+                --reports-muted: #555;
+            }
+
             [data-page="reports"] .sidebar,
+            [data-page="reports"] .sidebar-overlay,
             [data-page="reports"] .header,
             [data-page="reports"] .bottom-nav,
             [data-page="reports"] .fab,
-            [data-page="reports"] .toolbar-actions,
-            [data-page="reports"] .filter-chips {
+            [data-page="reports"] .reports-header-actions,
+            [data-page="reports"] .report-filter-card,
+            [data-page="reports"] .report-status-bar,
+            [data-page="reports"] .report-table-toolbar-note {
                 display: none !important;
             }
 
             [data-page="reports"] .main-area {
-                margin: 0 !important;
                 width: 100% !important;
+                margin: 0 !important;
             }
 
             [data-page="reports"] .content {
                 padding: 0 !important;
+                margin: 0 !important;
             }
 
-            [data-page="reports"] .card,
-            [data-page="reports"] .chart-container,
+            [data-page="reports"] .print-header {
+                display: block;
+                margin-bottom: 18px;
+                padding-bottom: 13px;
+                border-bottom: 2px solid #8f1720;
+            }
+
+            [data-page="reports"] .print-company {
+                color: #8f1720;
+                font-size: 20px;
+                font-weight: 800;
+            }
+
+            [data-page="reports"] .print-title {
+                margin-top: 4px;
+                color: #111;
+                font-size: 16px;
+                font-weight: 800;
+            }
+
+            [data-page="reports"] .print-period {
+                margin-top: 4px;
+                color: #555;
+                font-size: 10px;
+            }
+
+            [data-page="reports"] .reports-page-header {
+                margin-bottom: 14px;
+            }
+
+            [data-page="reports"] .reports-page-title {
+                font-size: 20px;
+            }
+
+            [data-page="reports"] .reports-page-subtitle {
+                font-size: 10px;
+            }
+
+            [data-page="reports"] .report-summary {
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 7px;
+            }
+
+            [data-page="reports"] .report-kpi {
+                min-height: 90px;
+                padding: 9px;
+                box-shadow: none !important;
+            }
+
+            [data-page="reports"] .report-kpi-icon {
+                display: none;
+            }
+
+            [data-page="reports"] .report-kpi-label {
+                margin-top: 0;
+                font-size: 8px;
+            }
+
+            [data-page="reports"] .report-kpi-value {
+                font-size: 13px;
+            }
+
+            [data-page="reports"] .summary-columns {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            [data-page="reports"] .financial-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            [data-page="reports"] .report-section,
+            [data-page="reports"] .report-table-card,
+            [data-page="reports"] .summary-panel,
+            [data-page="reports"] .financial-card {
+                break-inside: avoid;
+            }
+
+            [data-page="reports"] .report-table-card,
+            [data-page="reports"] .summary-panel,
+            [data-page="reports"] .financial-card,
             [data-page="reports"] .report-kpi {
                 box-shadow: none !important;
-                break-inside: avoid;
+            }
+
+            [data-page="reports"] .report-table {
+                min-width: 0;
+            }
+
+            [data-page="reports"] .table-scroll {
+                overflow: visible;
             }
         }
     </style>
@@ -531,135 +1145,119 @@
 
 <body>
 
-<div id="loadingScreen" class="loading-screen">
-    <div class="loading-content">
-        <div class="loading-logo">
-            <i class="fas fa-utensils"></i>
-        </div>
+    <!-- =========================================================
+         LOADING SCREEN
+    ========================================================== -->
 
-        <h1 class="loading-title">شواطئ عدن</h1>
-        <p class="loading-subtitle">مطابخ ومطاعم</p>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
 
-        <div class="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-    </div>
-</div>
-
-<div class="app">
-
-    <aside id="sidebar" class="sidebar"></aside>
-
-    <div id="sidebarOverlay" class="sidebar-overlay"></div>
-
-    <div class="main-area">
-
-        <header id="header" class="header"></header>
-
-        <main class="content" id="pageContent">
-
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title">التقارير</h1>
-                    <p class="page-subtitle">تحليلات الأداء والإيرادات</p>
-                </div>
+            <div class="loading-logo">
+                <i class="fas fa-utensils"></i>
             </div>
 
-            <div class="card mb-6">
+            <h1 class="loading-title">
+                شواطئ عدن
+            </h1>
 
-                <div class="card-header">
-                    <h2 class="card-title">الفترة الزمنية</h2>
-                </div>
+            <p class="loading-subtitle">
+                مطابخ ومطاعم
+            </p>
 
-                <div class="report-toolbar">
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
 
-                    <div class="filter-chips">
+        </div>
+    </div>
 
-                        <button
-                            class="chip active"
-                            type="button"
-                            data-period="day"
-                        >
-                            يومي
-                        </button>
 
-                        <button
-                            class="chip"
-                            type="button"
-                            data-period="week"
-                        >
-                            أسبوعي
-                        </button>
+    <!-- =========================================================
+         APPLICATION
+    ========================================================== -->
 
-                        <button
-                            class="chip"
-                            type="button"
-                            data-period="month"
-                        >
-                            شهري
-                        </button>
+    <div class="app">
 
-                        <button
-                            class="chip"
-                            type="button"
-                            data-period="custom"
-                        >
-                            مخصص
-                        </button>
+        <aside
+            id="sidebar"
+            class="sidebar"
+        ></aside>
 
+        <div
+            id="sidebarOverlay"
+            class="sidebar-overlay"
+        ></div>
+
+        <div class="main-area">
+
+            <header
+                id="header"
+                class="header"
+            ></header>
+
+            <main
+                class="content"
+                id="pageContent"
+            >
+
+                <!-- =================================================
+                     PRINT HEADER
+                ================================================== -->
+
+                <div class="print-header">
+
+                    <div class="print-company">
+                        شواطئ عدن
+                    </div>
+
+                    <div class="print-title">
+                        التقرير الشامل
                     </div>
 
                     <div
-                        class="date-range-panel"
-                        id="customDateRange"
-                        style="display:none"
+                        class="print-period"
+                        id="printReportPeriod"
                     >
+                        —
+                    </div>
 
-                        <div class="form-group compact">
-                            <label for="reportStartDate">من</label>
-                            <input
-                                type="date"
-                                id="reportStartDate"
-                                class="form-input"
-                            >
-                        </div>
+                </div>
 
-                        <div class="form-group compact">
-                            <label for="reportEndDate">إلى</label>
-                            <input
-                                type="date"
-                                id="reportEndDate"
-                                class="form-input"
-                            >
-                        </div>
+
+                <!-- =================================================
+                     PAGE HEADER
+                ================================================== -->
+
+                <div class="reports-page-header">
+
+                    <div>
+
+                        <h1 class="reports-page-title">
+                            التقارير
+                        </h1>
+
+                        <p class="reports-page-subtitle">
+                            تقرير شامل للحجوزات والعملاء والموردين والحركة المالية خلال الفترة المحددة.
+                        </p>
 
                     </div>
 
-                    <div class="toolbar-actions">
+                    <div class="reports-header-actions">
 
                         <button
-                            class="btn btn-secondary btn-sm"
                             type="button"
-                            id="exportCsvBtn"
+                            class="btn btn-secondary btn-sm"
+                            id="printReportBtn"
                         >
-                            <i class="fas fa-file-csv"></i>
-                            CSV
+                            <i class="fas fa-print"></i>
+                            طباعة التقرير
                         </button>
 
                         <button
-                            class="btn btn-secondary btn-sm"
                             type="button"
-                            id="exportJsonBtn"
-                        >
-                            <i class="fas fa-file-code"></i>
-                            JSON
-                        </button>
-
-                        <button
                             class="btn btn-primary btn-sm"
-                            type="button"
                             id="shareReportBtn"
                         >
                             <i class="fas fa-share-alt"></i>
@@ -670,118 +1268,1626 @@
 
                 </div>
 
-            </div>
 
-            <div class="kpi-grid" id="reportSummary"></div>
+                <!-- =================================================
+                     REPORT FILTER
+                ================================================== -->
 
-            <div class="content-grid">
+                <section class="report-filter-card">
 
-                <div class="chart-container">
+                    <div class="report-filter-header">
 
-                    <div class="card-header">
-                        <h2 class="card-title">الاتجاه الزمني للأرباح</h2>
-                    </div>
+                        <div class="report-filter-heading">
 
-                    <div
-                        class="chart-bars"
-                        id="monthlyChart"
-                    ></div>
+                            <div class="report-filter-icon">
+                                <i class="fas fa-calendar-days"></i>
+                            </div>
 
-                    <div class="chart-legend">
+                            <div>
 
-                        <div class="chart-legend-item">
-                            <span class="chart-legend-dot"></span>
-                            <span>الإيرادات</span>
+                                <h2>
+                                    تحديد فترة التقرير
+                                </h2>
+
+                                <p>
+                                    اختر اليوم أو الفترة التي تريد استخراج التقرير عنها.
+                                </p>
+
+                            </div>
+
                         </div>
 
                     </div>
 
-                </div>
 
-                <div class="card">
+                    <div class="report-filter-body">
 
-                    <div class="card-header">
-                        <h2 class="card-title">توزيع الحالات</h2>
+                        <div
+                            class="period-buttons"
+                            id="reportPeriodButtons"
+                        >
+
+                            <button
+                                type="button"
+                                class="period-button active"
+                                data-period="day"
+                            >
+                                <i class="fas fa-calendar-day"></i>
+                                اليوم
+                            </button>
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="yesterday"
+                            >
+                                <i class="fas fa-calendar-minus"></i>
+                                أمس
+                            </button>
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="week"
+                            >
+                                <i class="fas fa-calendar-week"></i>
+                                هذا الأسبوع
+                            </button>
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="month"
+                            >
+                                <i class="fas fa-calendar"></i>
+                                هذا الشهر
+                            </button>
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="custom"
+                            >
+                                <i class="fas fa-sliders"></i>
+                                فترة مخصصة
+                            </button>
+
+                        </div>
+
+
+                        <div
+                            id="customDateRange"
+                            class="date-range-panel hidden"
+                        >
+
+                            <div class="date-field">
+
+                                <label for="reportStartDate">
+                                    من تاريخ
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="reportStartDate"
+                                    class="form-input"
+                                >
+
+                            </div>
+
+                            <div class="date-field">
+
+                                <label for="reportEndDate">
+                                    إلى تاريخ
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="reportEndDate"
+                                    class="form-input"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="filter-footer">
+
+                            <div class="selected-period">
+
+                                <i class="fas fa-calendar-check"></i>
+
+                                <span id="selectedReportPeriod">
+                                    تقرير اليوم
+                                </span>
+
+                            </div>
+
+
+                            <div class="filter-actions">
+
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary btn-sm"
+                                    id="resetReportBtn"
+                                >
+                                    <i class="fas fa-rotate-right"></i>
+                                    إعادة ضبط
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-primary btn-sm"
+                                    id="applyReportBtn"
+                                >
+                                    <i class="fas fa-chart-column"></i>
+                                    إنشاء التقرير
+                                </button>
+
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div
-                        class="card-body"
-                        id="statusDistribution"
-                    ></div>
+                </section>
 
-                </div>
 
-            </div>
-
-            <div class="card mt-6">
-
-                <div class="card-header">
-                    <h2 class="card-title">أفضل العملاء</h2>
-                </div>
+                <!-- =================================================
+                     REPORT STATUS
+                ================================================== -->
 
                 <div
-                    class="card-body"
-                    id="topHalls"
-                ></div>
+                    class="report-status-bar"
+                    id="reportStatusBar"
+                >
 
-            </div>
+                    <div class="report-status-info">
 
-            <div class="card mt-6">
+                        <span class="report-status-dot"></span>
 
-                <div class="card-header">
-                    <h2 class="card-title">تفاصيل التقرير</h2>
-                </div>
+                        <strong id="reportStatusTitle">
+                            التقرير جاهز
+                        </strong>
 
-                <div class="table-wrapper">
+                        <span id="reportStatusDescription">
+                            يتم عرض بيانات الفترة المحددة.
+                        </span>
 
-                    <table class="data-table">
+                    </div>
 
-                        <thead>
-                            <tr>
-                                <th>النوع</th>
-                                <th>الاسم</th>
-                                <th>التاريخ</th>
-                                <th>المبلغ</th>
-                                <th>الحالة</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="reportDetailTable"></tbody>
-
-                    </table>
+                    <span
+                        class="report-generated-at"
+                        id="reportGeneratedAt"
+                    >
+                        —
+                    </span>
 
                 </div>
 
-            </div>
 
-        </main>
+                <!-- =================================================
+                     MAIN KPIs
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="mainSummarySection"
+                >
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-chart-pie"></i>
+                                الملخص المالي
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                إجمالي الحركة المالية المرتبطة بالفترة المحددة.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="report-summary"
+                        id="reportSummary"
+                    >
+
+                        <div
+                            class="report-kpi"
+                            style="
+                                --kpi-color:var(--reports-primary);
+                                --kpi-soft:var(--reports-primary-soft);
+                            "
+                        >
+
+                            <div class="report-kpi-top">
+
+                                <div class="report-kpi-icon">
+                                    <i class="fas fa-file-invoice"></i>
+                                </div>
+
+                            </div>
+
+                            <div class="report-kpi-label">
+                                إجمالي الفواتير
+                            </div>
+
+                            <div
+                                class="report-kpi-value"
+                                id="totalInvoicesAmount"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="report-kpi"
+                            style="
+                                --kpi-color:var(--reports-green);
+                                --kpi-soft:var(--reports-green-soft);
+                            "
+                        >
+
+                            <div class="report-kpi-top">
+
+                                <div class="report-kpi-icon">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </div>
+
+                            </div>
+
+                            <div class="report-kpi-label">
+                                المقبوض من العملاء
+                            </div>
+
+                            <div
+                                class="report-kpi-value"
+                                id="totalCustomerPayments"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="report-kpi"
+                            style="
+                                --kpi-color:var(--reports-orange);
+                                --kpi-soft:var(--reports-orange-soft);
+                            "
+                        >
+
+                            <div class="report-kpi-top">
+
+                                <div class="report-kpi-icon">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+
+                            </div>
+
+                            <div class="report-kpi-label">
+                                المتبقي على العملاء
+                            </div>
+
+                            <div
+                                class="report-kpi-value"
+                                id="totalCustomerRemaining"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            class="report-kpi"
+                            style="
+                                --kpi-color:var(--reports-purple);
+                                --kpi-soft:var(--reports-purple-soft);
+                            "
+                        >
+
+                            <div class="report-kpi-top">
+
+                                <div class="report-kpi-icon">
+                                    <i class="fas fa-receipt"></i>
+                                </div>
+
+                            </div>
+
+                            <div class="report-kpi-label">
+                                فواتير الموردين
+                            </div>
+
+                            <div
+                                class="report-kpi-value"
+                                id="totalSupplierInvoices"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     CUSTOMERS / SUPPLIERS FINANCIAL SUMMARY
+                ================================================== -->
+
+                <section class="report-section">
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-scale-balanced"></i>
+                                الملخص المالي التفصيلي
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                مقارنة الفواتير والمدفوعات والمبالغ المستحقة للعملاء والموردين.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="financial-grid">
+
+                        <!-- CUSTOMER INVOICES -->
+
+                        <div class="financial-card">
+
+                            <div class="financial-card-head">
+
+                                <div
+                                    class="financial-card-icon"
+                                    style="
+                                        --financial-color:var(--reports-primary);
+                                        --financial-soft:var(--reports-primary-soft);
+                                    "
+                                >
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                </div>
+
+                                <div class="financial-card-title">
+                                    حسابات العملاء
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="financial-card-value"
+                                id="customerInvoicesTotal"
+                            >
+                                —
+                            </div>
+
+                            <div class="financial-card-meta">
+
+                                <span>
+                                    إجمالي الفواتير
+                                </span>
+
+                                <strong id="customerInvoicesCount">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- CUSTOMER PAYMENTS -->
+
+                        <div class="financial-card">
+
+                            <div class="financial-card-head">
+
+                                <div
+                                    class="financial-card-icon"
+                                    style="
+                                        --financial-color:var(--reports-green);
+                                        --financial-soft:var(--reports-green-soft);
+                                    "
+                                >
+                                    <i class="fas fa-hand-holding-dollar"></i>
+                                </div>
+
+                                <div class="financial-card-title">
+                                    دفعات العملاء
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="financial-card-value"
+                                id="customerPaymentsTotal"
+                            >
+                                —
+                            </div>
+
+                            <div class="financial-card-meta">
+
+                                <span>
+                                    عدد الدفعات
+                                </span>
+
+                                <strong id="customerPaymentsCount">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- CUSTOMER REMAINING -->
+
+                        <div class="financial-card">
+
+                            <div class="financial-card-head">
+
+                                <div
+                                    class="financial-card-icon"
+                                    style="
+                                        --financial-color:var(--reports-orange);
+                                        --financial-soft:var(--reports-orange-soft);
+                                    "
+                                >
+                                    <i class="fas fa-clock"></i>
+                                </div>
+
+                                <div class="financial-card-title">
+                                    مستحقات العملاء
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="financial-card-value"
+                                id="customerRemainingTotal"
+                            >
+                                —
+                            </div>
+
+                            <div class="financial-card-meta">
+
+                                <span>
+                                    إجمالي المتبقي
+                                </span>
+
+                                <strong id="customerRemainingCount">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- SUPPLIER INVOICES -->
+
+                        <div class="financial-card">
+
+                            <div class="financial-card-head">
+
+                                <div
+                                    class="financial-card-icon"
+                                    style="
+                                        --financial-color:var(--reports-purple);
+                                        --financial-soft:var(--reports-purple-soft);
+                                    "
+                                >
+                                    <i class="fas fa-file-circle-check"></i>
+                                </div>
+
+                                <div class="financial-card-title">
+                                    فواتير الموردين
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="financial-card-value"
+                                id="supplierInvoicesTotal"
+                            >
+                                —
+                            </div>
+
+                            <div class="financial-card-meta">
+
+                                <span>
+                                    عدد الفواتير
+                                </span>
+
+                                <strong id="supplierInvoicesCount">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- SUPPLIER PAYMENTS -->
+
+                        <div class="financial-card">
+
+                            <div class="financial-card-head">
+
+                                <div
+                                    class="financial-card-icon"
+                                    style="
+                                        --financial-color:var(--reports-blue);
+                                        --financial-soft:var(--reports-blue-soft);
+                                    "
+                                >
+                                    <i class="fas fa-money-check-dollar"></i>
+                                </div>
+
+                                <div class="financial-card-title">
+                                    مدفوعات الموردين
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="financial-card-value"
+                                id="supplierPaymentsTotal"
+                            >
+                                —
+                            </div>
+
+                            <div class="financial-card-meta">
+
+                                <span>
+                                    عدد المدفوعات
+                                </span>
+
+                                <strong id="supplierPaymentsCount">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- SUPPLIER REMAINING -->
+
+                        <div class="financial-card">
+
+                            <div class="financial-card-head">
+
+                                <div
+                                    class="financial-card-icon"
+                                    style="
+                                        --financial-color:var(--reports-danger);
+                                        --financial-soft:var(--reports-danger-soft);
+                                    "
+                                >
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                </div>
+
+                                <div class="financial-card-title">
+                                    مستحقات الموردين
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="financial-card-value"
+                                id="supplierRemainingTotal"
+                            >
+                                —
+                            </div>
+
+                            <div class="financial-card-meta">
+
+                                <span>
+                                    إجمالي المستحق
+                                </span>
+
+                                <strong id="supplierRemainingCount">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     OPERATIONAL SUMMARY
+                ================================================== -->
+
+                <section class="report-section">
+
+                    <div class="summary-columns">
+
+                        <!-- BOOKINGS -->
+
+                        <div class="summary-panel">
+
+                            <div class="summary-panel-header">
+
+                                <div>
+
+                                    <h3>
+                                        الحجوزات
+                                    </h3>
+
+                                </div>
+
+                                <span id="bookingsSummaryCount">
+                                    —
+                                </span>
+
+                            </div>
+
+                            <div
+                                class="summary-panel-body"
+                                id="bookingsSummary"
+                            >
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-calendar-check"
+                                            style="
+                                                --row-color:var(--reports-primary);
+                                                --row-soft:var(--reports-primary-soft);
+                                            "
+                                        ></i>
+
+                                        إجمالي الحجوزات
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="bookingsCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-file-invoice"
+                                            style="
+                                                --row-color:var(--reports-primary);
+                                                --row-soft:var(--reports-primary-soft);
+                                            "
+                                        ></i>
+
+                                        إجمالي قيمة الحجوزات
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="bookingsTotalAmount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-circle-check"
+                                            style="
+                                                --row-color:var(--reports-green);
+                                                --row-soft:var(--reports-green-soft);
+                                            "
+                                        ></i>
+
+                                        الحجوزات المؤكدة
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="confirmedBookingsCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-circle-check"
+                                            style="
+                                                --row-color:var(--reports-blue);
+                                                --row-soft:var(--reports-blue-soft);
+                                            "
+                                        ></i>
+
+                                        الحجوزات المكتملة
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="completedBookingsCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-ban"
+                                            style="
+                                                --row-color:var(--reports-danger);
+                                                --row-soft:var(--reports-danger-soft);
+                                            "
+                                        ></i>
+
+                                        الحجوزات الملغاة
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="cancelledBookingsCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- CUSTOMERS -->
+
+                        <div class="summary-panel">
+
+                            <div class="summary-panel-header">
+
+                                <div>
+
+                                    <h3>
+                                        العملاء
+                                    </h3>
+
+                                </div>
+
+                                <span id="customersSummaryCount">
+                                    —
+                                </span>
+
+                            </div>
+
+                            <div
+                                class="summary-panel-body"
+                                id="customersSummary"
+                            >
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-users"
+                                            style="
+                                                --row-color:var(--reports-primary);
+                                                --row-soft:var(--reports-primary-soft);
+                                            "
+                                        ></i>
+
+                                        العملاء الذين لديهم حركة
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="activeCustomersCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-file-invoice-dollar"
+                                            style="
+                                                --row-color:var(--reports-primary);
+                                                --row-soft:var(--reports-primary-soft);
+                                            "
+                                        ></i>
+
+                                        فواتير العملاء
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="customerInvoicesSummaryCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-money-bill-wave"
+                                            style="
+                                                --row-color:var(--reports-green);
+                                                --row-soft:var(--reports-green-soft);
+                                            "
+                                        ></i>
+
+                                        دفعات العملاء
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="customerPaymentsSummaryCount"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+
+                                <div class="summary-row">
+
+                                    <div class="summary-row-label">
+
+                                        <i
+                                            class="fas fa-wallet"
+                                            style="
+                                                --row-color:var(--reports-orange);
+                                                --row-soft:var(--reports-orange-soft);
+                                            "
+                                        ></i>
+
+                                        المبالغ المتبقية
+
+                                    </div>
+
+                                    <div
+                                        class="summary-row-value"
+                                        id="customerRemainingSummary"
+                                    >
+                                        —
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     BOOKINGS
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="bookingsReportSection"
+                >
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-calendar-check"></i>
+                                تفاصيل الحجوزات
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                جميع الحجوزات الواقعة ضمن الفترة المحددة.
+                            </p>
+
+                        </div>
+
+                        <span
+                            class="report-section-count"
+                            id="bookingsTableCount"
+                        >
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="report-table-card">
+
+                        <div class="report-table-toolbar">
+
+                            <div class="report-table-toolbar-left">
+
+                                <span class="report-table-toolbar-title">
+                                    الحجوزات
+                                </span>
+
+                                <span class="report-table-toolbar-note">
+                                    العميل · التاريخ · القيمة · المدفوع · المتبقي · الحالة
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="table-scroll">
+
+                            <table class="report-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            رقم
+                                        </th>
+
+                                        <th>
+                                            العميل
+                                        </th>
+
+                                        <th>
+                                            المناسبة
+                                        </th>
+
+                                        <th>
+                                            تاريخ المناسبة
+                                        </th>
+
+                                        <th>
+                                            الإجمالي
+                                        </th>
+
+                                        <th>
+                                            المدفوع
+                                        </th>
+
+                                        <th>
+                                            المتبقي
+                                        </th>
+
+                                        <th>
+                                            الحالة
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="bookingsReportTable">
+
+                                    <tr>
+                                        <td colspan="8">
+
+                                            <div class="report-loading">
+
+                                                <i class="fas fa-spinner fa-spin"></i>
+
+                                                <strong>
+                                                    جاري تحميل التقرير...
+                                                </strong>
+
+                                            </div>
+
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     SUPPLIERS SUMMARY
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="suppliersReportSection"
+                >
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-truck-field"></i>
+                                الموردون
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                ملخص فواتير الموردين ومدفوعاتهم والمبالغ المستحقة.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="supplier-summary-grid">
+
+                        <div class="supplier-summary-card">
+
+                            <div class="supplier-summary-card-label">
+                                إجمالي فواتير الموردين
+                            </div>
+
+                            <div
+                                class="supplier-summary-card-value"
+                                id="suppliersInvoicesAmount"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <div class="supplier-summary-card">
+
+                            <div class="supplier-summary-card-label">
+                                إجمالي المدفوع للموردين
+                            </div>
+
+                            <div
+                                class="supplier-summary-card-value paid"
+                                id="suppliersPaymentsAmount"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <div class="supplier-summary-card">
+
+                            <div class="supplier-summary-card-label">
+                                إجمالي المستحق للموردين
+                            </div>
+
+                            <div
+                                class="supplier-summary-card-value due"
+                                id="suppliersRemainingAmount"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     SUPPLIER INVOICES
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="supplierInvoicesSection"
+                >
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-file-invoice"></i>
+                                فواتير الموردين
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                الفواتير المسجلة ضمن الفترة المحددة.
+                            </p>
+
+                        </div>
+
+                        <span
+                            class="report-section-count"
+                            id="supplierInvoicesTableCount"
+                        >
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="report-table-card">
+
+                        <div class="table-scroll">
+
+                            <table class="report-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            رقم الفاتورة
+                                        </th>
+
+                                        <th>
+                                            المورد
+                                        </th>
+
+                                        <th>
+                                            التاريخ
+                                        </th>
+
+                                        <th>
+                                            المبلغ
+                                        </th>
+
+                                        <th>
+                                            الحالة
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="supplierInvoicesReportTable">
+
+                                    <tr>
+                                        <td colspan="5">
+
+                                            <div class="report-loading">
+
+                                                <i class="fas fa-spinner fa-spin"></i>
+
+                                                <strong>
+                                                    جاري تحميل فواتير الموردين...
+                                                </strong>
+
+                                            </div>
+
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     CUSTOMER PAYMENTS
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="customerPaymentsSection"
+                >
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-hand-holding-dollar"></i>
+                                دفعات العملاء
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                جميع المبالغ التي تم تسجيلها من العملاء خلال الفترة.
+                            </p>
+
+                        </div>
+
+                        <span
+                            class="report-section-count"
+                            id="customerPaymentsTableCount"
+                        >
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="report-table-card">
+
+                        <div class="table-scroll">
+
+                            <table class="report-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            رقم الدفعة
+                                        </th>
+
+                                        <th>
+                                            العميل
+                                        </th>
+
+                                        <th>
+                                            الحجز
+                                        </th>
+
+                                        <th>
+                                            التاريخ
+                                        </th>
+
+                                        <th>
+                                            طريقة الدفع
+                                        </th>
+
+                                        <th>
+                                            المبلغ
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="customerPaymentsReportTable">
+
+                                    <tr>
+                                        <td colspan="6">
+
+                                            <div class="report-loading">
+
+                                                <i class="fas fa-spinner fa-spin"></i>
+
+                                                <strong>
+                                                    جاري تحميل دفعات العملاء...
+                                                </strong>
+
+                                            </div>
+
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     SUPPLIER PAYMENTS
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="supplierPaymentsSection"
+                >
+
+                    <div class="report-section-header">
+
+                        <div>
+
+                            <h2 class="report-section-title">
+                                <i class="fas fa-money-check-dollar"></i>
+                                دفعات الموردين
+                            </h2>
+
+                            <p class="report-section-subtitle">
+                                جميع المدفوعات المسجلة للموردين خلال الفترة.
+                            </p>
+
+                        </div>
+
+                        <span
+                            class="report-section-count"
+                            id="supplierPaymentsTableCount"
+                        >
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="report-table-card">
+
+                        <div class="table-scroll">
+
+                            <table class="report-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            رقم الدفعة
+                                        </th>
+
+                                        <th>
+                                            المورد
+                                        </th>
+
+                                        <th>
+                                            التاريخ
+                                        </th>
+
+                                        <th>
+                                            طريقة الدفع
+                                        </th>
+
+                                        <th>
+                                            المبلغ
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody id="supplierPaymentsReportTable">
+
+                                    <tr>
+                                        <td colspan="5">
+
+                                            <div class="report-loading">
+
+                                                <i class="fas fa-spinner fa-spin"></i>
+
+                                                <strong>
+                                                    جاري تحميل دفعات الموردين...
+                                                </strong>
+
+                                            </div>
+
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     REPORT FOOTER SUMMARY
+                ================================================== -->
+
+                <section
+                    class="report-section"
+                    id="reportFooterSummary"
+                >
+
+                    <div class="summary-panel">
+
+                        <div class="summary-panel-header">
+
+                            <div>
+
+                                <h3>
+                                    الخلاصة
+                                </h3>
+
+                            </div>
+
+                            <span>
+                                التقرير الشامل
+                            </span>
+
+                        </div>
+
+
+                        <div class="summary-panel-body">
+
+                            <div class="summary-row">
+
+                                <div class="summary-row-label">
+
+                                    <i
+                                        class="fas fa-arrow-down"
+                                        style="
+                                            --row-color:var(--reports-green);
+                                            --row-soft:var(--reports-green-soft);
+                                        "
+                                    ></i>
+
+                                    المقبوض من العملاء
+
+                                </div>
+
+                                <div
+                                    class="summary-row-value"
+                                    id="footerCustomerPayments"
+                                >
+                                    —
+                                </div>
+
+                            </div>
+
+
+                            <div class="summary-row">
+
+                                <div class="summary-row-label">
+
+                                    <i
+                                        class="fas fa-arrow-up"
+                                        style="
+                                            --row-color:var(--reports-danger);
+                                            --row-soft:var(--reports-danger-soft);
+                                        "
+                                    ></i>
+
+                                    المدفوع للموردين
+
+                                </div>
+
+                                <div
+                                    class="summary-row-value"
+                                    id="footerSupplierPayments"
+                                >
+                                    —
+                                </div>
+
+                            </div>
+
+
+                            <div class="summary-row">
+
+                                <div class="summary-row-label">
+
+                                    <i
+                                        class="fas fa-scale-balanced"
+                                        style="
+                                            --row-color:var(--reports-primary);
+                                            --row-soft:var(--reports-primary-soft);
+                                        "
+                                    ></i>
+
+                                    صافي الحركة المالية المسجلة
+
+                                </div>
+
+                                <div
+                                    class="summary-row-value"
+                                    id="footerNetMovement"
+                                >
+                                    —
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+            </main>
+
+        </div>
 
     </div>
 
-</div>
 
-<nav id="bottomNav" class="bottom-nav"></nav>
+    <!-- =========================================================
+         BOTTOM NAV
+    ========================================================== -->
 
-<button
-    id="fab"
-    class="fab"
-    aria-label="حجز جديد"
-    type="button"
->
-    <i class="fas fa-plus"></i>
-</button>
+    <nav
+        id="bottomNav"
+        class="bottom-nav"
+    ></nav>
 
-<div id="modalContainer"></div>
 
-<div
-    id="toastContainer"
-    class="toast-container"
-></div>
+    <!-- =========================================================
+         FAB
+    ========================================================== -->
 
-<script src="assets/js/core/utils.js"></script>
-<script src="assets/js/core/api.js"></script>
-<script src="assets/js/components/layout.js"></script>
-<script src="assets/js/pages/reports.js"></script>
+    <button
+        id="fab"
+        class="fab"
+        aria-label="حجز جديد"
+        type="button"
+    >
+        <i class="fas fa-plus"></i>
+    </button>
+
+
+    <!-- =========================================================
+         GLOBAL CONTAINERS
+    ========================================================== -->
+
+    <div id="modalContainer"></div>
+
+    <div
+        id="toastContainer"
+        class="toast-container"
+    ></div>
+
+
+    <!-- =========================================================
+         SCRIPTS
+    ========================================================== -->
+
+    <script src="assets/js/core/utils.js"></script>
+    <script src="assets/js/core/api.js"></script>
+    <script src="assets/js/components/layout.js"></script>
+    <script src="assets/js/pages/reports.js"></script>
 
 </body>
+
 </html>
