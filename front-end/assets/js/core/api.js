@@ -471,6 +471,13 @@ const BASE_URL = "http://127.0.0.1:8000/api";
       }).then(data);
     },
 
+    update(id, payload) {
+      return request(`/supplier-payments/${id}`, {
+        method: "PUT",
+        body: payload,
+      }).then(data);
+    },
+
     delete(id) {
       return request(`/supplier-payments/${id}`, {
         method: "DELETE",
@@ -707,6 +714,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
 
     getSupplierPayment: supplierPayments.get,
     createSupplierPayment: supplierPayments.create,
+    updateSupplierPayment: supplierPayments.update,
     deleteSupplierPayment: supplierPayments.delete,
 
     getSupplierInvoice: supplierInvoices.get,
@@ -730,7 +738,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
     getCustomerStatement: accounts.customerStatement,
     getSupplierAccounts: accounts.suppliers,
     getSupplierAccount: accounts.supplier,
-    getSupplierStatement: accounts.supplier,
+    getSupplierStatement: accounts.supplierStatement,
 
     getDailySummary: reports.dailySummary,
     getReportBookingsByDate: reports.bookingsByDate,

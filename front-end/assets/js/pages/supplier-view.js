@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     mode: 'invoice',
     editingInvoiceId: null,
     editingPaymentId: null,
-    saving: false
+    saving: false,
+    activeTab: 'invoices',
+    invoicesReady: false, paymentsReady: false, statementReady: false,
+    dataIssues: []
   };
 
   const el = {
@@ -89,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function today() {
-    return new Date().toISOString().slice(0, 10);
+    return localDateTime().slice(0, 10);
   }
 
   function localDateTime() {
@@ -107,38 +110,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function normalizeDateTime(value) {
     if (!value) return '';
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return String(value).slice(0, 16);
+    // Laravel's datetime columns are local, not UTC; avoid automatic offset conversion.
+    const raw = String(value);
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(raw) && !/[zZ]|[+-]\d{2}:\d{2}$/.test(raw)) {
+      return raw.replace(' ', 'T').slice(0, 16);
     }
-
-    const offset = date.getTimezoneOffset();
-    const local = new Date(date.getTime() - offset * 60000);
-
-    return local.toISOString().slice(0, 16);
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw.replace(' ', 'T').slice(0, 16);
+    const pad = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 
   function accountTotals() {
-    const invoices = state.invoices.reduce(
-      (sum, invoice) => sum + Number(invoice.total_amount || 0),
-      0
-    );
-
-    const payments = state.payments.reduce(
-      (sum, payment) => sum + Number(payment.amount || 0),
-      0
-    );
-
-    return {
-      invoices,
-      payments,
-      balance: invoices - payments
-    };
+    if (!state.invoicesReady || !state.paymentsReady) return null;
+    const invoices = state.invoices.reduce((sum, invoice) => sum + Number(invoice.total_amount || 0), 0);
+    const payments = state.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    return { invoices, payments, balance: Math.round((invoices - payments) * 100) / 100 };
   }
 
-  async function loadPaymentMethods() {
+  function arrayData(value) {
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.data)) return value.data;
+    if (Array.isArray(value?.data?.data)) return value.data.data;
+    throw new Error('تنسيق استجابة API غير صحيح');
+  }
+
+  function statementData(value) {
+    const obj = value?.data && !Array.isArray(value.data) ? value.data : value;
+    if (Array.isArray(obj?.transactions)) return obj.transactions;
+    if (Array.isArray(obj)) return obj;
+    throw new Error('تنسيق كشف الحساب غير صحيح');
+  }
+
+  function dataNotice() {
+    return state.dataIssues.length
+      ? `<div class="supplier-data-notice" role="alert"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(state.dataIssues.join('، '))} <button type="button" class="btn btn-sm btn-secondary" id="retrySupplierData">إعادة المحاولة</button></div>`
+      : '';
+  }
+
+    async function loadPaymentMethods() {
     try {
       const data = await API.getPaymentMethods();
 
@@ -167,70 +177,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadData() {
-    el.content.innerHTML = `
-      <div class="empty-state">
-        <i class="fas fa-spinner fa-spin"></i>
-        <h4>جاري تحميل ملف المورد</h4>
-        <p>يرجى الانتظار...</p>
-      </div>
-    `;
-
-    try {
-      const [
-        supplier,
-        invoices,
-        payments,
-        statement
-      ] = await Promise.all([
-        API.getSupplier(state.supplierId),
-        API.getSupplierInvoices({ supplier_id: state.supplierId }),
-        API.getSupplierPayments({ supplier_id: state.supplierId }),
-        API.getSupplierStatement(state.supplierId)
-      ]);
-
-      state.supplier = supplier;
-      state.invoices = Array.isArray(invoices)
-        ? invoices
-        : [];
-
-      state.payments = Array.isArray(payments)
-        ? payments
-        : [];
-
-      state.statement = Array.isArray(statement?.transactions)
-        ? statement.transactions
-        : Array.isArray(statement)
-          ? statement
-          : [];
-
-      render();
-    } catch (error) {
-      console.error(error);
-
-      el.content.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-triangle-exclamation"></i>
-          <h4>تعذر تحميل المورد</h4>
-          <p>${escapeHtml(error?.message || 'حدث خطأ')}</p>
-          <button class="btn btn-primary" id="backToSuppliers">
-            العودة للموردين
-          </button>
-        </div>
-      `;
-
-      document
-        .getElementById('backToSuppliers')
-        ?.addEventListener('click', () => {
-          location.href = 'suppliers.html';
-        });
+    el.content.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h4>جاري تحميل ملف المورد...</h4></div>';
+    const [supplierRes, invoicesRes, paymentsRes, statementRes] = await Promise.allSettled([
+      API.getSupplier(state.supplierId),
+      API.getSupplierInvoices({ supplier_id: state.supplierId }),
+      API.getSupplierPayments({ supplier_id: state.supplierId }),
+      API.getSupplierStatement(state.supplierId)
+    ]);
+    if (supplierRes.status !== 'fulfilled' || !supplierRes.value) {
+      const e = supplierRes.reason;
+      el.content.innerHTML = `<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><h4>تعذر تحميل المورد</h4><p>${escapeHtml(e?.message || 'يرجى إعادة المحاولة')}</p><button class="btn btn-primary" id="retrySupplierData">إعادة المحاولة</button></div>`;
+      document.getElementById('retrySupplierData')?.addEventListener('click', loadData);
+      return;
     }
+    state.supplier = supplierRes.value;
+    state.dataIssues = [];
+    state.invoicesReady = invoicesRes.status === 'fulfilled';
+    state.paymentsReady = paymentsRes.status === 'fulfilled';
+    state.statementReady = statementRes.status === 'fulfilled';
+    try { state.invoices = state.invoicesReady ? arrayData(invoicesRes.value) : []; }
+    catch (e) { state.invoicesReady = false; state.invoices = []; }
+    try { state.payments = state.paymentsReady ? arrayData(paymentsRes.value) : []; }
+    catch (e) { state.paymentsReady = false; state.payments = []; }
+    try { state.statement = state.statementReady ? statementData(statementRes.value) : []; }
+    catch (e) { state.statementReady = false; state.statement = []; }
+    if (!state.invoicesReady) state.dataIssues.push('تعذر تحميل الفواتير');
+    if (!state.paymentsReady) state.dataIssues.push('تعذر تحميل الدفعات');
+    if (!state.statementReady && !(state.invoicesReady && state.paymentsReady)) state.dataIssues.push('تعذر تحميل كشف الحساب');
+    render();
   }
 
-  function render() {
+    function render() {
     if (!state.supplier) return;
 
     const totals = accountTotals();
-    const balance = totals.balance;
+    const balance = totals?.balance ?? null;
+    const balanceLabel = balance === null ? 'الرصيد غير متاح' : balance > 0.005 ? `مستحق ${currency(balance)}` : balance < -0.005 ? `رصيد دائن ${currency(-balance)}` : 'الحساب مسدد';
 
     el.content.innerHTML = `
       <div class="supplier-header">
@@ -255,13 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         </div>
 
-        <div class="balance-badge ${balance > 0 ? 'due' : 'clear'}">
-          ${
-            balance > 0
-              ? `مستحق ${currency(balance)}`
-              : 'الحساب مسدد'
-          }
-        </div>
+        <div class="balance-badge ${balance === null ? 'unknown' : balance > 0.005 ? 'due' : balance < -0.005 ? 'credit' : 'clear'}">${escapeHtml(balanceLabel)}</div>
 
       </div>
 
@@ -270,62 +246,66 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="summary-card">
           <span class="label">إجمالي الفواتير</span>
           <span class="value">
-            ${currency(totals.invoices)}
+            ${totals ? currency(totals.invoices) : '—'}
           </span>
         </div>
 
         <div class="summary-card">
           <span class="label">إجمالي المدفوع</span>
           <span class="value success">
-            ${currency(totals.payments)}
+            ${totals ? currency(totals.payments) : '—'}
           </span>
         </div>
 
         <div class="summary-card">
           <span class="label">المستحق</span>
-          <span class="value ${balance > 0 ? 'danger' : 'success'}">
-            ${currency(Math.max(balance, 0))}
+          <span class="value ${balance !== null && balance > 0 ? 'danger' : 'success'}">
+            ${totals ? currency(Math.max(balance, 0)) : '—'}
           </span>
         </div>
 
       </div>
 
+      ${dataNotice()}
+
       <div class="tabs">
 
-        <button class="tab active" data-tab="invoices">
+        <button class="tab ${state.activeTab === 'invoices' ? 'active' : ''}" data-tab="invoices">
           <i class="fas fa-file-invoice"></i>
           الفواتير
         </button>
 
-        <button class="tab" data-tab="payments">
+        <button class="tab ${state.activeTab === 'payments' ? 'active' : ''}" data-tab="payments">
           <i class="fas fa-money-bill-wave"></i>
           المدفوعات
         </button>
 
-        <button class="tab" data-tab="statement">
+        <button class="tab ${state.activeTab === 'statement' ? 'active' : ''}" data-tab="statement">
           <i class="fas fa-receipt"></i>
           كشف الحساب
         </button>
 
       </div>
 
-      <div class="tab-content active" id="tab-invoices">
+      <div class="tab-content ${state.activeTab === 'invoices' ? 'active' : ''}" id="tab-invoices">
         ${renderInvoices()}
       </div>
 
-      <div class="tab-content" id="tab-payments">
+      <div class="tab-content ${state.activeTab === 'payments' ? 'active' : ''}" id="tab-payments">
         ${renderPayments()}
       </div>
 
-      <div class="tab-content" id="tab-statement">
+      <div class="tab-content ${state.activeTab === 'statement' ? 'active' : ''}" id="tab-statement">
         ${renderStatement()}
       </div>
     `;
 
     bindRenderedEvents();
+    document.getElementById('retrySupplierData')?.addEventListener('click', loadData);
   }
 
   function renderInvoices() {
+    if (!state.invoicesReady) return '<div class="empty-state"><h4>تعذر تحميل الفواتير</h4><p>تحقق من الاتصال وأعد المحاولة</p></div>';
     const invoices = [...state.invoices].sort((a, b) => {
       return new Date(b.invoice_date) - new Date(a.invoice_date);
     });
@@ -335,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="empty-state">
           <i class="fas fa-file-invoice"></i>
           <h4>لا توجد فواتير</h4>
-          <p>يمكنك إضافة أول فاتورة لهذا المورد</p>
+          <p>يمكنك إضافة أول فاتورة لهذا المورد</p><button class="btn btn-primary btn-sm" data-add="invoice">إضافة فاتورة</button>
         </div>
       `;
     }
@@ -419,6 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderPayments() {
+    if (!state.paymentsReady) return '<div class="empty-state"><h4>تعذر تحميل المدفوعات</h4><p>تحقق من الاتصال وأعد المحاولة</p></div>';
     const payments = [...state.payments].sort((a, b) => {
       return new Date(b.payment_date) - new Date(a.payment_date);
     });
@@ -428,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="empty-state">
           <i class="fas fa-money-bill-wave"></i>
           <h4>لا توجد مدفوعات</h4>
-          <p>يمكنك تسجيل أول دفعة لهذا المورد</p>
+          <p>يمكنك تسجيل أول دفعة لهذا المورد</p><button class="btn btn-primary btn-sm" data-add="payment">تسجيل دفعة</button>
         </div>
       `;
     }
@@ -498,134 +479,59 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function buildStatement() {
-    if (state.statement.length) {
-      return [...state.statement].sort((a, b) => {
-        return new Date(
-          a.date || a.created_at || a.createdAt
-        ) - new Date(
-          b.date || b.created_at || b.createdAt
-        );
-      });
+    if (state.statementReady) {
+      return [...state.statement].map(row => {
+        const isInvoice = row.type === 'invoice' || row.type === 'debit';
+        const debit = Number(row.debit ?? (isInvoice ? row.amount : 0)) || 0;
+        const credit = Number(row.credit ?? (!isInvoice ? row.amount : 0)) || 0;
+        return { ...row, debit, credit };
+      }).sort((a, b) => String(a.date ?? a.created_at ?? '').localeCompare(String(b.date ?? b.created_at ?? '')));
     }
-
-    const rows = [
-      ...state.invoices.map(invoice => ({
-        type: 'invoice',
-        date: invoice.invoice_date,
-        description:
-          invoice.invoice_number ||
-          invoice.details ||
-          `فاتورة #${invoice.id}`,
-        amount: Number(invoice.total_amount || 0)
-      })),
-
-      ...state.payments.map(payment => ({
-        type: 'payment',
-        date: payment.payment_date,
-        description:
-          paymentMethodName(payment),
-        amount: Number(payment.amount || 0)
-      }))
-    ];
-
-    return rows.sort((a, b) => {
-      return new Date(a.date) - new Date(b.date);
-    });
+    if (!(state.invoicesReady && state.paymentsReady)) return null;
+    return [
+      ...state.invoices.map(invoice => ({ type:'invoice', date:invoice.invoice_date,
+        description:invoice.invoice_number || invoice.details || `فاتورة #${invoice.id}`, debit:Number(invoice.total_amount)||0, credit:0 })),
+      ...state.payments.map(payment => ({ type:'payment', date:payment.payment_date,
+        description:paymentMethodName(payment), debit:0, credit:Number(payment.amount)||0 }))
+    ].sort((a,b) => String(a.date).localeCompare(String(b.date)));
   }
 
   function renderStatement() {
     const rows = buildStatement();
-
-    if (!rows.length) {
-      return `
-        <div class="empty-state">
-          <i class="fas fa-receipt"></i>
-          <h4>كشف الحساب فارغ</h4>
-          <p>لا توجد حركات مالية لهذا المورد</p>
-        </div>
-      `;
-    }
-
+    if (rows === null) return '<div class="empty-state"><h4>كشف الحساب غير متاح</h4><p>تعذر تحميل الحركات المالية</p></div>';
+    if (!rows.length) return '<div class="empty-state"><i class="fas fa-receipt"></i><h4>كشف الحساب فارغ</h4><p>لا توجد حركات مالية</p></div>';
     let balance = 0;
-
-    return `
-      <div class="section-header">
-        <span class="section-title">كشف الحساب</span>
-      </div>
-
-      <div class="statement">
-
-        <div class="statement-row statement-head">
-          <span>البيان</span>
-          <span>مدين</span>
-          <span>دائن</span>
-          <span>الرصيد</span>
-        </div>
-
+    return `<div class="section-header"><span class="section-title">كشف الحساب</span><button class="btn btn-secondary btn-sm" type="button" id="printSupplierStatement"><i class="fas fa-print"></i> طباعة الكشف</button></div>
+      <div class="statement"><div class="statement-row statement-head"><span>البيان</span><span>مدين</span><span>دائن</span><span>الرصيد</span></div>
         ${rows.map(row => {
-
-          const amount = Math.abs(Number(row.amount || 0));
-          const isInvoice =
-            row.type === 'invoice' ||
-            row.type === 'debit';
-
-          if (isInvoice) {
-            balance += amount;
-          } else {
-            balance -= amount;
-          }
-
-          return `
-            <div class="statement-row">
-
-              <div>
-                <strong>
-                  ${escapeHtml(
-                    row.description ||
-                    row.notes ||
-                    (isInvoice ? 'فاتورة' : 'دفعة')
-                  )}
-                </strong>
-
-                <div style="font-size:11px;color:var(--text-muted)">
-                  ${escapeHtml(
-                    normalizeDate(
-                      row.date ||
-                      row.created_at ||
-                      row.createdAt
-                    )
-                  )}
-                </div>
-              </div>
-
-              ${
-                isInvoice
-                  ? `<span class="statement-debit">${currency(amount)}</span>`
-                  : '<span></span>'
-              }
-
-              ${
-                !isInvoice
-                  ? `<span class="statement-credit">${currency(amount)}</span>`
-                  : '<span></span>'
-              }
-
-              <span class="statement-balance">
-                ${currency(Math.max(balance, 0))}
-              </span>
-
-            </div>
-          `;
-        }).join('')}
-
-      </div>
-    `;
+          const debit = Number(row.debit)||0, credit = Number(row.credit)||0;
+          balance = Math.round((balance + debit - credit)*100)/100;
+          const displayBalance = balance < -0.005 ? `دائن ${currency(-balance)}` : currency(balance);
+          return `<div class="statement-row"><div><strong>${escapeHtml(row.description || row.notes || (debit ? 'فاتورة' : 'دفعة'))}</strong><div style="font-size:11px;color:var(--text-muted)">${escapeHtml(normalizeDate(row.date || row.created_at || row.createdAt))}</div></div>
+          <span class="statement-debit">${debit ? currency(debit) : '—'}</span><span class="statement-credit">${credit ? currency(credit) : '—'}</span><span class="statement-balance ${balance < -0.005 ? 'credit' : ''}">${displayBalance}</span></div>`;
+        }).join('')}</div>`;
   }
 
-  function setMode(mode) {
+  function printStatement() {
+    const rows = buildStatement();
+    if (!rows) return toast('كشف الحساب غير متاح للطباعة', 'error');
+    const win = window.open('', '_blank');
+    if (!win) return toast('تعذر فتح نافذة الطباعة', 'error');
+    let balance = 0;
+    const tbody = rows.map(row => {
+      const debit = Number(row.debit)||0, credit = Number(row.credit)||0;
+      balance = Math.round((balance + debit - credit)*100)/100;
+      return `<tr><td>${escapeHtml(normalizeDate(row.date))}</td><td>${escapeHtml(row.description || '')}</td><td>${debit ? currency(debit) : '—'}</td><td>${credit ? currency(credit) : '—'}</td><td>${balance < 0 ? 'دائن ' + currency(-balance) : currency(balance)}</td></tr>`;
+    }).join('');
+    win.document.open();
+    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف حساب - ${escapeHtml(state.supplier?.name)}</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#111}table{border-collapse:collapse;width:100%;margin-top:20px}td,th{border:1px solid #ccc;padding:9px;font-size:12px;text-align:right}th{background:#eee}h1{font-size:20px}</style></head><body><h1>كشف حساب المورد: ${escapeHtml(state.supplier?.name)}</h1><p>تاريخ الطباعة: ${today()}</p><table><thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>${tbody}</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>`);
+    win.document.close();
+  }
+
+    function setMode(mode) {
     state.mode = mode;
 
-    document.querySelectorAll('[data-mode]').forEach(button => {
+    document.querySelectorAll('#transactionModal [data-mode]').forEach(button => {
       button.classList.toggle(
         'active',
         button.dataset.mode === mode
@@ -638,10 +544,10 @@ document.addEventListener('DOMContentLoaded', () => {
     el.paymentForm.style.display =
       mode === 'payment' ? 'block' : 'none';
 
-    if (state.editingInvoiceId) {
+    if (state.editingInvoiceId && mode === 'invoice') {
       el.modalTitle.textContent = 'تعديل الفاتورة';
       el.save.textContent = 'تحديث الفاتورة';
-    } else if (state.editingPaymentId) {
+    } else if (state.editingPaymentId && mode === 'payment') {
       el.modalTitle.textContent = 'تعديل الدفعة';
       el.save.textContent = 'تحديث الدفعة';
     } else {
@@ -670,6 +576,8 @@ document.addEventListener('DOMContentLoaded', () => {
     el.paymentDate.value = localDateTime();
     el.paymentAmount.value = '';
     el.paymentNotes.value = '';
+    // Reset the payment method to a valid default for new entries.
+    el.paymentMethod.selectedIndex = 0;
 
     if (mode === 'invoice' && item) {
       state.editingInvoiceId = Number(item.id);
@@ -714,13 +622,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.style.overflow = 'hidden';
   }
 
-  function closeModal() {
+  function closeModal(force = false) {
+    if (state.saving && force !== true) return;
     el.modal.classList.remove('active');
     document.body.style.overflow = '';
 
     state.editingInvoiceId = null;
     state.editingPaymentId = null;
-    state.saving = false;
   }
 
   async function saveInvoice() {
@@ -746,6 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
       toast('يرجى إدخال إجمالي صحيح', 'warning');
       return;
     }
+    if (!details) { toast('تفاصيل الفاتورة مطلوبة', 'warning'); el.invoiceDetails.focus(); return; }
 
     state.saving = true;
     el.save.disabled = true;
@@ -775,7 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toast('تم إضافة الفاتورة بنجاح', 'success');
       }
 
-      closeModal();
+      closeModal(true);
       await loadData();
     } catch (error) {
       console.error(error);
@@ -787,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       state.saving = false;
       el.save.disabled = false;
+      el.save.textContent = state.editingInvoiceId ? 'تحديث الفاتورة' : 'حفظ الفاتورة';
     }
   }
 
@@ -820,12 +730,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const payload = {
-        supplier_id: state.supplierId,
         amount: Number(amount.toFixed(2)),
         payment_method_id: methodId,
-        payment_date: date,
+        payment_date: date.replace('T', ' ') + (date.length === 16 ? ':00' : ''),
         notes: notes || null
       };
+      if (!state.editingPaymentId) payload.supplier_id = state.supplierId;
 
       if (state.editingPaymentId) {
         await API.updateSupplierPayment(
@@ -840,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toast('تم تسجيل الدفعة بنجاح', 'success');
       }
 
-      closeModal();
+      closeModal(true);
       await loadData();
     } catch (error) {
       console.error(error);
@@ -852,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       state.saving = false;
       el.save.disabled = false;
+      el.save.textContent = state.editingPaymentId ? 'تحديث الدفعة' : 'تسجيل الدفعة';
     }
   }
 
@@ -920,9 +831,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function bindRenderedEvents() {
+    document.getElementById('printSupplierStatement')?.addEventListener('click', printStatement);
     document.querySelectorAll('[data-tab]').forEach(button => {
       button.addEventListener('click', () => {
-
+        state.activeTab = button.dataset.tab;
         document.querySelectorAll('[data-tab]')
           .forEach(item => item.classList.remove('active'));
 
@@ -989,13 +901,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function bindEvents() {
-    el.fab?.addEventListener('click', () => {
-      openModal('invoice');
-    });
-
-    document.querySelectorAll('[data-mode]').forEach(button => {
+    // Layout replaces the FAB with a clone. Listen to its event, not the old node.
+    document.querySelectorAll('#transactionModal [data-mode]').forEach(button => {
       button.addEventListener('click', () => {
-        setMode(button.dataset.mode);
+        const next = button.dataset.mode;
+        // Switching while editing starts a fresh transaction instead of submitting the old ID.
+        if (state.editingInvoiceId || state.editingPaymentId) openModal(next);
+        else setMode(next);
       });
     });
 
@@ -1013,9 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
     document.addEventListener('fab:modal:opened', event => {
-      if (event.detail?.modalId === 'transactionModal') {
-        openModal('invoice');
-      }
+      if (event.detail?.modalId === 'transactionModal') openModal('invoice');
     });
 
     document.addEventListener('keydown', event => {

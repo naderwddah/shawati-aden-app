@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Payment\StoreSupplierPaymentRequest;
+use App\Http\Requests\Payment\UpdateSupplierPaymentRequest;
 use App\Http\Resources\SupplierPaymentResource;
 use App\Models\SupplierPayment;
 use App\Services\SupplierPaymentService;
@@ -91,6 +92,22 @@ class SupplierPaymentController extends Controller
         return response()->json([
             'success' => true,
             'data' => new SupplierPaymentResource($supplierPayment),
+        ]);
+    }
+
+    public function update(
+        UpdateSupplierPaymentRequest $request,
+        SupplierPayment $supplierPayment
+    ): JsonResponse {
+        $payment = $this->paymentService->update(
+            $supplierPayment,
+            $request->validated()
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث دفعة المورد بنجاح.',
+            'data' => new SupplierPaymentResource($payment),
         ]);
     }
 

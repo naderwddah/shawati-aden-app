@@ -28,4 +28,18 @@ class SupplierPaymentService
             ]);
         });
     }
+
+    /** Update a payment without changing the supplier it belongs to. */
+    public function update(SupplierPayment $payment, array $data): SupplierPayment
+    {
+        return DB::transaction(function () use ($payment, $data) {
+            $changes = array_intersect_key($data, array_flip([
+                'amount', 'payment_method_id', 'payment_date', 'notes',
+            ]));
+
+            $payment->update($changes);
+
+            return $payment->fresh()->load(['supplier', 'paymentMethod']);
+        });
+    }
 }

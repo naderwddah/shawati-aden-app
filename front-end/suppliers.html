@@ -54,6 +54,12 @@
       color: var(--danger);
     }
 
+    .suppliers-notice {padding:10px 14px;margin:0 0 12px;border:1px solid #fbbf24;background:#fffbeb;color:#92400e;border-radius:10px;font-size:12px;font-weight:700}
+    .suppliers-notice[hidden] {display:none}
+    .supplier-main {text-decoration:none;color:inherit}
+    .supplier-card.inactive {opacity:.72}
+    .supplier-inactive-label {color:var(--danger);font-size:11px;font-weight:700}
+    .account-value.credit {color:#7c3aed}
     .supplier-card {
       display: flex;
       align-items: center;
@@ -322,6 +328,7 @@
           >
         </div>
 
+        <div id="suppliersDataNotice" class="suppliers-notice" role="status" hidden></div>
         <div id="suppliersList"></div>
       </main>
     </div>

@@ -112,6 +112,7 @@ class SupplierAccountService
     public function getAllAccounts(): Collection
     {
         return Supplier::query()
+            ->withCount(['invoices', 'payments'])
             ->withSum('invoices', 'total_amount')
             ->withSum('payments', 'amount')
             ->get()
@@ -136,6 +137,8 @@ class SupplierAccountService
                     'payments_total' => $paymentsTotal,
                     'balance' => $balance,
                     'balance_type' => $this->getBalanceType($balance),
+                    'invoices_count' => (int) $supplier->invoices_count,
+                    'payments_count' => (int) $supplier->payments_count,
                 ];
             });
     }

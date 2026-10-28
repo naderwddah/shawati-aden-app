@@ -97,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         'index',
         'store',
         'show',
+        'update',
         'destroy',
     ]);
 
