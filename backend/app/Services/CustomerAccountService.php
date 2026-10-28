@@ -9,11 +9,16 @@ class CustomerAccountService
 {
     /**
      * حساب العميل:
-     * إجمالي الفواتير - إجمالي الدفعات
+     * إجمالي الأصناف + التأمين القابل للاسترداد - إجمالي الدفعات.
+     * الإرجاع يُخزن تراكميًا في plate_deposit_returned؛ لذلك يعرض
+     * net_invoices_total وnet_collected_total صافي الطرفين بعد الاسترداد.
+     * يُحافَظ على سياسة الحجوزات الملغاة القديمة كما هي دون حذف الرصيد.
      */
     public function getAccount(Customer $customer): array
     {
-        $invoicesTotal = (float) $customer->bookings()->sum('total_amount');
+        $invoicesTotal = (float) $customer->bookings()->sum('total_amount')
+            + (float) $customer->bookings()->sum('plate_deposit');
+        $depositReturned = (float) $customer->bookings()->sum('plate_deposit_returned');
 
         $paymentsTotal = (float) $customer->payments()->sum('amount');
 
@@ -22,6 +27,9 @@ class CustomerAccountService
         return [
             'customer' => $customer,
             'invoices_total' => $invoicesTotal,
+            'deposit_returned_total' => round($depositReturned, 2),
+            'net_invoices_total' => round($invoicesTotal - $depositReturned, 2),
+            'net_collected_total' => round($paymentsTotal - $depositReturned, 2),
             'payments_total' => $paymentsTotal,
             'balance' => $balance,
             'balance_type' => $this->getBalanceType($balance),
@@ -50,7 +58,7 @@ class CustomerAccountService
                 'id' => $booking->id,
                 'date' => $booking->invoice_date,
                 'description' => 'فاتورة حجز #' . $booking->id,
-                'debit' => (float) $booking->total_amount,
+                'debit' => round((float) $booking->total_amount + (float) ($booking->plate_deposit ?? 0), 2),
                 'credit' => 0,
             ]);
         }
@@ -87,13 +95,14 @@ class CustomerAccountService
             'customer' => $customer,
             'transactions' => $transactions,
             'invoices_total' => round(
-                $bookings->sum('total_amount'),
+                $bookings->sum(fn ($booking) => (float) $booking->total_amount + (float) ($booking->plate_deposit ?? 0)),
                 2
             ),
             'payments_total' => round(
                 $payments->sum('amount'),
                 2
             ),
+            'deposit_returned_total' => round((float) $bookings->sum('plate_deposit_returned'), 2),
             'balance' => round($runningBalance, 2),
             'balance_type' => $this->getBalanceType($runningBalance),
         ];
@@ -106,11 +115,15 @@ class CustomerAccountService
     {
         return Customer::query()
             ->withSum('bookings', 'total_amount')
+            ->withSum('bookings as bookings_sum_plate_deposit', 'plate_deposit')
+            ->withSum('bookings as bookings_sum_plate_deposit_returned', 'plate_deposit_returned')
             ->withSum('payments', 'amount')
             ->get()
             ->map(function (Customer $customer) {
 
-                $invoicesTotal = (float) ($customer->bookings_sum_total_amount ?? 0);
+                $invoicesTotal = (float) ($customer->bookings_sum_total_amount ?? 0)
+                    + (float) ($customer->bookings_sum_plate_deposit ?? 0);
+                $depositReturned = (float) ($customer->bookings_sum_plate_deposit_returned ?? 0);
                 $paymentsTotal = (float) ($customer->payments_sum_amount ?? 0);
 
                 $balance = round(
@@ -121,6 +134,9 @@ class CustomerAccountService
                 return [
                     'customer' => $customer,
                     'invoices_total' => $invoicesTotal,
+                    'deposit_returned_total' => round($depositReturned, 2),
+                    'net_invoices_total' => round($invoicesTotal - $depositReturned, 2),
+                    'net_collected_total' => round($paymentsTotal - $depositReturned, 2),
                     'payments_total' => $paymentsTotal,
                     'balance' => $balance,
                     'balance_type' => $this->getBalanceType($balance),

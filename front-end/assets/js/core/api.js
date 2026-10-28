@@ -28,22 +28,9 @@ const BASE_URL = "http://127.0.0.1:8000/api";
     storage.setItem(TOKEN_KEY, token);
   }
 
-  // إزالة جميع بيانات الجلسة المحلية عند انتهاء الصلاحية أو الخروج.
   function clearToken() {
     localStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem("banquet_kitchen_user");
-    sessionStorage.removeItem("banquet_kitchen_user");
-  }
-
-  let redirectingToLogin = false;
-
-  function redirectToLogin() {
-    const isLoginPage = window.location.pathname.endsWith("/login.html");
-    if (!isLoginPage && !redirectingToLogin) {
-      redirectingToLogin = true;
-      window.location.replace("login.html");
-    }
   }
 
   function isAuthenticated() {
@@ -138,9 +125,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
     } = options;
 
     const url = buildUrl(endpoint, query);
-    const isLoginRequest = endpoint.replace(/^\/+/, "") === "login";
-    // طلب الدخول لا يحتاج الرمز القديم، حتى لو انتهت صلاحيته.
-    const token = isLoginRequest ? null : getToken();
+    const token = getToken();
 
     const requestHeaders = {
       Accept: "application/json",
@@ -188,20 +173,28 @@ const BASE_URL = "http://127.0.0.1:8000/api";
     const data = await parseResponse(response);
 
     if (!response.ok) {
-      // 401 من مسار محمي: تنظيف الجلسة والتحويل مرة واحدة فقط.
-      // لا نمس رمزًا جديدًا إن وصلت استجابة قديمة بعد تسجيل دخول آخر.
-      if (response.status === 401 && !isLoginRequest && getToken() === token) {
+    if (response.status === 401) {
         clearToken();
-        redirectToLogin();
-      }
 
-      throw new ApiError(
+        const isLoginRequest =
+            endpoint.replace(/^\/+/, "") === "login";
+
+        const isLoginPage =
+            window.location.pathname.endsWith("/login.html") ||
+            window.location.pathname === "/login.html";
+
+        if (!isLoginRequest && !isLoginPage) {
+            window.location.replace("login.html");
+        }
+    }
+
+    throw new ApiError(
         getErrorMessage(data, response.status),
         response.status,
         data,
         data?.errors || null,
-      );
-    }
+    );
+}
 
     if (data && data.success === false) {
       throw new ApiError(
@@ -407,6 +400,12 @@ const BASE_URL = "http://127.0.0.1:8000/api";
       return request(`/bookings/${id}`, {
         method: "PUT",
         body: prepareBookingPayload(payload),
+      }).then(data);
+    },
+
+    complete(id, payload = {}) {
+      return request(`/bookings/${id}/complete`, {
+        method: 'POST', body: payload,
       }).then(data);
     },
 
@@ -697,6 +696,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
     getBooking: bookings.get,
     createBooking: bookings.create,
     updateBooking: bookings.update,
+    completeBooking: bookings.complete,
     deleteBooking: bookings.delete,
     getBookingsByDate: bookings.byDate,
     getUpcomingBookings: bookings.upcoming,
@@ -751,7 +751,7 @@ const BASE_URL = "http://127.0.0.1:8000/api";
       },
     });
 
-    const result = response?.data ?? response ?? {};
+    const result = response?.data || {};
 
     if (result.token) {
       setToken(result.token, remember);

@@ -139,69 +139,90 @@ class BookingController extends Controller
     }
 
     /**
-     * تحديث الحجز.
+     * Updating booking details and replacing its items is atomic.
+     * Status-only updates do not touch the invoice or its item snapshots.
      */
-    public function update(
-        UpdateBookingRequest $request,
-        Booking $booking
-    ): JsonResponse {
+    public function update(UpdateBookingRequest $request, Booking $booking): JsonResponse
+    {
         $data = $request->validated();
+        $booking = DB::transaction(function () use ($data, $booking) {
+            $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
+            $bookingData = collect($data)->except(['items', 'total_amount'])->toArray();
 
-        /*
-         * تحديث بيانات الحجز.
-         */
-        $bookingData = collect($data)
-            ->except('items')
-            ->toArray();
+            $itemsTotal = (float) $booking->total_amount;
+            if (array_key_exists('items', $data)) {
+                $itemsTotal = round(array_sum(array_map(
+                    fn ($item) => round((float) $item['quantity'] * (float) $item['unit_price'], 2),
+                    $data['items']
+                )), 2);
+                $bookingData['total_amount'] = $itemsTotal;
+            }
 
-        if (!empty($bookingData)) {
-            $booking->update($bookingData);
-        }
-
-        /*
-         * تحديث عناصر الحجز إذا تم إرسالها.
-         */
-        if (array_key_exists('items', $data)) {
-            $booking->items()->delete();
-
-            $totalAmount = 0;
-
-            foreach ($data['items'] as $item) {
-                $quantity = (float) $item['quantity'];
-                $unitPrice = (float) $item['unit_price'];
-
-                $totalPrice = round(
-                    $quantity * $unitPrice,
-                    2
-                );
-
-                $totalAmount += $totalPrice;
-
-                $booking->items()->create([
-                    'item_name' => $item['item_name'],
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
+            $deposit = (float) ($bookingData['plate_deposit'] ?? $booking->plate_deposit ?? 0);
+            $returned = (float) ($bookingData['plate_deposit_returned'] ?? $booking->plate_deposit_returned ?? 0);
+            $paid = (float) $booking->payments()->sum('amount');
+            if ($returned > $deposit || $returned > $paid ||
+                (array_key_exists('plate_deposit_returned', $bookingData) &&
+                    $returned < (float) ($booking->plate_deposit_returned ?? 0))) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'plate_deposit_returned' => 'المسترد يجب ألا يقل عن المسترد سابقًا أو يتجاوز التأمين أو المبالغ المحصلة.',
+                ]);
+            }
+            if ((int) round(($itemsTotal + $deposit) * 100) < (int) round($paid * 100)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'items' => 'لا يمكن أن يصبح إجمالي الحجز شاملًا التأمين أقل من الدفعات المسجلة.',
                 ]);
             }
 
-            /*
-             * الإجمالي الحقيقي يحسب من العناصر.
-             */
-            $booking->update([
-                'total_amount' => round($totalAmount, 2),
-            ]);
-        }
-
-        $booking->load([
-            'customer',
-            'items',
-            'payments.paymentMethod',
-        ]);
+            if ($bookingData) {
+                $booking->update($bookingData);
+            }
+            if (array_key_exists('items', $data)) {
+                $booking->items()->delete();
+                foreach ($data['items'] as $item) {
+                    $quantity = (float) $item['quantity'];
+                    $unitPrice = (float) $item['unit_price'];
+                    $booking->items()->create([
+                        'item_name' => $item['item_name'],
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'total_price' => round($quantity * $unitPrice, 2),
+                    ]);
+                }
+            }
+            return $booking->load(['customer', 'items', 'payments.paymentMethod']);
+        });
 
         return response()->json([
             'success' => true,
             'message' => 'تم تحديث الحجز بنجاح.',
+            'data' => new BookingDetailsResource($booking),
+        ]);
+    }
+
+    /**
+     * Completes a booking and takes an optional payment as one DB transaction.
+     */
+    public function complete(Request $request, Booking $booking): JsonResponse
+    {
+        $data = $request->validate([
+            'payment_amount' => ['sometimes', 'numeric', 'min:0'],
+            'payment_method_id' => ['nullable', 'integer', 'exists:payment_methods,id'],
+        ]);
+        $amount = (float) ($data['payment_amount'] ?? 0);
+        if ($amount > 0 && empty($data['payment_method_id'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'payment_method_id' => 'اختر طريقة دفع للمبلغ المستلم.',
+            ]);
+        }
+        $booking = $this->bookingService->complete(
+            $booking,
+            $amount,
+            isset($data['payment_method_id']) ? (int) $data['payment_method_id'] : null
+        );
+        return response()->json([
+            'success' => true,
+            'message' => 'اكتمل الحجز وتم تسجيل الدفعة إن وجدت.',
             'data' => new BookingDetailsResource($booking),
         ]);
     }

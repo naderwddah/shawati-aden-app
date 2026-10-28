@@ -691,7 +691,8 @@
                   <select id="deliveryPeriod" class="form-select">
                     <option value="">اختر الفترة</option>
                     <option value="صباحًا">صباحًا</option>
-                    <option value="ظهرًا">ظهرًا</option>
+                     <option value="ظهراً">ظهراً</option>
+                     <option value="مساء">مساء</option>
                     <option value="ليلًا">ليلًا</option>
                   </select>
                 </div>
@@ -709,9 +710,16 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="plateDeposit" class="form-label">تأمين الصحون</label>
+                  <label for="plateDeposit" class="form-label">تأمين الصحون (يُضاف إلى المطلوب)</label>
                   <input type="number" id="plateDeposit" class="form-input"
                          min="0" step="0.01" value="0" placeholder="0">
+                </div>
+
+                <div class="form-group" id="depositRefundGroup" style="display:none">
+                  <label for="plateDepositReturned" class="form-label">المبلغ المسترد من تأمين الصحون</label>
+                  <input type="number" id="plateDepositReturned" class="form-input"
+                         min="0" step="0.01" value="0" placeholder="0">
+                  <small style="display:block;margin-top:5px;color:var(--text-muted)">سجّل هنا المبلغ الذي أُعيد للعميل فعليًا. لا يمكن أن يتجاوز التأمين المحصّل.</small>
                 </div>
 
               </div>
@@ -769,7 +777,7 @@
 
                 <!-- الصف 1: الدفعة الأولى | طريقة الدفع -->
                 <div class="financial-box">
-                  <span class="financial-label">الدفعة الأولى</span>
+                  <span class="financial-label" id="initialPaymentLabel">الدفعة الأولى</span>
                   <input type="number" id="initialPayment" class="form-input"
                          min="0" step="0.01" value="0" placeholder="0">
                 </div>
@@ -795,6 +803,7 @@
                 </div>
 
               </div>
+              <p style="font-size:12px;color:var(--text-muted);margin:10px 0 0;text-align:center">الإجمالي المطلوب يشمل قيمة الأصناف وتأمين الصحون القابل للاسترداد.</p>
 
               <!-- إجمالي الأصناف (سطر صغير توضيحي) -->
               <div class="items-total-note">

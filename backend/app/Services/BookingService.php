@@ -70,6 +70,14 @@ class BookingService
                 ]);
             }
 
+            // Refunds cannot exceed funds actually collected for a new booking.
+            if ($plateDepositReturned !== null &&
+                $plateDepositReturned > (float) ($data['initial_payment'] ?? 0)) {
+                throw ValidationException::withMessages([
+                    'plate_deposit_returned' => 'لا يمكن إرجاع تأمين لم يتم تحصيله.',
+                ]);
+            }
+
             /*
              * إنشاء الحجز
              */
@@ -117,10 +125,10 @@ class BookingService
 
                 $initialPayment = (float) $data['initial_payment'];
 
-                if ($initialPayment > $totalAmount) {
+                if ($initialPayment > round($totalAmount + ($plateDeposit ?? 0), 2)) {
                     throw ValidationException::withMessages([
                         'initial_payment' =>
-                            'الدفعة الأولى لا يمكن أن تتجاوز إجمالي الفاتورة.',
+                            'الدفعة الأولى لا يمكن أن تتجاوز إجمالي الأصناف مع تأمين الصحون.',
                     ]);
                 }
 
@@ -140,7 +148,7 @@ class BookingService
             return $booking->load([
                 'customer',
                 'items',
-                'payments',
+                'payments.paymentMethod',
             ]);
         });
     }
@@ -177,4 +185,53 @@ class BookingService
             'is_active' => true,
         ]);
     }
+
+    /**
+     * Complete a booking and optionally collect the remainder atomically.
+     * Requests against an already-completed booking must use the ordinary
+     * payment API rather than replaying this transition.
+     */
+    public function complete(Booking $booking, float $amount, ?int $methodId): Booking
+    {
+        return DB::transaction(function () use ($booking, $amount, $methodId) {
+            $locked = Booking::query()->lockForUpdate()->findOrFail($booking->id);
+            if ($locked->status === 'completed') {
+                throw ValidationException::withMessages([
+                    'status' => 'الحجز مكتمل بالفعل؛ استخدم تسجيل دفعة مستقلة لتسديد المتبقي.',
+                ]);
+            }
+            if (in_array($locked->status, ['cancelled', 'canceled', 'ملغي'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'لا يمكن إكمال حجز ملغي.',
+                ]);
+            }
+            $paid = (float) $locked->payments()->sum('amount');
+            $payable = round((float) $locked->total_amount + (float) ($locked->plate_deposit ?? 0), 2);
+            $remainingCents = (int) round(($payable - $paid) * 100);
+            $amountCents = (int) round($amount * 100);
+            if ($amountCents < 0 || $amountCents > max(0, $remainingCents)) {
+                throw ValidationException::withMessages([
+                    'payment_amount' => 'المبلغ غير صالح أو يتجاوز المتبقي على الحجز.',
+                ]);
+            }
+            if ($amountCents > 0 && !$methodId) {
+                throw ValidationException::withMessages([
+                    'payment_method_id' => 'اختر طريقة الدفع.',
+                ]);
+            }
+            if ($amountCents > 0) {
+                CustomerPayment::create([
+                    'customer_id' => $locked->customer_id,
+                    'booking_id' => $locked->id,
+                    'amount' => $amountCents / 100,
+                    'payment_method_id' => $methodId,
+                    'payment_date' => now(),
+                    'notes' => 'دفعة إكمال الحجز',
+                ]);
+            }
+            $locked->update(['status' => 'completed']);
+            return $locked->load(['customer', 'items', 'payments.paymentMethod']);
+        });
+    }
+
 }

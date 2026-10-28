@@ -66,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('items', ItemController::class);
 
+    // Must coexist with the standard bookings resource and dashboard routes.
+    Route::post('bookings/{booking}/complete', [BookingController::class, 'complete']);
     Route::apiResource('bookings', BookingController::class);
 
     Route::get(

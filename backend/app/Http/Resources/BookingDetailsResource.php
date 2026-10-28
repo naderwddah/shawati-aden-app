@@ -9,6 +9,12 @@ class BookingDetailsResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $itemsTotal = (float) ($this->total_amount ?? 0);
+        $deposit = (float) ($this->plate_deposit ?? 0);
+        $returned = (float) ($this->plate_deposit_returned ?? 0);
+        $paid = (float) $this->payments->sum('amount');
+        $payable = round($itemsTotal + $deposit, 2);
+
         return [
             'id' => $this->id,
             'customer_id' => $this->customer_id,
@@ -21,7 +27,12 @@ class BookingDetailsResource extends JsonResource
             'delivery_address' => $this->delivery_address,
             'mark' => $this->mark,
 
-            'total_amount' => (float) $this->total_amount,
+            'total_amount' => $itemsTotal,
+            'payable_total' => $payable,
+            'paid_amount' => $paid,
+            'net_collected' => round($paid - $returned, 2),
+            'remaining_amount' => round(max(0, $payable - $paid), 2),
+            'plate_deposit_pending_return' => round(max(0, $deposit - $returned), 2),
 
             'plate_deposit' => $this->plate_deposit !== null
                 ? (float) $this->plate_deposit

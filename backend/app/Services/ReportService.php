@@ -45,7 +45,9 @@ class ReportService
             ->whereDate('invoice_date', $date)
             ->sum('total_amount');
 
-        $bookingsTotal = (float) $bookings->sum('total_amount');
+        $bookingsTotal = (float) $bookings->sum(
+            fn ($booking) => (float) $booking->total_amount + (float) ($booking->plate_deposit ?? 0)
+        );
 
         $bookingsPaid = (float) $bookings->sum(
             fn ($booking) => (float) ($booking->payments_sum_amount ?? 0)
@@ -146,10 +148,8 @@ class ReportService
      */
     public function customerAccountsSummary(): array
     {
-        $invoicesTotal = (float) Customer::query()
-            ->withSum('bookings', 'total_amount')
-            ->get()
-            ->sum('bookings_sum_total_amount');
+        $invoicesTotal = (float) Booking::sum('total_amount')
+            + (float) Booking::sum('plate_deposit');
 
         $paymentsTotal = (float) CustomerPayment::sum('amount');
 
@@ -322,7 +322,9 @@ class ReportService
         /*
          * الأرصدة.
          */
-        $customerBalance = $sales - $customerPayments;
+        // Sales exclude refundable deposits; receivables do not.
+        $deposits = (float) $bookingsQuery->sum('plate_deposit');
+        $customerBalance = $sales + $deposits - $customerPayments;
 
         $supplierBalance = $purchases - $supplierPayments;
 
@@ -342,6 +344,7 @@ class ReportService
                 2
             ),
 
+            'plate_deposits_total' => round($deposits, 2),
             'customer_balance' => round(
                 $customerBalance,
                 2

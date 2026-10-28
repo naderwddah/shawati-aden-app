@@ -18,6 +18,7 @@ class StoreBookingRequest extends FormRequest
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'customer_name' => ['nullable', 'string', 'max:150'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
+            'customer_notes' => ['nullable', 'string'],
 
             'invoice_date' => ['required', 'date'],
             'event_date' => ['required', 'date'],

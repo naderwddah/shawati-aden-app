@@ -23,6 +23,11 @@
   let paymentMethods = [];
   let currentStatusBookingId = null;
   let savingStatus = false;
+  let statusModalMode = 'status';
+  let visibleCount = 30;
+  let deleteDialogResolve = null;
+  let refundBookingId = null;
+  let savingRefund = false;
 
   /* =========================================================
    * عناصر DOM
@@ -38,8 +43,8 @@
   const todayBookingsEl = document.getElementById('todayBookings');
   const totalAmountEl = document.getElementById('totalAmount');
 
-  const statusModal = document.getElementById('statusModal');
-  const statusModalTitle = document.getElementById('statusModalTitle');
+  const statusModal = document.getElementById('bookingStatusModal');
+  const statusModalTitle = document.getElementById('bookingStatusModalTitle');
   const paymentSectionX = document.getElementById('paymentSectionX');
   const paymentAmountX = document.getElementById('paymentAmountX');
   const paymentMethodX = document.getElementById('paymentMethodX');
@@ -117,7 +122,7 @@
 
   function getArabicDay(dateValue) {
     if (!dateValue) return '';
-    const d = new Date(String(dateValue).slice(0, 10));
+    const d = new Date(`${String(dateValue).slice(0, 10)}T12:00:00`);
     if (Number.isNaN(d.getTime())) return '';
     return ARABIC_DAYS[d.getDay()] || '';
   }
@@ -257,7 +262,10 @@
       paid = booking.payments.reduce((s, p) => s + number(p.amount), 0);
     }
 
-    const remaining = Math.max(0, total - paid);
+    const deposit = number(booking.plate_deposit ?? booking.plateDeposit);
+    const returned = number(booking.plate_deposit_returned ?? booking.plateDepositReturned);
+    const payable = number(booking.payable_total ?? total + deposit);
+    const remaining = Math.max(0, payable - paid);
 
     const plateDeposit = booking.plate_deposit == null
       ? null
@@ -275,6 +283,7 @@
       deliveryAddress: booking.delivery_address ?? booking.deliveryAddress ?? booking.address ?? '',
       mark: booking.mark ?? '',
       totalAmount: total,
+      payableTotal: payable,
       plateDeposit: plateDeposit,
       plateDepositReturned: booking.plate_deposit_returned == null
         ? null
@@ -285,6 +294,7 @@
       payments: Array.isArray(booking.payments) ? booking.payments : [],
       paidAmount: paid,
       remaining: remaining,
+      refundAmount: returned,
       createdAt: booking.created_at ?? booking.createdAt ?? ''
     };
   }
@@ -304,7 +314,7 @@
 
     const totalValue = allBookings
       .filter((b) => b.status !== 'cancelled')
-      .reduce((sum, b) => sum + b.totalAmount, 0);
+      .reduce((sum, b) => sum + b.payableTotal, 0);
     if (totalAmountEl) {
       totalAmountEl.textContent = formatCurrencyShort(totalValue);
     }
@@ -373,10 +383,11 @@
     const timeFormatted = formatTime12(booking.deliveryTime);
     const period = booking.deliveryPeriod ? ` · ${booking.deliveryPeriod}` : '';
 
-    const total = formatCurrencyShort(booking.totalAmount);
+    const total = formatCurrencyShort(booking.payableTotal);
     const paid = formatCurrencyShort(booking.paidAmount);
     const remaining = formatCurrencyShort(booking.remaining);
     const deposit = formatCurrencyShort(booking.plateDeposit || 0);
+    const refund = formatCurrencyShort(booking.refundAmount || 0);
 
     let itemsPreview = '';
     if (booking.items.length) {
@@ -394,7 +405,7 @@
     if (isCompleted) {
       actionButtons = `
         <div class="booking-locked">
-          <i class="fas fa-lock"></i> الحجز مغلق
+          <i class="fas fa-check-circle"></i> تم إكمال الحجز
         </div>
         <div class="booking-actions">
           ${booking.remaining > 0 ? `
@@ -402,6 +413,7 @@
               <i class="fas fa-hand-holding-usd"></i> تسديد (${remaining})
             </button>
           ` : ''}
+          ${(booking.plateDeposit || 0) > (booking.refundAmount || 0) && (booking.paidAmount || 0) > (booking.refundAmount || 0) ? `<button class="btn-action secondary" data-action="refund" data-id="${booking.id}"><i class="fas fa-undo"></i> إرجاع تأمين</button>` : ''}
           <button class="btn-action secondary" data-action="change-status" data-id="${booking.id}">
             <i class="fas fa-exchange-alt"></i> الحالة
           </button>
@@ -415,9 +427,11 @@
     } else {
       actionButtons = `
         <div class="booking-actions">
+          ${booking.remaining > 0 ? `<button class="btn-action warning" data-action="pay-remaining" data-id="${booking.id}" title="تسجيل دفعة"><i class="fas fa-money-bill-wave"></i> دفع</button>` : ''}
           <button class="btn-action primary" data-action="edit" data-id="${booking.id}">
             <i class="fas fa-pen"></i> تعديل
           </button>
+          ${(booking.plateDeposit || 0) > (booking.refundAmount || 0) && (booking.paidAmount || 0) > (booking.refundAmount || 0) ? `<button class="btn-action secondary" data-action="refund" data-id="${booking.id}"><i class="fas fa-undo"></i> إرجاع تأمين</button>` : ''}
           <button class="btn-action secondary" data-action="change-status" data-id="${booking.id}">
             <i class="fas fa-exchange-alt"></i> الحالة
           </button>
@@ -463,7 +477,7 @@
           </div>
           <div class="fin-box deposit">
             <div class="fin-label">تأمين</div>
-            <div class="fin-value">${deposit}</div>
+            <div class="fin-value">${deposit}${booking.refundAmount > 0 ? `<span class="deposit-refund-note">مُسترد: ${refund}</span>` : ''}</div>
           </div>
         </div>
 
@@ -480,10 +494,18 @@
       renderEmpty();
       return;
     }
-    bookingList.innerHTML = filteredBookings.map(renderBookingCard).join('');
+    bookingList.innerHTML = filteredBookings.slice(0, visibleCount).map(renderBookingCard).join('');
+    const more = document.getElementById('bookingsMoreContainer');
+    if (more) more.innerHTML = filteredBookings.length > visibleCount
+      ? `<button type="button" class="btn btn-secondary" id="showMoreBookings">عرض المزيد (${filteredBookings.length - visibleCount})</button>` : '';
+    document.getElementById('showMoreBookings')?.addEventListener('click', () => {
+      visibleCount += 30;
+      renderBookings();
+    });
   }
 
-  function applyFiltersAndRender() {
+  function applyFiltersAndRender(resetPage = true) {
+    if (resetPage) visibleCount = 30;
     const query = searchQuery.trim().toLowerCase();
 
     filteredBookings = allBookings.filter((b) => {
@@ -523,6 +545,7 @@
     try {
       const list = await window.API.getPaymentMethods();
       paymentMethods = Array.isArray(list) ? list : (list?.data || []);
+      if (statusModal?.classList.contains('active')) fillPaymentMethodsSelect();
     } catch (e) {
       console.warn('payment methods load failed:', e);
       paymentMethods = [];
@@ -540,10 +563,8 @@
     renderLoading();
 
     try {
-      if (!paymentMethods.length) {
-        await loadPaymentMethods();
-      }
-
+      // Payment methods are optional for listing; don't block fetching bookings.
+      if (!paymentMethods.length) void loadPaymentMethods();
       const response = await window.API.getBookings();
       const raw = unwrap(response);
 
@@ -581,13 +602,14 @@
     }).join('');
   }
 
-  function openStatusModal(bookingId) {
+  function openStatusModal(bookingId, paymentOnly = false) {
+    statusModalMode = paymentOnly ? 'payment' : 'status';
     const booking = allBookings.find((b) => Number(b.id) === Number(bookingId));
     if (!booking) return;
 
     currentStatusBookingId = booking.id;
 
-    statusModalTitle.textContent = `حالة الحجز #${booking.id}`;
+    statusModalTitle.textContent = paymentOnly ? `تسجيل دفعة للحجز #${booking.id}` : `حالة الحجز #${booking.id}`;
 
     $$('input[name="newStatus"]', statusModal).forEach((r) => {
       r.checked = r.value === booking.status;
@@ -601,8 +623,9 @@
       radio.onchange = () => onStatusChange(booking);
     });
 
+    const options = document.getElementById('bookingStatusOptions');
+    if (options) options.style.display = paymentOnly ? 'none' : '';
     onStatusChange(booking);
-
     statusModal.classList.add('active');
   }
 
@@ -612,7 +635,7 @@
 
     const newStatus = selected.value;
 
-    if (newStatus === 'completed' && booking.remaining > 0) {
+    if ((statusModalMode === 'payment' || newStatus === 'completed') && booking.remaining > 0) {
       paymentSectionX.classList.add('show');
       paymentAmountX.value = booking.remaining.toFixed(2);
       paymentAmountX.max = booking.remaining.toFixed(2);
@@ -628,7 +651,8 @@
     }
   }
 
-  function closeStatusModal() {
+  function closeStatusModal(force = false) {
+    if (savingStatus && force !== true) return;
     statusModal.classList.remove('active');
     currentStatusBookingId = null;
     savingStatus = false;
@@ -651,7 +675,7 @@
     const newStatus = selected.value;
     const oldStatus = booking.status;
 
-    if (newStatus === oldStatus && !(newStatus === 'completed' && booking.remaining > 0)) {
+    if (statusModalMode !== 'payment' && newStatus === oldStatus) {
       showToast('لم تتغير الحالة', 'info');
       return;
     }
@@ -661,89 +685,39 @@
     confirmStatusBtn.textContent = 'جاري الحفظ...';
 
     try {
-      /* ✅ 1) جلب الحجز الكامل (يحتوي الأصناف والحقول الكاملة) */
-      let fullBooking = booking;
-      try {
-        if (window.API && typeof window.API.getBooking === 'function') {
-          const res = await window.API.getBooking(booking.id);
-          const fb = (res && res.data) ? res.data : res;
-          if (fb && fb.id) fullBooking = fb;
-        }
-      } catch (e) {
-        console.warn('⚠️ getBooking failed, using list data:', e);
-      }
-
-      /* ✅ 2) تسجيل دفعة إن كانت الحالة الجديدة "مكتمل" + يوجد متبقي */
-      if (newStatus === 'completed' && booking.remaining > 0) {
+      if (statusModalMode === 'payment') {
         const amount = number(paymentAmountX.value);
         const methodId = Number(paymentMethodX.value);
-
-        if (amount <= 0) throw new Error('أدخل مبلغًا صحيحًا للدفعة');
-        if (amount > booking.remaining) {
-          throw new Error(`المبلغ يتجاوز المتبقي (${formatCurrency(booking.remaining)})`);
-        }
+        if (!(amount > 0 && amount <= booking.remaining)) throw new Error('الدفعة غير صالحة أو تتجاوز المتبقي');
         if (!methodId) throw new Error('اختر طريقة دفع');
-
-        if (typeof window.API.createCustomerPayment !== 'function') {
-          throw new Error('واجهة تسجيل الدفعات غير متاحة');
-        }
-
         await window.API.createCustomerPayment({
-          customer_id: fullBooking.customer_id ?? booking.customerId,
-          booking_id: fullBooking.id,
-          amount: amount,
-          payment_method_id: methodId,
-          payment_date: nowSqlDateTime(),
-          notes: 'دفعة إكمال الحجز'
+          customer_id: booking.customerId,
+          booking_id: booking.id,
+          amount, payment_method_id: methodId,
+          payment_date: nowSqlDateTime(), notes: 'دفعة على الحجز'
         });
+      } else if (newStatus === 'completed') {
+        const amount = booking.remaining > 0 ? number(paymentAmountX.value) : 0;
+        const methodId = amount > 0 ? Number(paymentMethodX.value) : null;
+        if (amount < 0 || amount > booking.remaining) throw new Error('مبلغ الدفعة غير صحيح');
+        if (amount > 0 && !methodId) throw new Error('اختر طريقة الدفع');
+        // Only ONE API call: backend updates status + creates payment atomically.
+        await window.API.completeBooking(booking.id, {
+          payment_amount: amount,
+          ...(methodId ? { payment_method_id: methodId } : {})
+        });
+      } else {
+        // Never resend the items / original invoice when changing only status.
+        await window.API.updateBooking(booking.id, { status: newStatus });
       }
-
-      /* ✅ 3) تجهيز الأصناف بصيغة صحيحة */
-      const items = (fullBooking.items || []).map((it) => {
-        const qty = number(it.quantity);
-        const unit = number(it.unit_price ?? it.price);
-        const total = number(it.total_price) || qty * unit;
-        return {
-          item_id: it.item_id ?? null,
-          item_name: it.item_name ?? it.name ?? 'صنف',
-          quantity: qty,
-          unit_price: unit,
-          total_price: Number(total.toFixed(2))
-        };
-      });
-
-      /* ✅ 4) بناء payload بصيغ صحيحة */
-      const fullPayload = {
-        customer_id: fullBooking.customer_id ?? booking.customerId,
-        invoice_date: normalizeInvoiceDate(fullBooking.invoice_date),
-        event_date: normalizeEventDate(fullBooking.event_date),
-        delivery_time: normalizeDeliveryTime(fullBooking.delivery_time),
-        delivery_period: fullBooking.delivery_period || 'ظهراً',
-        delivery_address: fullBooking.delivery_address || '',
-        mark: fullBooking.mark || null,
-        total_amount: number(fullBooking.total_amount || booking.totalAmount),
-        plate_deposit: fullBooking.plate_deposit ?? null,
-        notes: fullBooking.notes || null,
-        status: newStatus,
-        items
-      };
-
-      /* ✅ 5) plate_deposit_returned يُرسل فقط لو له قيمة */
-      if (fullBooking.plate_deposit_returned !== null &&
-          fullBooking.plate_deposit_returned !== undefined) {
-        fullPayload.plate_deposit_returned = number(fullBooking.plate_deposit_returned);
-      }
-
-      await window.API.updateBooking(fullBooking.id, fullPayload);
 
       showToast(
-        newStatus === 'completed' && booking.remaining > 0
-          ? 'تم إكمال الحجز وتسجيل الدفعة'
-          : 'تم تغيير الحالة',
+        statusModalMode === 'payment' ? 'تم تسجيل الدفعة' :
+        newStatus === 'completed' ? 'تم إكمال الحجز بنجاح' : 'تم تغيير الحالة',
         'success'
       );
 
-      closeStatusModal();
+      closeStatusModal(true);
       await loadBookings();
     } catch (error) {
       console.error('Status change failed:', error);
@@ -763,34 +737,84 @@
     window.location.href = `booking-form.html?id=${encodeURIComponent(id)}`;
   }
 
-  async function confirmDelete(booking) {
-    const msg = `هل تريد حذف الحجز #${booking.id} للعميل "${booking.customerName}"؟\n\nسيتم حذف كل الدفعات المرتبطة به.`;
-
-    let confirmed = false;
-    if (window.Layout?.showConfirm) {
-      confirmed = await new Promise((resolve) => {
-        let done = false;
-        const finish = (v) => { if (!done) { done = true; resolve(v); } };
-        try {
-          window.Layout.showConfirm({
-            title: 'حذف الحجز',
-            message: msg,
-            confirmText: 'حذف',
-            danger: true,
-            onConfirm: () => finish(true),
-            onCancel: () => finish(false)
-          });
-        } catch { finish(confirm(msg)); }
-      });
-    } else {
-      confirmed = confirm(msg);
+  function openRefundModal(booking) {
+    refundBookingId = booking.id;
+    const max = Math.max(0, Math.min(booking.plateDeposit || 0, booking.paidAmount || 0) - (booking.refundAmount || 0));
+    if (max <= 0) {
+      showToast('لا توجد قيمة تأمين محصلة قابلة للإرجاع', 'info');
+      return;
     }
+    document.getElementById('bookingRefundInfo').textContent =
+      `الحجز #${booking.id} — التأمين ${formatCurrency(booking.plateDeposit)}، المسترد سابقًا ${formatCurrency(booking.refundAmount)}، الحد المتاح الآن ${formatCurrency(max)}.`;
+    const input = document.getElementById('bookingRefundAmount');
+    input.value = max.toFixed(2);
+    input.max = max.toFixed(2);
+    document.getElementById('bookingRefundModal').classList.add('active');
+    input.focus();
+  }
 
+  function closeRefundModal() {
+    if (savingRefund) return;
+    document.getElementById('bookingRefundModal')?.classList.remove('active');
+    refundBookingId = null;
+  }
+
+  async function confirmRefund() {
+    if (savingRefund || refundBookingId == null) return;
+    const booking = allBookings.find(b => Number(b.id) === Number(refundBookingId));
+    if (!booking) return;
+    const amount = Number(document.getElementById('bookingRefundAmount').value);
+    const max = Math.max(0, Math.min(booking.plateDeposit || 0, booking.paidAmount || 0) - (booking.refundAmount || 0));
+    if (!Number.isFinite(amount) || amount <= 0 || amount > max) {
+      showToast('أدخل مبلغًا ضمن حد التأمين المحصل القابل للإرجاع', 'error');
+      return;
+    }
+    const totalReturned = Math.round(((booking.refundAmount || 0) + amount) * 100) / 100;
+    const button = document.getElementById('bookingRefundConfirmBtn');
+    savingRefund = true;
+    button.disabled = true;
+    try {
+      // Stored as cumulative plate_deposit_returned, not a negative customer payment.
+      await window.API.updateBooking(booking.id, { plate_deposit_returned: totalReturned });
+      showToast('تم تسجيل إرجاع التأمين', 'success');
+      document.getElementById('bookingRefundModal').classList.remove('active');
+      refundBookingId = null;
+      await loadBookings();
+    } catch (error) {
+      showToast(error?.message || 'تعذر تسجيل الإرجاع', 'error');
+    } finally {
+      savingRefund = false;
+      button.disabled = false;
+    }
+  }
+
+  function askDeleteConfirmation(message) {
+    const modal = document.getElementById('bookingDeleteModal');
+    const text = document.getElementById('bookingDeleteMessage');
+    const confirmBtn = document.getElementById('bookingDeleteConfirmBtn');
+    if (!modal || !text || !confirmBtn) return Promise.resolve(window.confirm(message));
+    if (deleteDialogResolve) return Promise.resolve(false);
+    text.textContent = message;
+    modal.classList.add('active');
+    return new Promise(resolve => { deleteDialogResolve = resolve; });
+  }
+
+  function finishDeleteDialog(confirmed) {
+    document.getElementById('bookingDeleteModal')?.classList.remove('active');
+    if (deleteDialogResolve) {
+      const resolve = deleteDialogResolve;
+      deleteDialogResolve = null;
+      resolve(confirmed);
+    }
+  }
+
+  async function confirmDelete(booking) {
+    const message = `هل تريد حذف الحجز #${booking.id} للعميل «${booking.customerName}»؟\n\nسيتم حذف جميع الدفعات المرتبطة بهذا الحجز فقط، ولا يمكن التراجع.`;
+    const confirmed = await askDeleteConfirmation(message);
     if (!confirmed) return;
-
     try {
       await window.API.deleteBooking(booking.id);
-      showToast('تم حذف الحجز', 'success');
+      showToast('تم حذف الحجز ودفعاته المرتبطة', 'success');
       await loadBookings();
     } catch (error) {
       showToast(error?.message || 'تعذر حذف الحجز', 'error');
@@ -803,16 +827,12 @@
 
   async function printBooking(booking) {
     try {
-      let fullBooking = booking;
-
-      try {
-        if (window.API && typeof window.API.getBooking === 'function') {
-          const res = await window.API.getBooking(booking.id);
-          const fb = (res && res.data) ? res.data : res;
-          if (fb && fb.id) fullBooking = fb;
-        }
-      } catch (e) {
-        console.warn('⚠️ تعذر جلب تفاصيل الحجز الكاملة:', e);
+      if (!window.API || typeof window.API.getBooking !== 'function') {
+        throw new Error('واجهة تفاصيل الحجوزات غير متاحة');
+      }
+      const fullBooking = await window.API.getBooking(booking.id);
+      if (!fullBooking || !Array.isArray(fullBooking.items)) {
+        throw new Error('تعذر تحميل تفاصيل الأصناف اللازمة لطباعة الفاتورة');
       }
 
       let restaurant = {
@@ -858,7 +878,7 @@
 
       const getDayName = (dateStr) => {
         if (!dateStr) return '';
-        const d = new Date(String(dateStr).slice(0, 10));
+        const d = new Date(`${String(dateStr).slice(0, 10)}T12:00:00`);
         if (Number.isNaN(d.getTime())) return '';
         return ARABIC_DAYS[d.getDay()] || '';
       };
@@ -911,7 +931,7 @@
         );
       }
 
-      const totalAmount = Number(fullBooking.total_amount ?? 0);
+      const totalAmount = Number(fullBooking.payable_total ?? (Number(fullBooking.total_amount ?? 0) + Number(fullBooking.plate_deposit ?? 0)));
       const remaining = Math.max(0, totalAmount - paidAmount);
 
       const paymentMethodName = (() => {
@@ -961,6 +981,7 @@
         remaining: remaining,
 
         platesDeposit: Number(fullBooking.plate_deposit || 0),
+        platesDepositReturned: Number(fullBooking.plate_deposit_returned || 0),
 
         notes: fullBooking.notes || '',
 
@@ -975,7 +996,7 @@
 
     } catch (error) {
       console.error('❌ printBooking failed:', error);
-      showToast('تعذر فتح الفاتورة', 'error');
+      showToast(error?.message || 'تعذر فتح الفاتورة', 'error');
     }
   }
 
@@ -1018,10 +1039,15 @@
     else if (action === 'delete') confirmDelete(booking);
     else if (action === 'print') printBooking(booking);
     else if (action === 'change-status') openStatusModal(id);
-    else if (action === 'pay-remaining') openStatusModal(id);
+    else if (action === 'pay-remaining') openStatusModal(id, true);
+    else if (action === 'refund') openRefundModal(booking);
   }
 
   function bindEvents() {
+    document.getElementById('bookingRefundConfirmBtn')?.addEventListener('click', confirmRefund);
+    document.querySelectorAll('[data-close="bookingRefundModal"]').forEach(el => el.addEventListener('click', closeRefundModal));
+    document.getElementById('bookingDeleteConfirmBtn')?.addEventListener('click', () => finishDeleteDialog(true));
+    document.querySelectorAll('[data-close="bookingDeleteModal"]').forEach(el => el.addEventListener('click', () => finishDeleteDialog(false)));
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value || '';
@@ -1045,13 +1071,15 @@
       bookingList.addEventListener('click', handleListClick);
     }
 
-    $$('[data-close="statusModal"]').forEach((el) => {
+    $$('[data-close="bookingStatusModal"]').forEach((el) => {
       el.addEventListener('click', closeStatusModal);
     });
 
     confirmStatusBtn?.addEventListener('click', confirmStatusChange);
 
     document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('bookingRefundModal')?.classList.contains('active')) { closeRefundModal(); return; }
+      if (e.key === 'Escape' && deleteDialogResolve) { finishDeleteDialog(false); return; }
       if (e.key === 'Escape' && statusModal?.classList.contains('active')) {
         closeStatusModal();
       }

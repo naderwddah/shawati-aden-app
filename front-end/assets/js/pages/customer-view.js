@@ -237,7 +237,8 @@
   }
 
   function bookingTotal(b) {
-    return number(b.total_amount ?? b.totalAmount ?? b.total);
+    return number(b.payable_total ?? b.payableTotal ??
+      (number(b.total_amount ?? b.totalAmount ?? b.total) + number(b.plate_deposit ?? b.plateDeposit)));
   }
 
   function bookingRemaining(b) {
@@ -249,7 +250,7 @@
     let totalPaid = 0;
 
     state.bookings.forEach((b) => {
-      if (getStatus(b.status) !== 'cancelled') totalInvoices += bookingTotal(b);
+      totalInvoices += bookingTotal(b); // Match CustomerAccountService (includes cancelled invoices until explicitly reversed).
     });
 
     state.payments.forEach((p) => {
@@ -278,7 +279,6 @@
     const rows = [];
 
     state.bookings.forEach((b) => {
-      if (getStatus(b.status) === 'cancelled') return;
       rows.push({
         type: 'booking',
         date: b.invoice_date || b.event_date || '',

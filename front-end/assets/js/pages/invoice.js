@@ -211,7 +211,8 @@
             <span style="font-weight: 900; font-size: 14px; color: #420a09; width: 30%;">${totalLabel} :</span>
             <span style="font-weight: 900; font-size: 18px; color: #420a09; width: 40%; text-align: center;">${formatCurrency(totalValue)}</span>
             <span style="font-size: 9px; font-weight: 800; color: #420a09; width: 30%; text-align: left; opacity: 0.8; line-height: 1.4;">
-              المدفوع: <span style="color:#27ae60;">${formatCurrency(data.deposit)}</span><br>المتبقي: <span style="color:#c0392b;">${formatCurrency(Math.max(0, grandTotal - (data.deposit || 0)))}</span>
+              المدفوع: <span style="color:#27ae60;">${formatCurrency(data.deposit)}</span><br>
+              ${data.platesDepositReturned > 0 ? `التأمين المُعاد: ${formatCurrency(data.platesDepositReturned)}<br>` : ''}المتبقي: <span style="color:#c0392b;">${formatCurrency(Math.max(0, grandTotal - (data.deposit || 0)))}</span>
             </span>
           </div>
 

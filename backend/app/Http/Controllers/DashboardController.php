@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
         $bookings = $this->activeBookings()
             ->whereDate('event_date', $date)
-            ->select(['id', 'customer_id', 'event_date', 'delivery_time', 'delivery_period', 'total_amount', 'status'])
+            ->select(['id', 'customer_id', 'event_date', 'delivery_time', 'delivery_period', 'total_amount', 'plate_deposit', 'status'])
             ->with('customer:id,name')
             ->orderBy('delivery_time')
             ->get();
@@ -48,13 +48,13 @@ class DashboardController extends Controller
             'data' => [
                 'date' => $date,
                 'count' => $bookings->count(),
-                'total_amount' => round((float) $bookings->sum('total_amount'), 2),
+                'total_amount' => round((float) $bookings->sum(fn ($b) => (float) $b->total_amount + (float) ($b->plate_deposit ?? 0)), 2),
                 'bookings' => $bookings->map(fn (Booking $booking) => [
                     'id' => $booking->id,
                     'customer_name' => $booking->customer?->name ?? 'عميل',
                     'delivery_time' => $booking->delivery_time,
                     'delivery_period' => $booking->delivery_period,
-                    'total_amount' => (float) $booking->total_amount,
+                    'total_amount' => round((float) $booking->total_amount + (float) ($booking->plate_deposit ?? 0), 2),
                     'status' => $booking->status,
                 ])->values(),
             ],
@@ -80,7 +80,7 @@ class DashboardController extends Controller
             ->sum('quantity');
 
         $bookings = (clone $query)
-            ->select(['id', 'customer_id', 'event_date', 'delivery_time', 'total_amount'])
+            ->select(['id', 'customer_id', 'event_date', 'delivery_time', 'total_amount', 'plate_deposit'])
             ->with('customer:id,name')
             ->orderBy('event_date')
             ->orderBy('delivery_time')
@@ -99,7 +99,7 @@ class DashboardController extends Controller
                     'customer_name' => $booking->customer?->name ?? 'عميل',
                     'event_date' => $booking->event_date,
                     'delivery_time' => $booking->delivery_time,
-                    'total_amount' => (float) $booking->total_amount,
+                    'total_amount' => round((float) $booking->total_amount + (float) ($booking->plate_deposit ?? 0), 2),
                 ])->values(),
             ],
         ]);
@@ -112,11 +112,12 @@ class DashboardController extends Controller
         $accounts = Customer::query()
             ->select(['id', 'name', 'phone'])
             ->withSum('bookings as invoices_total', 'total_amount')
+            ->withSum('bookings as deposit_total', 'plate_deposit')
             ->withSum('payments as payments_total', 'amount')
             ->get()
             ->map(function (Customer $customer) {
                 $balance = round(
-                    (float) ($customer->invoices_total ?? 0) - (float) ($customer->payments_total ?? 0),
+                    (float) ($customer->invoices_total ?? 0) + (float) ($customer->deposit_total ?? 0) - (float) ($customer->payments_total ?? 0),
                     2
                 );
 

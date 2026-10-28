@@ -21,12 +21,19 @@ class CustomerPaymentService
              * يجب أن تكون الفاتورة لنفس العميل.
              */
             if (!empty($data['booking_id'])) {
-                $booking = Booking::findOrFail($data['booking_id']);
+                $booking = Booking::query()->lockForUpdate()->findOrFail($data['booking_id']);
 
                 if ((int) $booking->customer_id !== (int) $customer->id) {
                     throw ValidationException::withMessages([
                         'booking_id' =>
                             'الفاتورة المحددة لا تتبع لهذا العميل.',
+                    ]);
+                }
+                $paid = (float) $booking->payments()->sum('amount');
+                $due = (float) $booking->total_amount + (float) ($booking->plate_deposit ?? 0);
+                if ((int) round(((float) $data['amount'] + $paid) * 100) > (int) round($due * 100)) {
+                    throw ValidationException::withMessages([
+                        'amount' => 'الدفعة تتجاوز المتبقي على الحجز شاملًا تأمين الصحون.',
                     ]);
                 }
             }

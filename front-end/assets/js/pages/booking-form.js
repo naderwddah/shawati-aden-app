@@ -38,6 +38,8 @@
     // in the simplified UI.
     editingBookingStatus: null,
     editingPlateReturned: null,
+    originalInvoiceDate: null,
+    existingPaymentsTotal: 0,
 
     customerSearchTimer: null
   };
@@ -602,10 +604,13 @@
           })
           .join("");
 
+        const catalogMatch = state.items.some(c => String(getItemId(c)) === String(selectedItemId));
+        const customName = item.name && (!selectedItemId || !catalogMatch) ? item.name : null;
         return `
           <div class="booking-item-row" data-item-index="${index}">
             <select class="item-select" data-action="item-select">
               <option value="">اختر الصنف</option>
+              ${customName ? `<option value="__custom__" selected>${escapeHtml(customName)} (محفوظ)</option>` : ''}
               ${options}
             </select>
             <input type="number"
@@ -663,6 +668,8 @@
     const index = Number(row.dataset.itemIndex);
     const item = state.bookingItems[index];
     if (!item) return;
+
+    if (value === '__custom__') return;
 
     if (!value) {
       item.item_id = null;
@@ -762,6 +769,11 @@
     return normalizeNumber(input.value, 0);
   }
 
+  function getPlateReturnedValue() {
+    const input = $("#plateDepositReturned");
+    return input ? normalizeNumber(input.value, 0) : 0;
+  }
+
   function getPlateDepositValue() {
     const input = $("#plateDeposit");
     if (!input) return 0;
@@ -772,7 +784,7 @@
     const itemsTotal = calculateBookingTotal();
     const deposit = getPlateDepositValue();
     const grandTotal = roundMoney(itemsTotal + deposit);
-    const initialPayment = getInitialPaymentValue();
+    const initialPayment = state.editing ? state.existingPaymentsTotal : getInitialPaymentValue();
     const remaining = Math.max(0, roundMoney(grandTotal - initialPayment));
 
     const itemsTotalEl = $("#itemsTotal");
@@ -797,6 +809,9 @@
       depositInput.addEventListener("change", updateFinancialDisplay);
     }
 
+    const refundInput = $("#plateDepositReturned");
+    if (refundInput) refundInput.addEventListener("input", updateFinancialDisplay);
+
     const paymentInput = $("#initialPayment");
     if (paymentInput) {
       paymentInput.addEventListener("input", updateFinancialDisplay);
@@ -816,44 +831,6 @@
     return { name, phone, notes };
   }
 
-  async function createNewCustomer() {
-    const data = getNewCustomerData();
-
-    const existing = state.customers.find((customer) => {
-      if (!data.phone) return false;
-      return String(customer.phone ?? "").trim() === data.phone;
-    });
-
-    if (existing) {
-      const useExisting = window.confirm(
-        "يوجد عميل مسجل بنفس رقم الجوال.\n\n" +
-        "هل تريد استخدام العميل الموجود بدل إنشاء عميل جديد؟"
-      );
-
-      if (useExisting) return existing;
-
-      throw new Error("يوجد عميل مسجل مسبقًا بنفس رقم الجوال.");
-    }
-
-    if (typeof API.createCustomer !== "function") {
-      throw new Error("واجهة إنشاء العملاء غير متاحة.");
-    }
-
-    const response = await API.createCustomer(data);
-    const created = getApiData(response);
-    const customer = created?.data ?? created?.customer ?? created;
-
-    if (!customer || !getCustomerId(customer)) {
-      throw new Error(
-        "تم إنشاء العميل ولكن لم يتم استلام بياناته بشكل صحيح."
-      );
-    }
-
-    state.customers.push(customer);
-    return customer;
-  }
-
-
   /* =========================================================
    * Booking payload
    * ========================================================= */
@@ -866,7 +843,8 @@
     const totalAmount = calculateBookingTotal();
 
     // Invoice date is always set to today (no field in the UI).
-    const invoiceDate = todayDate();
+    const invoiceDate = (state.editing && state.originalInvoiceDate)
+      ? state.originalInvoiceDate : todayDate();
     const eventDate = getFieldValue("eventDate");
     const deliveryTime = getFieldValue("deliveryTime");
     const deliveryPeriod = getFieldValue("deliveryPeriod");
@@ -876,7 +854,7 @@
     const plateDeposit = getPlateDepositValue();
 
     const payload = {
-      customer_id: Number(customerId),
+      ...(customerId ? { customer_id: Number(customerId) } : {}),
       invoice_date: invoiceDate,
       event_date: eventDate,
       delivery_time: deliveryTime,
@@ -917,7 +895,15 @@
       }
     }
 
+    if (state.mode === "new" && !state.editing) {
+      const customer = getNewCustomerData();
+      payload.customer_name = customer.name;
+      payload.customer_phone = customer.phone;
+      payload.customer_notes = customer.notes || null;
+    }
+
     if (state.editing) {
+      payload.plate_deposit_returned = getPlateReturnedValue();
       if (
         state.editingBookingStatus !== null &&
         state.editingBookingStatus !== undefined
@@ -1036,7 +1022,7 @@
     if (state.editing) return true;
 
     const payment = getInitialPaymentValue();
-    const total = calculateBookingTotal();
+    const total = calculateBookingTotal() + getPlateDepositValue();
 
     if (payment < 0) {
       showAlert("الدفعة الأولى لا يمكن أن تكون سالبة.");
@@ -1044,7 +1030,7 @@
     }
 
     if (payment > total) {
-      showAlert("الدفعة الأولى لا يمكن أن تتجاوز إجمالي الحجز.");
+      showAlert("الدفعة الأولى لا يمكن أن تتجاوز إجمالي الأصناف مع التأمين.");
       return false;
     }
 
@@ -1067,7 +1053,20 @@
     if (!validateBookingFields()) return false;
     if (!validateItems()) return false;
     if (!validatePayment()) return false;
-
+    const deposit = getPlateDepositValue();
+    const refund = getPlateReturnedValue();
+    if (deposit < 0 || refund < 0 || refund > deposit) {
+      showAlert("مبلغ التأمين المسترد يجب أن يكون بين الصفر وقيمة التأمين.");
+      return false;
+    }
+    if (state.editing && refund < normalizeNumber(state.editingPlateReturned)) {
+      showAlert("لا يمكن تقليل قيمة التأمين المسترد سابقًا.");
+      return false;
+    }
+    if (state.editing && refund > state.existingPaymentsTotal) {
+      showAlert("لا يمكن إرجاع مبلغ تأمين أكبر من المبالغ المحصلة من العميل لهذا الحجز.");
+      return false;
+    }
     return true;
   }
 
@@ -1078,7 +1077,13 @@
 
   async function resolveCustomerForBooking() {
     if (state.mode === "existing") return state.selectedCustomer;
-    return createNewCustomer();
+    const newData = getNewCustomerData();
+    const existing = state.customers.find(c => String(c.phone ?? '').trim() === newData.phone);
+    if (existing) {
+      throw new Error('هذا الرقم مسجّل بالفعل. اختر العميل الموجود من البحث.');
+    }
+    // The backend creates customer + booking + initial payment in ONE transaction.
+    return null;
   }
 
   async function saveBooking() {
@@ -1093,7 +1098,7 @@
       const customer = await resolveCustomerForBooking();
       const customerId = getCustomerId(customer);
 
-      if (!customerId) {
+      if (state.mode === 'existing' && !customerId) {
         throw new Error("تعذر تحديد العميل المرتبط بالحجز.");
       }
 
@@ -1216,6 +1221,9 @@
     state.editing = true;
     state.editingBookingStatus = booking.status ?? null;
     state.editingPlateReturned = booking.plate_deposit_returned ?? null;
+    state.originalInvoiceDate = booking.invoice_date ?? null;
+    state.existingPaymentsTotal = normalizeNumber(booking.paid_amount,
+      Array.isArray(booking.payments) ? booking.payments.reduce((sum, p) => sum + normalizeNumber(p.amount), 0) : 0);
 
     populateBookingForm(booking);
   }
@@ -1241,13 +1249,21 @@
     setInputValue("deliveryAddress", booking.delivery_address);
     setInputValue("mark", booking.mark);
     setInputValue("bookingNotes", booking.notes);
-    setInputValue("plateDeposit", booking.plate_deposit);
+    setInputValue("plateDeposit", booking.plate_deposit ?? 0);
+    setInputValue("plateDepositReturned", booking.plate_deposit_returned ?? 0);
+    const refundGroup = $("#depositRefundGroup");
+    if (refundGroup) refundGroup.style.display = "block";
+    const periodSelect = $("#deliveryPeriod");
+    if (periodSelect && booking.delivery_period && ![...periodSelect.options].some(o => o.value === booking.delivery_period)) {
+      periodSelect.add(new Option(booking.delivery_period, booking.delivery_period));
+      periodSelect.value = booking.delivery_period;
+    }
 
     state.bookingItems = Array.isArray(booking.items)
       ? booking.items.map((item) => ({
           id: item.id ?? null,
           item_id: item.item_id ?? item.item?.id ?? null,
-          name: item.name ?? item.item?.name ?? "",
+          name: item.item_name ?? item.name ?? item.item?.name ?? "",
           quantity: normalizeNumber(item.quantity, 1),
           unit_price: normalizeNumber(
             item.unit_price ?? item.price,
@@ -1288,7 +1304,12 @@
     const initialPayment = document.querySelector("#initialPayment");
     const paymentMethodSelect = document.querySelector("#paymentMethodSelect");
 
-    if (initialPayment) initialPayment.disabled = true;
+    if (initialPayment) {
+      initialPayment.value = state.existingPaymentsTotal.toFixed(2);
+      initialPayment.disabled = true;
+    }
+    const paymentLabel = $("#initialPaymentLabel");
+    if (paymentLabel) paymentLabel.textContent = "المدفوع سابقًا";
     if (paymentMethodSelect) paymentMethodSelect.disabled = true;
 
     // Dim the financial rows that relate to payment.
@@ -1332,6 +1353,12 @@
     state.editing = false;
     state.editingBookingStatus = null;
     state.editingPlateReturned = null;
+    state.originalInvoiceDate = null;
+    state.existingPaymentsTotal = 0;
+    const refundGroup = $("#depositRefundGroup");
+    if (refundGroup) refundGroup.style.display = "none";
+    const paymentLabel = $("#initialPaymentLabel");
+    if (paymentLabel) paymentLabel.textContent = "الدفعة الأولى";
 
     setCustomerMode("existing");
     renderItems();
@@ -1440,11 +1467,13 @@
     try {
       hideAlert();
 
-      await Promise.all([
+      const resources = await Promise.allSettled([
         loadCustomers(),
         loadItems(),
         loadPaymentMethods()
       ]);
+      const essentialError = resources.slice(0, 2).find(r => r.status === 'rejected');
+      if (essentialError) throw essentialError.reason;
 
       bindCustomerModeButtons();
       bindCustomerSearch();
