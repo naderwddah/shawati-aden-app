@@ -1,0 +1,926 @@
+<!doctype html>
+<html dir="rtl" lang="ar" data-page="customer-view">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#8F1720" />
+  <meta name="description" content="تفاصيل العميل - شواطئ عدن" />
+  <title>تفاصيل العميل - شواطئ عدن</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="assets/css/global.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="assets/images/logo.png" />
+
+  <style>
+    /* ===================== أساسيات ===================== */
+    .cv-page { padding-bottom: 90px; }
+
+    /* ===================== رأس العميل ===================== */
+    .cv-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--surface-card, #fff);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 12px;
+    }
+    .cv-header .avatar {
+      width: 54px; height: 54px;
+      border-radius: 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .cv-header .info { flex: 1; min-width: 0; }
+    .cv-header .name {
+      font-size: 17px; font-weight: 800; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cv-header .phone {
+      font-size: 13px; color: var(--text-muted); direction: ltr;
+      text-align: right; margin-top: 3px;
+    }
+    .cv-header .notes {
+      font-size: 12px; color: var(--text-muted); margin-top: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cv-header .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 800;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .cv-header .status-badge.active   { background: #d1fae5; color: #065f46; }
+    .cv-header .status-badge.inactive { background: #fee2e2; color: #991b1b; }
+    .cv-header .status-badge.remaining{ background: #fef3c7; color: #92400e; }
+    .cv-header .status-badge.paid     { background: #d1fae5; color: #065f46; }
+
+    /* زر الرجوع */
+    .cv-back-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .cv-back-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-card, #fff);
+      color: var(--text-secondary);
+      font-family: inherit; font-size: 13px; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      transition: .15s;
+    }
+    .cv-back-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ===================== بطاقات الملخص ===================== */
+    .cv-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .cv-summary .stat {
+      padding: 10px 6px;
+      background: var(--surface-card, #fff);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+    }
+    .cv-summary .label {
+      display: block; font-size: 10.5px; color: var(--text-muted);
+      font-weight: 700; margin-bottom: 3px;
+    }
+    .cv-summary .value {
+      display: block; font-size: 16px; font-weight: 800;
+      color: var(--text);
+    }
+    .cv-summary .value.success { color: #047857; }
+    .cv-summary .value.danger  { color: #b91c1c; }
+
+    /* ===================== التابات ===================== */
+    .cv-tabs {
+      display: flex; gap: 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .cv-tabs::-webkit-scrollbar { display: none; }
+    .cv-tab {
+      padding: 10px 14px;
+      font-size: 13px; font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      font-family: inherit;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .cv-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .cv-tab-content { display: none; }
+    .cv-tab-content.active { display: block; }
+
+    /* ===================== رأس القسم ===================== */
+    .cv-section-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .cv-section-head h3 {
+      margin: 0; font-size: 14px; font-weight: 800;
+      color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ===================== بطاقة الحجز ===================== */
+    .cv-booking-card {
+      background: var(--surface-card, #fff);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    }
+    .cv-bk-head {
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .cv-bk-title {
+      font-size: 14px; font-weight: 800;
+      color: var(--text); margin: 0 0 3px;
+    }
+    .cv-bk-title .num {
+      color: var(--text-muted); font-weight: 700; font-size: 12px;
+    }
+    .cv-bk-mark {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700;
+      color: #92400e; background: #fef3c7;
+      padding: 2px 8px; border-radius: 999px;
+    }
+    .cv-bk-status {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 800;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .cv-bk-status.new       { background: #fef3c7; color: #92400e; }
+    .cv-bk-status.confirmed { background: #d1fae5; color: #065f46; }
+    .cv-bk-status.completed { background: #e0e7ff; color: #3730a3; }
+    .cv-bk-status.cancelled { background: #fee2e2; color: #991b1b; }
+
+    .cv-bk-datetime {
+      display: flex; flex-wrap: wrap; gap: 8px 12px;
+      padding: 7px 10px;
+      background: var(--surface-muted, #f9fafb);
+      border-radius: 9px;
+      font-size: 12px; color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    .cv-bk-datetime span {
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .cv-bk-datetime i { color: var(--primary); font-size: 11px; }
+
+    .cv-bk-finance {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .cv-fin {
+      padding: 7px 3px;
+      border-radius: 9px;
+      text-align: center;
+      border: 1px solid transparent;
+    }
+    .cv-fin.total     { background: #f3f4f6; border-color: #e5e7eb; }
+    .cv-fin.paid      { background: #ecfdf5; border-color: #d1fae5; }
+    .cv-fin.remaining { background: #fef2f2; border-color: #fee2e2; }
+    .cv-fin.deposit   { background: #fff7ed; border-color: #fed7aa; }
+    .cv-fin .lbl {
+      font-size: 9.5px; font-weight: 700;
+      margin-bottom: 2px; line-height: 1.2;
+    }
+    .cv-fin.total .lbl     { color: #6b7280; }
+    .cv-fin.paid .lbl      { color: #059669; }
+    .cv-fin.remaining .lbl { color: #dc2626; }
+    .cv-fin.deposit .lbl   { color: #ea580c; }
+    .cv-fin .val {
+      font-size: 12.5px; font-weight: 800; line-height: 1.2;
+    }
+    .cv-fin.total .val     { color: #111827; }
+    .cv-fin.paid .val      { color: #047857; }
+    .cv-fin.remaining .val { color: #b91c1c; }
+    .cv-fin.deposit .val   { color: #c2410c; }
+
+    .cv-bk-items {
+      font-size: 11.5px; color: var(--text-muted);
+      padding: 6px 10px;
+      background: var(--surface-muted, #f9fafb);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      line-height: 1.7;
+    }
+    .cv-bk-items strong { color: var(--text-secondary); font-weight: 700; }
+
+    .cv-bk-locked {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #047857;
+      border-radius: 9px;
+      padding: 7px 12px;
+      text-align: center;
+      font-size: 11.5px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+
+    .cv-bk-actions {
+      display: flex; gap: 6px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .cv-action {
+      flex: 1;
+      min-height: 38px;
+      border: 0; border-radius: 9px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 11.5px; font-weight: 800;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 5px;
+      transition: .15s;
+    }
+    .cv-action.primary   { background: #1f2937; color: #fff; }
+    .cv-action.primary:hover { background: #111827; }
+    .cv-action.secondary { background: var(--surface-muted, #f3f4f6); color: var(--text-secondary); }
+    .cv-action.secondary:hover { background: #e5e7eb; }
+    .cv-action.warning   { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+    .cv-action.warning:hover { background: #b45309; color: #fff; }
+    .cv-action.danger    { flex: 0 0 42px; background: #fee2e2; color: #dc2626; }
+    .cv-action.danger:hover { background: #dc2626; color: #fff; }
+
+    /* ===================== بطاقة الدفعة ===================== */
+    .cv-payment-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px;
+      background: var(--surface-card, #fff);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .cv-pay-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      background: #ecfdf5; color: #047857;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .cv-pay-info { flex: 1; min-width: 0; }
+    .cv-pay-title {
+      font-size: 13px; font-weight: 800; color: var(--text);
+    }
+    .cv-pay-sub {
+      font-size: 11.5px; color: var(--text-muted); margin-top: 3px;
+      line-height: 1.6;
+    }
+    .cv-pay-amount {
+      font-size: 15px; font-weight: 800; color: #047857;
+      white-space: nowrap;
+    }
+    .cv-pay-del {
+      width: 34px; height: 34px;
+      border: 0; border-radius: 9px;
+      background: #fee2e2; color: #dc2626;
+      cursor: pointer; font-size: 13px;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .cv-pay-del:hover { background: #dc2626; color: #fff; }
+
+    /* ===================== كشف الحساب ===================== */
+    .cv-statement-toggle {
+      display: inline-flex; gap: 6px;
+      padding: 4px;
+      background: var(--surface-muted, #f3f4f6);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .cv-stmt-btn {
+      padding: 8px 14px;
+      border: 0; border-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit; font-size: 12px; font-weight: 800;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+      white-space: nowrap;
+    }
+    .cv-stmt-btn.active {
+      background: #fff; color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+
+    .cv-stmt-card {
+      background: var(--surface-card, #fff);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .cv-stmt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .cv-stmt-table thead th {
+      background: var(--surface-muted, #f9fafb);
+      color: var(--text-secondary);
+      font-weight: 800;
+      font-size: 11px;
+      padding: 9px 8px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .cv-stmt-table thead th.num { text-align: left; }
+    .cv-stmt-table tbody td {
+      padding: 9px 8px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+    .cv-stmt-table tbody tr:last-child td { border-bottom: 0; }
+    .cv-stmt-table tbody tr:hover { background: var(--surface-muted, #f9fafb); }
+
+    .cv-stmt-table .desc {
+      font-weight: 700; color: var(--text); font-size: 12px;
+    }
+    .cv-stmt-table .desc .date {
+      display: block; font-weight: 600; color: var(--text-muted);
+      font-size: 10.5px; margin-top: 2px;
+    }
+    .cv-stmt-table .debit  { color: #b91c1c; font-weight: 800; }
+    .cv-stmt-table .credit { color: #047857; font-weight: 800; }
+    .cv-stmt-table .balance { color: var(--text); font-weight: 800; }
+    .cv-stmt-table td.num { text-align: left; direction: ltr; }
+
+    /* تفصيل الفاتورة */
+    .cv-stmt-detail {
+      padding: 10px 12px;
+      background: var(--surface-muted, #f9fafb);
+      border-radius: 8px;
+      margin: 6px 0 4px;
+      font-size: 11.5px;
+    }
+    .cv-stmt-detail-title {
+      font-weight: 800; color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .cv-stmt-detail-row {
+      display: grid;
+      grid-template-columns: 1fr 45px 65px 70px;
+      gap: 6px;
+      padding: 4px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .cv-stmt-detail-row:last-child { border-bottom: 0; }
+    .cv-stmt-detail-row .num {
+      text-align: center;
+      direction: ltr;
+    }
+    .cv-stmt-detail-row .name { font-weight: 700; }
+
+    /* ===================== حالات فارغة ===================== */
+    .cv-empty {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--text-muted);
+    }
+    .cv-empty i { display: block; font-size: 34px; opacity: .35; margin-bottom: 10px; }
+    .cv-empty h4 { font-size: 15px; font-weight: 800; color: var(--text); margin: 0 0 5px; }
+    .cv-empty p { font-size: 13px; margin: 0; }
+
+    /* ===================== Skeleton ===================== */
+    .sk-card {
+      background: var(--surface-card, #fff);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .sk-line {
+      height: 12px; border-radius: 6px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+      background-size: 200% 100%;
+      animation: sk-shine 1.4s infinite;
+      margin-bottom: 8px;
+    }
+    .sk-line.w-40 { width: 40%; }
+    .sk-line.w-60 { width: 60%; }
+    .sk-line.w-80 { width: 80%; }
+    @keyframes sk-shine {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ===================== Modals ===================== */
+    .cv-modal {
+      display: none;
+      position: fixed; inset: 0;
+      z-index: 1000;
+      align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .cv-modal.active { display: flex; }
+    .cv-modal-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,.5);
+      backdrop-filter: blur(2px);
+    }
+    .cv-modal-dialog {
+      position: relative;
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .cv-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cv-modal-header h3 {
+      margin: 0; font-size: 15px; font-weight: 800;
+      color: var(--text);
+    }
+    .cv-modal-close {
+      width: 32px; height: 32px;
+      border: 0; background: transparent;
+      color: var(--text-muted); cursor: pointer;
+      border-radius: 8px; font-size: 15px;
+    }
+    .cv-modal-close:hover { background: var(--surface-muted, #f3f4f6); }
+    .cv-modal-body { padding: 16px; }
+    .cv-modal-footer {
+      display: flex; gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .cv-modal-footer button {
+      flex: 1; min-height: 44px;
+      border: 0; border-radius: 10px;
+      cursor: pointer; font-family: inherit;
+      font-size: 14px; font-weight: 800;
+    }
+    .cv-modal-footer .btn-cancel {
+      background: var(--surface-muted, #f3f4f6);
+      color: var(--text-secondary);
+    }
+    .cv-modal-footer .btn-confirm {
+      background: var(--primary); color: #fff;
+    }
+    .cv-modal-footer .btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* خيارات الحالة */
+    .cv-status-options {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-bottom: 14px;
+    }
+    .cv-status-opt {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: #fff; cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 800;
+      color: var(--text-secondary);
+      transition: .15s;
+    }
+    .cv-status-opt:hover { border-color: var(--primary); }
+    .cv-status-opt:has(input:checked) {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+.cv-status-opt input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+    .cv-pay-box {
+      display: none;
+      padding: 12px;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .cv-pay-box.show { display: block; }
+    .cv-pay-box .title {
+      font-size: 12px; font-weight: 800; color: #92400e;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .cv-pay-box .row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .cv-pay-box .row:last-child { margin-bottom: 0; }
+    .cv-pay-box label {
+      font-size: 12px; font-weight: 700; color: #92400e;
+      width: 90px; flex-shrink: 0;
+    }
+    .cv-pay-box input,
+    .cv-pay-box select {
+      flex: 1; height: 42px;
+      padding: 0 10px;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      background: #fff;
+      font-family: inherit; font-size: 14px; font-weight: 800;
+      text-align: center; color: #92400e;
+    }
+    .cv-pay-box select {
+      text-align: right; font-weight: 700;
+    }
+    .cv-pay-box .hint {
+      font-size: 11px; color: #92400e;
+      text-align: center; margin-top: 6px; opacity: .85;
+    }
+
+    /* ===================== Transaction Modal (booking/payment) ===================== */
+    .switch-group {
+      display: flex; gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .switch-btn {
+      padding: 8px 16px;
+      border: 0; background: transparent;
+      color: var(--text-muted);
+      font-weight: 700; border-radius: 999px;
+      cursor: pointer; font-family: inherit; font-size: 13px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .switch-btn.active { background: var(--primary); color: #fff; }
+
+    .section-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .section-title {
+      font-weight: 700; margin-bottom: 10px;
+      color: var(--text-secondary);
+      display: flex; align-items: center; gap: 7px;
+      font-size: 13px;
+    }
+    .form-grid-2 {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .item-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1fr) 80px 100px 110px 38px;
+      gap: 8px; align-items: center;
+      margin-bottom: 8px;
+    }
+    .payment-method-option {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      cursor: pointer;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .payment-method-option:has(input:checked) {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .payment-method-option input { display: none; }
+
+    /* ===================== الهاتف ===================== */
+    @media (max-width: 600px) {
+      .cv-header { padding: 12px; gap: 10px; }
+      .cv-header .avatar { width: 46px; height: 46px; font-size: 18px; }
+      .cv-header .name { font-size: 15px; }
+      .cv-summary { gap: 6px; }
+      .cv-summary .stat { padding: 8px 4px; }
+      .cv-summary .value { font-size: 14px; }
+      .cv-booking-card { padding: 11px; }
+      .cv-bk-finance { gap: 4px; }
+      .cv-fin { padding: 6px 2px; }
+      .cv-fin .lbl { font-size: 9px; }
+      .cv-fin .val { font-size: 11px; }
+      .cv-action { font-size: 11px; min-height: 36px; }
+      .form-grid-2 { grid-template-columns: 1fr; }
+      .item-row {
+        grid-template-columns: 1fr 70px 90px 90px 34px;
+      }
+      .cv-stmt-table { font-size: 11px; }
+      .cv-stmt-table thead th,
+      .cv-stmt-table tbody td { padding: 7px 5px; }
+      .cv-stmt-detail-row {
+        grid-template-columns: 1fr 40px 60px 65px;
+        font-size: 10.5px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside id="sidebar" class="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    <div class="main-area">
+      <header id="header" class="header"></header>
+      <main class="content" id="pageContent">
+        <div id="customerViewContent" class="cv-page"></div>
+      </main>
+    </div>
+  </div>
+
+  <nav id="bottomNav" class="bottom-nav"></nav>
+
+  <button id="fab" class="fab" type="button" aria-label="إضافة">
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <div id="modalContainer"></div>
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ===================== Transaction Modal ===================== -->
+  <div class="modal" id="transactionModal" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
+    <div class="modal-overlay" data-close="transactionModal"></div>
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title" id="transactionModalTitle">حجز جديد</h3>
+        <button type="button" class="modal-close" data-close="transactionModal" aria-label="إغلاق">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="switch-group">
+          <button type="button" class="switch-btn active" data-mode="booking">
+            <i class="fas fa-calendar-plus"></i> حجز
+          </button>
+          <button type="button" class="switch-btn" data-mode="payment">
+            <i class="fas fa-money-bill-wave"></i> دفعة
+          </button>
+        </div>
+
+        <!-- ============ Booking Mode ============ -->
+        <div id="bookingMode">
+          <div class="section-card" style="margin-bottom:12px">
+            <div class="section-title"><i class="fas fa-user"></i> بيانات العميل</div>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13px;">
+              <span><strong>الاسم:</strong> <span id="bookingCustomerName">—</span></span>
+              <span><strong>الجوال:</strong> <span id="bookingCustomerPhone">—</span></span>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="bookingEventDate">تاريخ المناسبة <span class="req">*</span></label>
+              <input type="date" class="form-input" id="bookingEventDate" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bookingDeliveryTime">وقت التسليم <span class="req">*</span></label>
+              <input type="time" class="form-input" id="bookingDeliveryTime" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bookingDeliveryPeriod">الفترة <span class="req">*</span></label>
+              <select class="form-input" id="bookingDeliveryPeriod">
+                <option value="صباحاً">صباحاً</option>
+                <option value="ظهراً" selected>ظهراً</option>
+                <option value="مساءً">مساءً</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bookingMark">العلامة</label>
+              <input type="text" class="form-input" id="bookingMark" placeholder="علامة أو وصف مختصر" />
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label" for="bookingAddress">موقع / عنوان التوصيل <span class="req">*</span></label>
+              <input type="text" class="form-input" id="bookingAddress" placeholder="أدخل موقع أو عنوان التوصيل" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bookingPlateDeposit">تأمين الصحون</label>
+              <input type="number" class="form-input" id="bookingPlateDeposit" min="0" step="0.01" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bookingPaymentMethod">طريقة دفع الدفعة الأولى</label>
+              <select class="form-input" id="bookingPaymentMethod"></select>
+            </div>
+          </div>
+
+          <div class="section-card" style="margin-top:12px">
+            <div class="section-title"><i class="fas fa-utensils"></i> الأصناف</div>
+            <div id="bookingItemsContainer"></div>
+            <button type="button" class="btn btn-sm btn-secondary" id="addBookingItemBtn">
+              <i class="fas fa-plus"></i> إضافة صنف
+            </button>
+          </div>
+
+          <div class="form-grid-2" style="margin-top:12px">
+            <div class="form-group">
+              <label class="form-label" for="bookingNotes">ملاحظات</label>
+              <textarea class="form-input" id="bookingNotes" rows="3" placeholder="ملاحظات الحجز"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="bookingInitialPayment">الدفعة الأولى</label>
+              <input type="number" class="form-input" id="bookingInitialPayment" min="0" step="0.01" placeholder="0" />
+            </div>
+          </div>
+
+          <div class="section-card" style="margin-top:12px">
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; text-align:center;">
+              <div>
+                <span style="font-size:11px; color:var(--text-muted)">إجمالي الأصناف</span><br>
+                <span id="bookingItemsTotal" style="font-weight:800">0 ر.س</span>
+              </div>
+              <div>
+                <span style="font-size:11px; color:var(--text-muted)">تأمين الصحون</span><br>
+                <span id="bookingPlateDisplay" style="font-weight:800">0 ر.س</span>
+              </div>
+              <div>
+                <span style="font-size:11px; color:var(--text-muted)">إجمالي الفاتورة</span><br>
+                <span id="bookingGrandTotal" style="font-weight:800; color:var(--danger)">0 ر.س</span>
+              </div>
+              <div>
+                <span style="font-size:11px; color:var(--text-muted)">المتبقي</span><br>
+                <span id="bookingRemainingPreview" style="font-weight:800; color:var(--danger)">0 ر.س</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ Payment Mode ============ -->
+        <div id="paymentMode" style="display:none">
+          <div class="section-card" style="margin-bottom:12px">
+            <div class="section-title"><i class="fas fa-user"></i> بيانات العميل</div>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13px;">
+              <span><strong>الاسم:</strong> <span id="paymentCustomerName">—</span></span>
+              <span><strong>الجوال:</strong> <span id="paymentCustomerPhone">—</span></span>
+            </div>
+          </div>
+
+          <div class="section-card" style="margin-bottom:12px">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
+              <div>
+                <span style="font-size:11px; color:var(--text-muted)">الرصيد الحالي</span><br>
+                <span id="paymentCurrentBalance" style="font-weight:800; font-size:16px">0 ر.س</span>
+              </div>
+              <div>
+                <span style="font-size:11px; color:var(--text-muted)">الرصيد بعد الدفع</span><br>
+                <span id="paymentAfterBalance" style="font-weight:800; font-size:16px; color:var(--success)">0 ر.س</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="paymentAmount">المبلغ <span class="req">*</span></label>
+              <input type="number" class="form-input" id="paymentAmount" min="0.01" step="0.01" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="paymentDate">تاريخ ووقت الدفع <span class="req">*</span></label>
+              <input type="datetime-local" class="form-input" id="paymentDate" />
+            </div>
+            <div class="form-group" style="grid-column:1/-1">
+              <label class="form-label" for="paymentBooking">الحجز المرتبط بالدفعة</label>
+              <select class="form-input" id="paymentBooking"></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">طريقة الدفع</label>
+            <div id="paymentMethodsContainer" style="display:flex; gap:8px; flex-wrap:wrap"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="paymentNotes">ملاحظات</label>
+            <textarea class="form-input" id="paymentNotes" rows="3" placeholder="ملاحظات الدفعة"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="transactionModal">إلغاء</button>
+        <button type="button" class="btn btn-primary" id="transactionSaveBtn">حفظ الحجز</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Status Modal ===================== -->
+  <div class="cv-modal" id="statusModal">
+    <div class="cv-modal-overlay" data-close="statusModal"></div>
+    <div class="cv-modal-dialog">
+      <div class="cv-modal-header">
+        <h3 id="statusModalTitle">تغيير حالة الحجز</h3>
+        <button type="button" class="cv-modal-close" data-close="statusModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="cv-modal-body">
+        <div class="cv-status-options" id="statusOptions">
+          <label class="cv-status-opt">
+            <input type="radio" name="newStatus" value="new">
+            <i class="fas fa-circle" style="color:#f59e0b;font-size:8px"></i> جديد
+          </label>
+          <label class="cv-status-opt">
+            <input type="radio" name="newStatus" value="confirmed">
+            <i class="fas fa-circle" style="color:#10b981;font-size:8px"></i> مؤكد
+          </label>
+          <label class="cv-status-opt">
+            <input type="radio" name="newStatus" value="completed">
+            <i class="fas fa-circle" style="color:#6366f1;font-size:8px"></i> مكتمل
+          </label>
+          <label class="cv-status-opt">
+            <input type="radio" name="newStatus" value="cancelled">
+            <i class="fas fa-circle" style="color:#ef4444;font-size:8px"></i> ملغي
+          </label>
+        </div>
+
+        <div class="cv-pay-box" id="paymentSectionX">
+          <div class="title"><i class="fas fa-money-bill-wave"></i> تسجيل دفعة الإكمال</div>
+          <div class="row">
+            <label for="paymentAmountX">المبلغ المتبقي</label>
+            <input type="number" id="paymentAmountX" min="0" step="0.01" placeholder="0">
+          </div>
+          <div class="row">
+            <label for="paymentMethodX">طريقة الدفع</label>
+            <select id="paymentMethodX"></select>
+          </div>
+          <div class="hint" id="paymentHintX">
+            سيتم تسجيل هذا المبلغ كدفعة مرتبطة بالحجز.
+          </div>
+        </div>
+      </div>
+
+      <div class="cv-modal-footer">
+        <button type="button" class="btn-cancel" data-close="statusModal">إلغاء</button>
+        <button type="button" class="btn-confirm" id="confirmStatusBtn">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* التبديل بين الحجز والدفعة في transactionModal */
+    function setTransactionMode(mode) {
+      document.querySelectorAll(".switch-btn").forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.mode === mode);
+      });
+      var booking = document.getElementById("bookingMode"),
+        payment = document.getElementById("paymentMode");
+      if (booking) booking.style.display = mode === "booking" ? "block" : "none";
+      if (payment) payment.style.display = mode === "payment" ? "block" : "none";
+      var title = document.getElementById("transactionModalTitle"),
+        save = document.getElementById("transactionSaveBtn");
+      if (mode === "booking") {
+        if (title) title.textContent = "حجز جديد";
+        if (save) save.textContent = "حفظ الحجز";
+      } else {
+        if (title) title.textContent = "تسجيل دفعة";
+        if (save) save.textContent = "تسجيل الدفعة";
+      }
+    }
+  </script>
+
+  <script src="assets/js/core/utils.js"></script>
+  <script src="assets/js/core/api.js"></script>
+  <script src="assets/js/components/layout.js"></script>
+  <script src="assets/js/pages/customer-view.js"></script>
+</body>
+</html>
