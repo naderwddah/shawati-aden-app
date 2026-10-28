@@ -27,6 +27,7 @@ class CustomerAccountService
         return [
             'customer' => $customer,
             'invoices_total' => $invoicesTotal,
+            'invoices_count' => $customer->bookings()->count(),
             'deposit_returned_total' => round($depositReturned, 2),
             'net_invoices_total' => round($invoicesTotal - $depositReturned, 2),
             'net_collected_total' => round($paymentsTotal - $depositReturned, 2),
@@ -114,6 +115,7 @@ class CustomerAccountService
     public function getAllAccounts(): Collection
     {
         return Customer::query()
+            ->withCount('bookings')
             ->withSum('bookings', 'total_amount')
             ->withSum('bookings as bookings_sum_plate_deposit', 'plate_deposit')
             ->withSum('bookings as bookings_sum_plate_deposit_returned', 'plate_deposit_returned')
@@ -134,6 +136,7 @@ class CustomerAccountService
                 return [
                     'customer' => $customer,
                     'invoices_total' => $invoicesTotal,
+                    'invoices_count' => (int) $customer->bookings_count,
                     'deposit_returned_total' => round($depositReturned, 2),
                     'net_invoices_total' => round($invoicesTotal - $depositReturned, 2),
                     'net_collected_total' => round($paymentsTotal - $depositReturned, 2),

@@ -29,6 +29,7 @@ class BookingController extends Controller
     {
         $bookings = Booking::query()
             ->with('customer')
+            ->when($request->boolean('include_items'), fn ($query) => $query->with('items'))
             ->withSum('payments', 'amount')
             ->withSum('items', 'quantity')
 

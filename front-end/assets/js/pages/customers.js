@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", function () {
   let editingCustomerId = null;
   let customers = [];
   let accounts = [];
+  let accountsFailed = false;
+  let accountsByCustomerId = new Map();
+  let loadVersion = 0;
 
   if (!listEl) return;
 
@@ -84,52 +87,26 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function getAccountForCustomer(customerId) {
-    return accounts.find(
-      (account) =>
-        Number(account.customer_id ?? account.customer?.id ?? account.id) ===
-        Number(customerId)
-    ) || null;
+    return accountsByCustomerId.get(String(customerId)) ?? null;
   }
 
   function getCustomerFinancialData(customer) {
     const account = getAccountForCustomer(customer.id);
-
-    const totalInvoices = number(
-      account?.total_invoices ??
-      account?.totalInvoices ??
-      customer.total_invoices ??
-      customer.totalInvoices ??
-      0
-    );
-
-    const totalPaid = number(
-      account?.total_paid ??
-      account?.totalPaid ??
-      customer.total_paid ??
-      customer.totalPaid ??
-      0
-    );
-
-    const balance = number(
-      account?.balance ??
-      customer.balance ??
-      Math.max(0, totalInvoices - totalPaid)
-    );
-
-    const invoicesCount = number(
-      account?.invoices_count ??
-      account?.invoicesCount ??
-      customer.invoices_count ??
-      customer.invoicesCount ??
-      0
-    );
-
+    if (accountsFailed || !account) return null;
+    // CustomerAccountService: invoices_total, payments_total, balance,
+    // net_collected_total, invoices_count (added in this repair).
     return {
-      totalInvoices,
-      totalPaid,
-      balance,
-      invoicesCount
+      totalInvoices: number(account.invoices_total ?? account.total_invoices ?? 0),
+      totalPaid: number(account.payments_total ?? account.total_paid ?? 0),
+      netCollected: number(account.net_collected_total ?? account.payments_total ?? 0),
+      balance: number(account.balance ?? 0),
+      invoicesCount: number(account.invoices_count ?? 0),
+      returned: number(account.deposit_returned_total ?? 0)
     };
+  }
+
+  function isActive(customer) {
+    return ![false, 0, "0"].includes(customer.is_active);
   }
 
   function getInitials(name) {
@@ -195,7 +172,7 @@ document.addEventListener("DOMContentLoaded", function () {
     listEl.innerHTML = filtered
       .map((customer) => {
         const financial = getCustomerFinancialData(customer);
-        const active = customer.is_active !== false;
+        const active = isActive(customer);
         const initials = getInitials(customer.name);
 
         return `
@@ -214,35 +191,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 <div class="financial">
                   <span>
-                    <span class="label">الفواتير</span>
-                    ${financial.invoicesCount}
+                    <span class="label">الحجوزات</span>
+                    ${financial ? financial.invoicesCount : '—'}
                   </span>
 
                   <span>
                     <span class="label">الإجمالي</span>
-                    <span class="amount">${formatCurrency(financial.totalInvoices)}</span>
+                    <span class="amount">${financial ? formatCurrency(financial.totalInvoices) : "—"}</span>
                   </span>
 
                   <span>
                     <span class="label">مدفوع</span>
-                    <span class="paid">${formatCurrency(financial.totalPaid)}</span>
+                    <span class="paid">${financial ? formatCurrency(financial.netCollected) : "—"}</span>
                   </span>
 
-                  ${
-                    financial.balance > 0
-                      ? `
-                        <span>
-                          <span class="label">متبقي</span>
-                          <span class="remaining">${formatCurrency(financial.balance)}</span>
-                        </span>
-                      `
-                      : `
-                        <span>
-                          <span class="label">الحالة</span>
-                          <span style="color:var(--success);font-weight:700;">مسدد</span>
-                        </span>
-                      `
-                  }
+                  ${!financial ? `<span class="financial-warning">تعذر تحميل الحساب</span>` : financial.balance > 0
+                    ? `<span><span class="label">مستحق</span><span class="remaining">${formatCurrency(financial.balance)}</span></span>`
+                    : financial.balance < 0
+                    ? `<span><span class="label">رصيد دائن</span><span class="paid">${formatCurrency(Math.abs(financial.balance))}</span></span>`
+                    : `<span><span class="label">الحالة</span><span class="paid">مسدد</span></span>`}
+
                 </div>
               </div>
             </div>
@@ -276,73 +244,50 @@ document.addEventListener("DOMContentLoaded", function () {
       .join("");
   }
 
-  async function loadAccounts() {
-    accounts = [];
-
-    if (typeof API.getCustomerAccounts !== "function") return;
-
-    try {
-      const result = await API.getCustomerAccounts();
-      accounts = Array.isArray(result) ? result : [];
-    } catch (error) {
-      accounts = [];
-    }
-  }
-
   async function loadCustomers() {
     if (!window.API || typeof API.getCustomers !== "function") {
-      listEl.innerHTML = `
-        <div class="empty-state-box">
-          <div class="empty-state-icon">
-            <i class="fas fa-exclamation-circle"></i>
-          </div>
-          <h4 class="empty-state-title">تعذر الاتصال بالخادم</h4>
-        </div>
-      `;
+      listEl.innerHTML = '<div class="empty-state-box"><h4>تعذر تحميل واجهة الاتصال</h4></div>';
       return;
     }
-
-    try {
-      const result = await API.getCustomers();
-
-      customers = Array.isArray(result) ? result : [];
-
-      await loadAccounts();
-
-      updateSummary();
-      renderCustomers(searchInput?.value.trim() || "");
-    } catch (error) {
-      listEl.innerHTML = `
-        <div class="empty-state-box">
-          <div class="empty-state-icon">
-            <i class="fas fa-exclamation-circle"></i>
-          </div>
-          <h4 class="empty-state-title">حدث خطأ في تحميل العملاء</h4>
-          <p class="empty-state-text">${escapeHtml(error.message || "تعذر تحميل البيانات")}</p>
-        </div>
-      `;
-
-      showToast(error.message || "فشل تحميل العملاء", "error");
+    const version = ++loadVersion;
+    // Both requests are independent; do not block customer records on a
+    // temporarily failing financial summary.
+    const [customerResult, accountResult] = await Promise.allSettled([
+      API.getCustomers(), API.getCustomerAccounts()
+    ]);
+    if (version !== loadVersion) return;
+    if (customerResult.status !== 'fulfilled' || !Array.isArray(customerResult.value)) {
+      listEl.innerHTML = `<div class="empty-state-box"><h4>تعذر تحميل العملاء</h4><p class="empty-state-text">${escapeHtml(customerResult.reason?.message || 'يرجى المحاولة مرة أخرى')}</p><button type="button" class="btn btn-primary" id="retryCustomers">إعادة المحاولة</button></div>`;
+      document.getElementById('retryCustomers')?.addEventListener('click', loadCustomers);
+      [countEl, receivablesEl, collectedEl].forEach(el => { if (el) el.textContent = '—'; });
+      return;
+    }
+    customers = customerResult.value;
+    accountsFailed = accountResult.status !== 'fulfilled' || !Array.isArray(accountResult.value);
+    accounts = accountsFailed ? [] : accountResult.value;
+    accountsByCustomerId = new Map(accounts.map(a => [String(a.customer_id ?? a.customer?.id), a]));
+    updateSummary();
+    renderCustomers(searchInput?.value || '');
+    const warning = document.getElementById('customerAccountsWarning');
+    if (warning) {
+      warning.hidden = !accountsFailed;
+      warning.textContent = accountsFailed ? 'تعذر تحميل الأرصدة المالية. بيانات العملاء متاحة، ويمكن إعادة تحميل الصفحة للمحاولة.' : '';
     }
   }
 
   function updateSummary() {
-    const activeCustomers = customers.filter(
-      (customer) => customer.is_active !== false
-    );
-
     let receivables = 0;
     let collected = 0;
-
     customers.forEach((customer) => {
       const financial = getCustomerFinancialData(customer);
-      receivables += financial.balance;
-      collected += financial.totalPaid;
+      if (financial) {
+        receivables += Math.max(0, financial.balance);
+        collected += financial.netCollected;
+      }
     });
-
-    if (countEl) countEl.textContent = activeCustomers.length;
-    if (receivablesEl) receivablesEl.textContent = formatCurrency(receivables);
-    if (collectedEl) collectedEl.textContent = formatCurrency(collected);
+    if (countEl) countEl.textContent = customers.length.toLocaleString('ar-SA');
+    if (receivablesEl) receivablesEl.textContent = accountsFailed ? '—' : formatCurrency(receivables);
+    if (collectedEl) collectedEl.textContent = accountsFailed ? '—' : formatCurrency(collected);
   }
 
   function openAddModal() {
@@ -383,6 +328,11 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    if (customers.some(c => String(c.phone || '').trim() === phone)) {
+      showToast('يوجد عميل مسجل بهذا الرقم. استخدم بياناته الموجودة.', 'warning');
+      phoneInput.focus();
+      return;
+    }
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
@@ -471,6 +421,11 @@ document.addEventListener("DOMContentLoaded", function () {
       (customer) => Number(customer.id) === Number(editingCustomerId)
     );
 
+    if (customers.some(c => Number(c.id) !== Number(editingCustomerId) && String(c.phone || '').trim() === phone)) {
+      showToast('رقم الجوال مرتبط بعميل آخر.', 'warning');
+      editPhone.focus();
+      return;
+    }
     saveEditBtn.disabled = true;
     saveEditBtn.innerHTML =
       '<i class="fas fa-spinner fa-spin"></i> جاري التحديث...';
@@ -480,7 +435,7 @@ document.addEventListener("DOMContentLoaded", function () {
         name,
         phone,
         notes,
-        is_active: currentCustomer?.is_active !== false
+        is_active: currentCustomer ? isActive(currentCustomer) : true
       });
 
       showToast(`تم تحديث العميل "${name}" بنجاح`, "success");
@@ -502,8 +457,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!customer) return;
 
-    const isActive = customer.is_active !== false;
-    const nextState = !isActive;
+    const currentlyActive = isActive(customer);
+    const nextState = !currentlyActive;
 
     try {
       await API.updateCustomer(customerId, {
@@ -621,7 +576,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function initialize() {
     if (!window.API) {
-      setTimeout(initialize, 150);
+      listEl.innerHTML = '<div class="empty-state-box"><h4>ملف API غير محمل</h4></div>';
       return;
     }
 

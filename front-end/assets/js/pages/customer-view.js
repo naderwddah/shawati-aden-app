@@ -26,6 +26,7 @@
     saving: false,
     loading: false,
     statementView: 'normal',
+    activeTab: 'bookings',
     statusBookingId: null,
     savingStatus: false
   };
@@ -174,22 +175,28 @@
     if (type === 'error') console.error(msg); else console.log(msg);
   }
 
-  async function confirmAction(message) {
-    if (window.Layout?.showConfirm) {
-      return new Promise((resolve) => {
-        let done = false;
-        const finish = (v) => { if (!done) { done = true; resolve(Boolean(v)); } };
-        try {
-          window.Layout.showConfirm({
-            title: 'تأكيد العملية', message,
-            confirmText: 'تأكيد', cancelText: 'إلغاء', danger: true,
-            onConfirm: () => finish(true),
-            onCancel: () => finish(false)
-          });
-        } catch { finish(window.confirm(message)); }
-      });
-    }
-    return window.confirm(message);
+  function confirmAction(message) {
+    const modal = $('cvConfirmDialog');
+    if (!modal) return Promise.resolve(window.confirm(message));
+    $('cvConfirmMessage').textContent = message;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    return new Promise((resolve) => {
+      const finish = (value) => {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        modal.removeEventListener('click', click);
+        document.removeEventListener('keydown', keydown);
+        resolve(value);
+      };
+      const click = (event) => {
+        const button = event.target.closest('[data-cv-confirm]');
+        if (button && modal.contains(button)) finish(button.dataset.cvConfirm === 'accept');
+      };
+      const keydown = (event) => { if (event.key === 'Escape') finish(false); };
+      modal.addEventListener('click', click);
+      document.addEventListener('keydown', keydown);
+    });
   }
 
   /* =========================================================
@@ -260,7 +267,7 @@
     return {
       totalInvoices,
       totalPaid,
-      balance: Math.max(0, totalInvoices - totalPaid)
+      balance: Math.round((totalInvoices - totalPaid) * 100) / 100
     };
   }
 
@@ -289,6 +296,15 @@
       });
     });
 
+    state.bookings.forEach((b) => {
+      const returned = number(b.plate_deposit_returned);
+      if (returned > 0) rows.push({
+        type: 'refund_note', date: '',
+        description: `تأمين صحون مُعاد للحجز #${b.id} (تراكمي: ${moneyShort(returned)} ر.س، تاريخ الإرجاع غير محفوظ)`,
+        debit: 0, credit: 0, booking: b, refundAmount: returned
+      });
+    });
+
     state.payments.forEach((p) => {
       const bid = p.booking_id ?? p.bookingId;
       rows.push({
@@ -301,9 +317,11 @@
       });
     });
 
-    return rows.sort((a, b) =>
-      new Date(a.date || 0) - new Date(b.date || 0)
-    );
+    return rows.sort((a, b) => {
+      if (a.type === 'refund_note') return b.type === 'refund_note' ? 0 : 1;
+      if (b.type === 'refund_note') return -1;
+      return String(a.date).localeCompare(String(b.date));
+    });
   }
 
   /* =========================================================
@@ -353,13 +371,15 @@
   function renderHeader() {
     const c = state.customer;
     const a = computeAccount();
-    const balance = Math.max(0, a.balance);
+    const balance = a.balance;
 
     let statusBadge = '';
     if (c.is_active === false) {
       statusBadge = `<span class="status-badge inactive"><i class="fas fa-circle" style="font-size:7px"></i> غير نشط</span>`;
     } else if (balance > 0) {
       statusBadge = `<span class="status-badge remaining"><i class="fas fa-circle" style="font-size:7px"></i> متبقي ${moneyShort(balance)}</span>`;
+    } else if (balance < 0) {
+      statusBadge = `<span class="status-badge paid"><i class="fas fa-circle" style="font-size:7px"></i> رصيد دائن ${moneyShort(Math.abs(balance))}</span>`;
     } else {
       statusBadge = `<span class="status-badge paid"><i class="fas fa-circle" style="font-size:7px"></i> مسدد</span>`;
     }
@@ -405,13 +425,13 @@
   function renderTabs() {
     return `
       <div class="cv-tabs" id="profileTabs">
-        <button type="button" class="cv-tab active" data-tab="bookings">
+        <button type="button" class="cv-tab ${state.activeTab === 'bookings' ? 'active' : ''}" data-tab="bookings">
           <i class="fas fa-calendar-check"></i> الحجوزات
         </button>
-        <button type="button" class="cv-tab" data-tab="payments">
+        <button type="button" class="cv-tab ${state.activeTab === 'payments' ? 'active' : ''}" data-tab="payments">
           <i class="fas fa-money-bill-wave"></i> المدفوعات
         </button>
-        <button type="button" class="cv-tab" data-tab="statement">
+        <button type="button" class="cv-tab ${state.activeTab === 'statement' ? 'active' : ''}" data-tab="statement">
           <i class="fas fa-file-invoice-dollar"></i> كشف الحساب
         </button>
       </div>
@@ -429,6 +449,8 @@
     const total = bookingTotal(booking);
     const remaining = Math.max(0, total - paid);
     const deposit = number(booking.plate_deposit);
+    const returned = number(booking.plate_deposit_returned);
+    const pendingReturn = Math.max(0, deposit - returned);
 
     const items = Array.isArray(booking.items) ? booking.items : [];
     let itemsPreview = '';
@@ -462,6 +484,7 @@
           <button class="cv-action primary" data-action="printBooking" data-id="${booking.id}">
             <i class="fas fa-receipt"></i> الفاتورة
           </button>
+          ${pendingReturn > 0 && paid > returned ? `<button class="cv-action warning" data-action="refundDeposit" data-id="${booking.id}" title="إرجاع تأمين الصحون"><i class="fas fa-rotate-left"></i> إرجاع تأمين</button>` : ''}
           <button class="cv-action danger" data-action="deleteBooking" data-id="${booking.id}">
             <i class="fas fa-trash"></i>
           </button>
@@ -478,6 +501,7 @@
           <button class="cv-action secondary" data-action="printBooking" data-id="${booking.id}">
             <i class="fas fa-print"></i>
           </button>
+          ${pendingReturn > 0 && paid > returned ? `<button class="cv-action warning" data-action="refundDeposit" data-id="${booking.id}" title="إرجاع تأمين الصحون"><i class="fas fa-rotate-left"></i> إرجاع تأمين</button>` : ''}
           <button class="cv-action danger" data-action="deleteBooking" data-id="${booking.id}">
             <i class="fas fa-trash"></i>
           </button>
@@ -517,8 +541,8 @@
             <div class="val">${moneyShort(remaining)}</div>
           </div>
           <div class="cv-fin deposit">
-            <div class="lbl">تأمين</div>
-            <div class="val">${moneyShort(deposit)}</div>
+            <div class="lbl">تأمين لم يُرجع</div>
+            <div class="val">${moneyShort(pendingReturn)}</div>
           </div>
         </div>
 
@@ -742,7 +766,7 @@
       ${renderHeader()}
       ${renderTabs()}
 
-      <section class="cv-tab-content active" id="tab-bookings">
+      <section class="cv-tab-content ${state.activeTab === 'bookings' ? 'active' : ''}" id="tab-bookings">
         <div class="cv-section-head">
           <h3><i class="fas fa-calendar-check"></i> الحجوزات (${state.bookings.length})</h3>
           <button type="button" class="btn btn-primary btn-sm" data-action="newBooking">
@@ -752,7 +776,7 @@
         <div id="bookingsList">${renderBookingsList()}</div>
       </section>
 
-      <section class="cv-tab-content" id="tab-payments">
+      <section class="cv-tab-content ${state.activeTab === 'payments' ? 'active' : ''}" id="tab-payments">
         <div class="cv-section-head">
           <h3><i class="fas fa-money-bill-wave"></i> المدفوعات (${state.payments.length})</h3>
           <button type="button" class="btn btn-primary btn-sm" data-action="newPayment">
@@ -762,7 +786,7 @@
         <div id="paymentsList">${renderPaymentsList()}</div>
       </section>
 
-      <section class="cv-tab-content" id="tab-statement">
+      <section class="cv-tab-content ${state.activeTab === 'statement' ? 'active' : ''}" id="tab-statement">
         <div class="cv-section-head">
           <h3><i class="fas fa-file-invoice-dollar"></i> كشف الحساب</h3>
         </div>
@@ -777,24 +801,11 @@
     $$('#profileTabs .cv-tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
+        state.activeTab = target;
         $$('#profileTabs .cv-tab').forEach((t) => t.classList.toggle('active', t === tab));
-        $$('.cv-tab-content').forEach((panel) => {
-          panel.classList.toggle('active', panel.id === `tab-${target}`);
-        });
+        $$('.cv-tab-content').forEach((panel) => panel.classList.toggle('active', panel.id === `tab-${target}`));
       });
     });
-
-    const toggle = document.getElementById('stmtToggle');
-    if (toggle) {
-      toggle.addEventListener('click', (e) => {
-        const btn = e.target.closest('.cv-stmt-btn');
-        if (!btn) return;
-        state.statementView = btn.dataset.view === 'detailed' ? 'detailed' : 'normal';
-        const content = document.getElementById('statementContent');
-        if (content) content.innerHTML = renderStatementContent();
-        bindTabs();
-      });
-    }
   }
 
   /* =========================================================
@@ -816,32 +827,27 @@
     if (state.loading) return;
     state.loading = true;
     renderSkeleton();
-
     try {
       await waitForApi();
-
-      const customer = await apiCall(['getCustomer'], state.customerId);
-      if (!customer) {
-        renderFailure('العميل غير موجود', 'لم يتم العثور على العميل.');
-        return;
-      }
-      state.customer = customer;
-
-      const [bookingsRes, paymentsRes, methodsRes] = await Promise.allSettled([
-        apiCall(['getBookings'], { customer_id: state.customerId }),
+      const [customerRes, bookingsRes, paymentsRes, methodsRes] = await Promise.allSettled([
+        apiCall(['getCustomer'], state.customerId),
+        apiCall(['getBookings'], { customer_id: state.customerId, include_items: 1 }),
         apiCall(['getCustomerPayments'], { customer_id: state.customerId }),
         apiCall(['getPaymentMethods'])
       ]);
-
-      state.bookings = bookingsRes.status === 'fulfilled' ? arrayData(bookingsRes.value) : [];
-      state.payments = paymentsRes.status === 'fulfilled' ? arrayData(paymentsRes.value) : [];
+      if (customerRes.status !== 'fulfilled' || !customerRes.value) throw new Error('تعذر تحميل العميل');
+      if (bookingsRes.status !== 'fulfilled' || paymentsRes.status !== 'fulfilled') {
+        throw new Error('تعذر تحميل الحجوزات أو الدفعات؛ لا يمكن حساب الرصيد بأمان. أعد المحاولة.');
+      }
+      state.customer = customerRes.value;
+      state.bookings = arrayData(bookingsRes.value);
+      state.payments = arrayData(paymentsRes.value);
       state.paymentMethods = methodsRes.status === 'fulfilled' ? arrayData(methodsRes.value) : [];
-
       renderProfile();
+      if (methodsRes.status !== 'fulfilled') toast('تعذر تحميل طرق الدفع، لا يمكن تسجيل دفعة حاليًا.', 'warning');
     } catch (error) {
       console.error('loadData failed:', error);
-      renderFailure('فشل تحميل البيانات', error?.message || 'تعذر الاتصال بالخادم');
-      toast(error?.message || 'فشل التحميل', 'error');
+      renderFailure('فشل تحميل بيانات العميل', error?.message || 'تعذر الاتصال بالخادم');
     } finally {
       state.loading = false;
     }
@@ -858,8 +864,10 @@
         <a href="customers.html" class="btn btn-primary" style="margin-top:14px;display:inline-flex;">
           <i class="fas fa-arrow-right"></i> العودة إلى العملاء
         </a>
+        <button type="button" class="btn btn-secondary" id="cvRetryLoad" style="margin-top:14px;margin-inline-start:8px">إعادة المحاولة</button>
       </div>
     `;
+    $('cvRetryLoad')?.addEventListener('click', loadData);
   }
 
   /* =========================================================
@@ -950,11 +958,11 @@
   }
 
   function fillPaymentBookings(selectedId = '') {
-    const select = $('paymentBooking');
+    const select = $('cvPaymentBooking');
     if (!select) return;
     const openBookings = state.bookings.filter((b) => bookingRemaining(b) > 0);
 
-    select.innerHTML = '<option value="">اختر الحجز المرتبط بالدفعة</option>' +
+    select.innerHTML = '<option value="">دفعة عامة (غير مرتبطة بحجز)</option>' +
       openBookings.map((b) => `
         <option value="${esc(b.id)}">
           حجز #${esc(b.id)} · ${esc(formatDateDisplay(b.event_date) || b.mark || '—')} · متبقى ${esc(moneyShort(bookingRemaining(b)))} ر.س
@@ -973,29 +981,29 @@
 
   function renderNewItemRow(data = {}) {
     const selectedId = data.item_id ?? data.itemId ?? '';
-    const quantity = number(data.quantity) || 1;
+    const snapshotName = String(data.item_name ?? data.name ?? '').trim();
+    const quantity = Number.isFinite(Number(data.quantity)) && Number(data.quantity) > 0 ? Number(data.quantity) : 1;
     const price = number(data.unit_price ?? data.unitPrice ?? data.price);
-
+    const catalogMatch = state.items.find(it => String(itemId(it)) === String(selectedId) && selectedId !== '');
+    const matchingName = state.items.find(it => itemName(it) === snapshotName);
+    const match = catalogMatch || matchingName;
+    const useSnapshot = !!snapshotName && !match;
     const options = state.items.map((it) => `
-      <option value="${esc(itemId(it))}"
-              data-name="${esc(itemName(it))}"
-              data-price="${esc(itemPrice(it))}"
-              ${Number(selectedId) === Number(itemId(it)) ? 'selected' : ''}>
+      <option value="${esc(itemId(it))}" data-name="${esc(itemName(it))}" data-price="${esc(itemPrice(it))}"
+        ${match && String(itemId(match)) === String(itemId(it)) ? 'selected' : ''}>
         ${esc(itemName(it))} · ${esc(moneyShort(itemPrice(it)))} ر.س
       </option>
     `).join('');
-
     return `
       <div class="item-row">
         <select class="form-input item-select">
           <option value="">اختر الصنف</option>
+          ${useSnapshot ? `<option value="snapshot" data-name="${esc(snapshotName)}" selected>${esc(snapshotName)} (محفوظ)</option>` : ''}
           ${options}
         </select>
-        <input type="number" class="form-input item-qty" min="1" step="1" value="${esc(quantity)}" placeholder="الكمية">
-        <input type="number" class="form-input item-price" min="0" step="0.01" value="${esc(price || '')}" placeholder="السعر">
-        <button type="button" class="btn-icon-sm btn-icon-danger remove-item-btn" title="حذف">
-          <i class="fas fa-trash"></i>
-        </button>
+        <input type="number" class="form-input item-qty" min="0.01" step="0.01" value="${esc(quantity)}" placeholder="الكمية">
+        <input type="number" class="form-input item-price" min="0" step="0.01" value="${esc(price)}" placeholder="السعر">
+        <button type="button" class="btn-icon-sm btn-icon-danger remove-item-btn" title="حذف"><i class="fas fa-trash"></i></button>
       </div>`;
   }
 
@@ -1024,7 +1032,7 @@
         unit_price: unitPrice,
         total_price: Number((quantity * unitPrice).toFixed(2))
       };
-    }).filter((it) => it.item_name && it.quantity > 0 && it.unit_price >= 0);
+    });
   }
 
   function updateBookingPreview() {
@@ -1035,8 +1043,11 @@
 
     setText('bookingItemsTotal', moneyShort(total));
     setText('bookingPlateDisplay', moneyShort(deposit));
-    setText('bookingGrandTotal', moneyShort(total));
-    setText('bookingRemainingPreview', moneyShort(Math.max(0, total - initialPayment)));
+    const payable = total + deposit;
+    const booking = state.bookings.find(b => Number(b.id) === Number(state.editingBookingId));
+    const alreadyPaid = booking ? bookingPaid(booking.id) : 0;
+    setText('bookingGrandTotal', moneyShort(payable));
+    setText('bookingRemainingPreview', moneyShort(Math.max(0, payable - alreadyPaid - (booking ? 0 : initialPayment))));
   }
 
   function resetBookingForm(booking = null) {
@@ -1052,6 +1063,8 @@
     setField('bookingPlateDeposit', booking ? booking.plate_deposit : '');
     setField('bookingNotes', booking?.notes || '');
     setField('bookingInitialPayment', '');
+    if ($('bookingInitialPayment')) $('bookingInitialPayment').disabled = Boolean(booking);
+    if ($('bookingPaymentMethod')) $('bookingPaymentMethod').disabled = Boolean(booking);
 
     fillPaymentMethods();
     renderBookingItems(booking?.items || []);
@@ -1061,9 +1074,17 @@
 
   async function openBookingModal(booking = null) {
     if (!state.customer) return;
-    await ensureItemsLoaded();
-    resetBookingForm(booking);
-    openModal();
+    try {
+      await ensureItemsLoaded();
+      if (!state.items.length && !booking) throw new Error('لا توجد أصناف متاحة لإنشاء حجز.');
+      if (booking) {
+        // Edit must use the complete invoice snapshot, not list summary.
+        booking = await apiCall(['getBooking'], booking.id);
+        if (!booking?.id || !Array.isArray(booking.items)) throw new Error('تعذر جلب تفاصيل الحجز، تم إيقاف التعديل لحماية الأصناف.');
+      }
+      resetBookingForm(booking);
+      openModal();
+    } catch (error) { toast(error?.message || 'تعذر فتح الحجز', 'error'); }
   }
 
   function openPaymentModal(preselectedBookingId = '') {
@@ -1071,9 +1092,9 @@
     state.editingBookingId = null;
     setText('paymentCustomerName', state.customer.name || '—');
     setText('paymentCustomerPhone', state.customer.phone || '—');
-    setField('paymentAmount', '');
-    setField('paymentDate', dateTimeLocalNow());
-    setField('paymentNotes', '');
+    setField('cvPaymentAmount', '');
+    setField('cvPaymentDate', dateTimeLocalNow());
+    setField('cvPaymentNotes', '');
 
     fillPaymentBookings(preselectedBookingId);
     fillPaymentMethods();
@@ -1083,13 +1104,13 @@
   }
 
   function updatePaymentPreview() {
-    const bid = Number($('paymentBooking')?.value) || 0;
+    const bid = Number($('cvPaymentBooking')?.value) || 0;
     const booking = state.bookings.find((b) => Number(b.id) === bid);
     const current = booking ? bookingRemaining(booking) : Math.max(0, computeAccount().balance);
-    const amount = number($('paymentAmount')?.value);
+    const amount = number($('cvPaymentAmount')?.value);
     const after = Math.max(0, current - amount);
-    setText('paymentCurrentBalance', moneyShort(current));
-    setText('paymentAfterBalance', moneyShort(after));
+    setText('cvPaymentCurrentBalance', moneyShort(current));
+    setText('cvPaymentAfterBalance', moneyShort(after));
   }
 
   function validateBooking() {
@@ -1107,7 +1128,9 @@
     if (!deliveryPeriod) throw new Error('الفترة مطلوبة');
     if (!address) throw new Error('عنوان التوصيل مطلوب');
     if (!items.length) throw new Error('أضف صنفًا واحدًا على الأقل');
-    if (initialPayment > total) throw new Error('الدفعة الأولى تتجاوز الإجمالي');
+    if (items.some(it => !it.item_name || it.quantity <= 0 || it.unit_price < 0)) throw new Error('تأكد من اختيار الصنف وإدخال كمية وسعر صحيحين لكل صف');
+    if (deposit < 0 || initialPayment < 0) throw new Error('المبالغ لا يمكن أن تكون سالبة');
+    if (initialPayment > total + deposit) throw new Error('الدفعة الأولى تتجاوز قيمة الأصناف مع التأمين');
 
     return {
       eventDate, deliveryTime, deliveryPeriod, address,
@@ -1119,7 +1142,7 @@
   function bookingPayload(data) {
     const payload = {
       customer_id: Number(state.customerId),
-      invoice_date: nowSqlDateTime(),
+      ...(state.editingBookingId ? {} : { invoice_date: nowSqlDateTime() }),
       event_date: normalizeEventDate(data.eventDate),
       delivery_time: normalizeDeliveryTime(data.deliveryTime),
       delivery_period: data.deliveryPeriod,
@@ -1175,29 +1198,25 @@
   }
 
   function validatePayment() {
-    const amount = number($('paymentAmount')?.value);
-    const paymentDate = $('paymentDate')?.value;
+    const amount = number($('cvPaymentAmount')?.value);
+    const paymentDate = $('cvPaymentDate')?.value;
     const methodId = number(document.querySelector('input[name="customerPaymentMethod"]:checked')?.value);
-    const bookingId = number($('paymentBooking')?.value) || null;
+    const bookingId = number($('cvPaymentBooking')?.value) || null;
 
     if (amount <= 0) throw new Error('أدخل مبلغًا صحيحًا');
     if (!paymentDate) throw new Error('حدد تاريخ الدفع');
     if (!methodId) throw new Error('اختر طريقة الدفع');
-    if (!bookingId) throw new Error('اختر الحجز');
-
-    const booking = state.bookings.find((b) => Number(b.id) === bookingId);
-    if (!booking) throw new Error('الحجز غير موجود');
-
-    const remaining = bookingRemaining(booking);
-    if (amount > remaining) {
-      throw new Error(`المبلغ يتجاوز المتبقي (${moneyShort(remaining)} ر.س)`);
+    const booking = bookingId ? state.bookings.find((b) => Number(b.id) === bookingId) : null;
+    if (bookingId && !booking) throw new Error('الحجز غير موجود');
+    if (booking && amount > bookingRemaining(booking)) {
+      throw new Error(`المبلغ يتجاوز المتبقي (${moneyShort(bookingRemaining(booking))} ر.س)`);
     }
 
     return {
       amount: Number(amount.toFixed(2)),
       bookingId, methodId,
       paymentDate: sqlDateTime(paymentDate),
-      notes: $('paymentNotes')?.value.trim() || null
+      notes: $('cvPaymentNotes')?.value.trim() || null
     };
   }
 
@@ -1210,7 +1229,7 @@
 
       await apiCall(['createCustomerPayment', 'addCustomerPayment'], {
         customer_id: Number(state.customerId),
-        booking_id: Number(data.bookingId),
+        booking_id: data.bookingId ? Number(data.bookingId) : null,
         amount: data.amount,
         payment_method_id: data.methodId,
         payment_date: data.paymentDate,
@@ -1251,23 +1270,23 @@
     if (!booking) return;
 
     state.statusBookingId = booking.id;
-    setText('statusModalTitle', `حالة الحجز #${booking.id}`);
+    setText('cvStatusModalTitle', `حالة الحجز #${booking.id}`);
 
-    $$('input[name="newStatus"]').forEach((r) => {
+    $$('input[name="cvNewStatus"]', $('cvStatusModal')).forEach((r) => {
       r.checked = r.value === getStatus(booking.status);
     });
 
-    const payBox = $('paymentSectionX');
+    const payBox = $('cvStatusPaymentSection');
     if (payBox) payBox.classList.remove('show');
 
-    const methodSelect = $('paymentMethodX');
+    const methodSelect = $('cvStatusPaymentMethod');
     if (methodSelect) {
       methodSelect.innerHTML = state.paymentMethods.map((m, i) =>
         `<option value="${esc(m.id)}" ${i === 0 ? 'selected' : ''}>${esc(m.name)}</option>`
       ).join('');
     }
 
-    $$('input[name="newStatus"]').forEach((radio) => {
+    $$('input[name="cvNewStatus"]', $('cvStatusModal')).forEach((radio) => {
       radio.onchange = () => onStatusChange(booking);
     });
 // ✅ ضمان تفعيل الراديو عند النقر على الـ label
@@ -1282,16 +1301,16 @@ $$('.cv-status-opt').forEach((label) => {
   };
 });
     onStatusChange(booking);
-    $('statusModal')?.classList.add('active');
+    $('cvStatusModal')?.classList.add('active');
   }
 
   function onStatusChange(booking) {
-    const selectedRadio = document.querySelector('input[name="newStatus"]:checked');
+    const selectedRadio = document.querySelector('input[name="cvNewStatus"]:checked');
     if (!selectedRadio) return;
     const newStatus = selectedRadio.value;
-    const payBox = $('paymentSectionX');
-    const amountInput = $('paymentAmountX');
-    const hint = $('paymentHintX');
+    const payBox = $('cvStatusPaymentSection');
+    const amountInput = $('cvStatusPaymentAmount');
+    const hint = $('cvStatusPaymentHint');
 
     if (newStatus === 'completed' && bookingRemaining(booking) > 0) {
       if (payBox) payBox.classList.add('show');
@@ -1310,107 +1329,45 @@ $$('.cv-status-opt').forEach((label) => {
   }
 
   function closeStatusModal() {
-    $('statusModal')?.classList.remove('active');
+    if (state.savingStatus) return;
+    $('cvStatusModal')?.classList.remove('active');
     state.statusBookingId = null;
     state.savingStatus = false;
   }
 
   async function confirmStatusChange() {
     if (state.savingStatus) return;
-
-    const booking = state.bookings.find((b) => Number(b.id) === Number(state.statusBookingId));
+    const booking = state.bookings.find(b => Number(b.id) === Number(state.statusBookingId));
     if (!booking) return;
-
-    const selectedRadio = document.querySelector('input[name="newStatus"]:checked');
-    if (!selectedRadio) return;
-
-    const newStatus = selectedRadio.value;
-    const oldStatus = getStatus(booking.status);
-
-    if (newStatus === oldStatus && !(newStatus === 'completed' && bookingRemaining(booking) > 0)) {
-      toast('لم تتغير الحالة', 'info');
-      return;
+    const chosen = document.querySelector('input[name="cvNewStatus"]:checked');
+    if (!chosen) { toast('اختر حالة الحجز', 'warning'); return; }
+    const next = chosen.value;
+    if (next === getStatus(booking.status)) {
+      if (next === 'completed' && bookingRemaining(booking) > 0) {
+        closeStatusModal(); openPaymentModal(booking.id); return;
+      }
+      toast('لم تتغير الحالة', 'info'); return;
     }
-
-    const btn = $('confirmStatusBtn');
+    const btn = $('cvConfirmStatusBtn');
     state.savingStatus = true;
     if (btn) { btn.disabled = true; btn.textContent = 'جاري الحفظ...'; }
-
     try {
-      /* ✅ 1) جلب الحجز الكامل (يحتوي الأصناف) */
-      let fullBooking = booking;
-      try {
-        const res = await apiCall(['getBooking'], booking.id);
-        const fb = res?.data || res;
-        if (fb?.id) fullBooking = fb;
-      } catch (e) {
-        console.warn('getBooking failed, using list data:', e);
-      }
-
-      /* ✅ 2) تسجيل دفعة إن كانت "مكتمل" + يوجد متبقي */
-      if (newStatus === 'completed' && bookingRemaining(booking) > 0) {
-        const amount = number($('paymentAmountX')?.value);
-        const methodId = Number($('paymentMethodX')?.value);
-
-        if (amount <= 0) throw new Error('أدخل مبلغًا صحيحًا');
-        if (amount > bookingRemaining(booking)) throw new Error('المبلغ يتجاوز المتبقي');
-        if (!methodId) throw new Error('اختر طريقة الدفع');
-
-        await apiCall(['createCustomerPayment', 'addCustomerPayment'], {
-          customer_id: fullBooking.customer_id ?? state.customerId,
-          booking_id: fullBooking.id,
-          amount: amount,
-          payment_method_id: methodId,
-          payment_date: nowSqlDateTime(),
-          notes: 'دفعة إكمال الحجز'
+      if (next === 'completed') {
+        const amount = number($('cvStatusPaymentAmount')?.value);
+        const methodId = Number($('cvStatusPaymentMethod')?.value) || null;
+        const remaining = bookingRemaining(booking);
+        if (amount < 0 || amount > remaining) throw new Error('المبلغ يتجاوز المتبقي');
+        if (amount > 0 && !methodId) throw new Error('اختر طريقة دفع');
+        // Atomic backend operation: status + payment or neither.
+        await apiCall(['completeBooking'], booking.id, {
+          payment_amount: amount,
+          payment_method_id: amount > 0 ? methodId : null
         });
+      } else {
+        await apiCall(['updateBooking'], booking.id, {status: next});
       }
-
-      /* ✅ 3) تجهيز الأصناف بصيغة صحيحة */
-      const items = (fullBooking.items || []).map((it) => {
-        const qty = number(it.quantity);
-        const unit = number(it.unit_price ?? it.price);
-        const total = number(it.total_price) || qty * unit;
-        return {
-          item_id: it.item_id ?? null,
-          item_name: it.item_name ?? it.name ?? 'صنف',
-          quantity: qty,
-          unit_price: unit,
-          total_price: Number(total.toFixed(2))
-        };
-      });
-
-      /* ✅ 4) بناء payload بصيغ صحيحة */
-      const payload = {
-        customer_id: fullBooking.customer_id ?? state.customerId,
-        invoice_date: normalizeInvoiceDate(fullBooking.invoice_date),
-        event_date: normalizeEventDate(fullBooking.event_date),
-        delivery_time: normalizeDeliveryTime(fullBooking.delivery_time),
-        delivery_period: fullBooking.delivery_period || 'ظهراً',
-        delivery_address: fullBooking.delivery_address || '',
-        mark: fullBooking.mark || null,
-        total_amount: number(fullBooking.total_amount || bookingTotal(fullBooking)),
-        plate_deposit: fullBooking.plate_deposit ?? null,
-        notes: fullBooking.notes || null,
-        status: newStatus,
-        items
-      };
-
-      /* ✅ 5) plate_deposit_returned فقط لو له قيمة */
-      if (fullBooking.plate_deposit_returned !== null &&
-          fullBooking.plate_deposit_returned !== undefined) {
-        payload.plate_deposit_returned = number(fullBooking.plate_deposit_returned);
-      }
-
-      await apiCall(['updateBooking'], fullBooking.id, payload);
-
-      toast(
-        newStatus === 'completed' && bookingRemaining(booking) > 0
-          ? 'تم إكمال الحجز وتسجيل الدفعة'
-          : 'تم تغيير الحالة',
-        'success'
-      );
-
+      toast('تم تحديث حالة الحجز بنجاح', 'success');
+      state.savingStatus = false;
       closeStatusModal();
       await loadData();
     } catch (error) {
@@ -1420,6 +1377,47 @@ $$('.cv-status-opt').forEach((label) => {
       state.savingStatus = false;
       if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
     }
+  }
+
+  function openRefundDialog(id) {
+    const booking = state.bookings.find(b => Number(b.id) === Number(id));
+    if (!booking) return;
+    const returned = number(booking.plate_deposit_returned);
+    const pending = Math.max(0, number(booking.plate_deposit) - returned);
+    const amountMax = Math.min(pending, Math.max(0, bookingPaid(id) - returned));
+    if (!amountMax) { toast('لا يوجد تأمين قابل للإرجاع من المبالغ المحصلة', 'warning'); return; }
+    $('cvRefundDialog').dataset.bookingId = String(id);
+    $('cvRefundMessage').textContent = `التأمين المتبقي للإرجاع ${money(pending)}، والحد المتاح الآن ${money(amountMax)}.`;
+    $('cvRefundAmount').value = amountMax.toFixed(2);
+    $('cvRefundAmount').max = amountMax.toFixed(2);
+    $('cvRefundDialog').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeRefundDialog() {
+    if ($('cvRefundSave')?.disabled) return;
+    $('cvRefundDialog')?.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  async function saveRefund() {
+    const modal = $('cvRefundDialog');
+    const booking = state.bookings.find(b => Number(b.id) === Number(modal?.dataset.bookingId));
+    if (!booking) return;
+    const amount = number($('cvRefundAmount').value);
+    const current = number(booking.plate_deposit_returned);
+    const max = Math.min(Math.max(0, number(booking.plate_deposit) - current), Math.max(0, bookingPaid(booking.id) - current));
+    if (amount <= 0 || amount > max) { toast('مبلغ الإرجاع غير صالح', 'warning'); return; }
+    const btn = $('cvRefundSave');
+    btn.disabled = true;
+    try {
+      await apiCall(['updateBooking'], booking.id, {plate_deposit_returned: Math.round((current + amount) * 100) / 100});
+      toast('تم تسجيل تأمين الصحون المُعاد', 'success');
+      btn.disabled = false;
+      closeRefundDialog();
+      await loadData();
+    } catch (error) { toast(error?.message || 'تعذر تسجيل الاسترداد', 'error'); }
+    finally { btn.disabled = false; }
   }
 
   /* =========================================================
@@ -1473,7 +1471,7 @@ $$('.cv-status-opt').forEach((label) => {
         const res = await apiCall(['getBooking'], id);
         const fb = res?.data || res;
         if (fb?.id) booking = fb;
-      } catch (e) { console.warn('getBooking failed:', e); }
+      } catch (e) { throw new Error('تعذر جلب تفاصيل الحجز. لا يمكن إصدار فاتورة ناقصة.'); }
 
       let restaurant = { name: 'شواطئ عدن', subtitle: 'مطابخ ومطاعم', phone: '', delivery: '', address: '', social: '', logo: '' };
       try {
@@ -1526,7 +1524,7 @@ $$('.cv-status-opt').forEach((label) => {
         paid = bookingPaid(booking.id);
       }
 
-      const totalAmount = number(booking.total_amount || bookingTotal(booking));
+      const totalAmount = bookingTotal(booking);
       const remaining = Math.max(0, totalAmount - paid);
 
       const paymentMethod = (() => {
@@ -1670,7 +1668,15 @@ $$('.cv-status-opt').forEach((label) => {
 
     container.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
-      if (!btn) return;
+      if (!btn) {
+        const viewButton = e.target.closest('[data-view]');
+        if (viewButton && container.contains(viewButton)) {
+          state.statementView = viewButton.dataset.view === 'detailed' ? 'detailed' : 'normal';
+          const content = $('statementContent');
+          if (content) content.innerHTML = renderStatementContent();
+        }
+        return;
+      }
 
       const action = btn.dataset.action;
       const id = Number(btn.dataset.id);
@@ -1689,6 +1695,7 @@ $$('.cv-status-opt').forEach((label) => {
         case 'deleteBooking': deleteBooking(id); break;
         case 'deletePayment': deletePayment(id); break;
         case 'printStatement': printStatement(); break;
+        case 'refundDeposit': openRefundDialog(id); break;
         case 'gotoBooking': {
           e.preventDefault();
           const tab = document.querySelector('#profileTabs .cv-tab[data-tab="bookings"]');
@@ -1753,29 +1760,31 @@ $$('.cv-status-opt').forEach((label) => {
       $(id)?.addEventListener('input', updateBookingPreview);
     });
 
-    $('paymentAmount')?.addEventListener('input', updatePaymentPreview);
-    $('paymentBooking')?.addEventListener('change', updatePaymentPreview);
+    $('cvPaymentAmount')?.addEventListener('input', updatePaymentPreview);
+    $('cvPaymentBooking')?.addEventListener('change', updatePaymentPreview);
 
     $$('[data-close="transactionModal"]').forEach((btn) => {
       btn.addEventListener('click', closeModal);
     });
 
-    $$('[data-close="statusModal"]').forEach((btn) => {
+    $$('[data-close="cvStatusModal"]').forEach((btn) => {
       btn.addEventListener('click', closeStatusModal);
     });
-    $('confirmStatusBtn')?.addEventListener('click', confirmStatusChange);
+    $('cvConfirmStatusBtn')?.addEventListener('click', confirmStatusChange);
+    $('cvRefundSave')?.addEventListener('click', saveRefund);
+    $$('[data-cv-refund="cancel"]').forEach(b => b.addEventListener('click', closeRefundDialog));
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if ($('transactionModal')?.classList.contains('active')) closeModal();
-        if ($('statusModal')?.classList.contains('active')) closeStatusModal();
+        if ($('cvStatusModal')?.classList.contains('active')) closeStatusModal();
       }
     });
   }
 
   function bindFab() {
-    $('fab')?.addEventListener('click', () => {
-      if (state.customer) openBookingModal();
+    document.addEventListener('fab:modal:opened', (event) => {
+      if (event.detail?.modalId === 'transactionModal') openBookingModal();
     });
   }
 
@@ -1802,7 +1811,6 @@ $$('.cv-status-opt').forEach((label) => {
   window.setTransactionMode = setMode;
   window.openBookingModal = openBookingModal;
   window.openPaymentModal = openPaymentModal;
-  window.closeModal = closeModal;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });

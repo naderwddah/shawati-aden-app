@@ -645,9 +645,13 @@
       .cv-fin .val { font-size: 11px; }
       .cv-action { font-size: 11px; min-height: 36px; }
       .form-grid-2 { grid-template-columns: 1fr; }
-      .item-row {
-        grid-template-columns: 1fr 70px 90px 90px 34px;
-      }
+      .item-row { grid-template-columns: minmax(90px, 1fr) 55px 72px 34px; gap:5px; }
+      .item-row .form-input { min-width:0; width:100%; padding-inline:4px; font-size:12px; }
+      .cv-fin .val, .cv-summary .value { overflow-wrap:anywhere; }
+      .cv-stmt-card { overflow-x:auto; }
+      .cv-stmt-table { min-width:390px; }
+      .cv-modal-dialog { max-width:calc(100vw - 16px); }
+      .cv-page { min-width:0; }
       .cv-stmt-table { font-size: 11px; }
       .cv-stmt-table thead th,
       .cv-stmt-table tbody td { padding: 7px 5px; }
@@ -722,9 +726,9 @@
             <div class="form-group">
               <label class="form-label" for="bookingDeliveryPeriod">الفترة <span class="req">*</span></label>
               <select class="form-input" id="bookingDeliveryPeriod">
-                <option value="صباحاً">صباحاً</option>
-                <option value="ظهراً" selected>ظهراً</option>
-                <option value="مساءً">مساءً</option>
+                <option value="صباحاً">صباحاً</option><option value="صباحًا">صباحًا</option>
+                <option value="ظهراً" selected>ظهراً</option><option value="ظهرًا">ظهرًا</option>
+                <option value="مساءً">مساءً</option><option value="مساءا">مساءا</option><option value="ليلًا">ليلًا</option>
               </select>
             </div>
             <div class="form-group">
@@ -765,7 +769,7 @@
           </div>
 
           <div class="section-card" style="margin-top:12px">
-            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; text-align:center;">
+            <div class="cv-finance-preview" style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; text-align:center;">
               <div>
                 <span style="font-size:11px; color:var(--text-muted)">إجمالي الأصناف</span><br>
                 <span id="bookingItemsTotal" style="font-weight:800">0 ر.س</span>
@@ -800,27 +804,27 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
               <div>
                 <span style="font-size:11px; color:var(--text-muted)">الرصيد الحالي</span><br>
-                <span id="paymentCurrentBalance" style="font-weight:800; font-size:16px">0 ر.س</span>
+                <span id="cvPaymentCurrentBalance" style="font-weight:800; font-size:16px">0 ر.س</span>
               </div>
               <div>
                 <span style="font-size:11px; color:var(--text-muted)">الرصيد بعد الدفع</span><br>
-                <span id="paymentAfterBalance" style="font-weight:800; font-size:16px; color:var(--success)">0 ر.س</span>
+                <span id="cvPaymentAfterBalance" style="font-weight:800; font-size:16px; color:var(--success)">0 ر.س</span>
               </div>
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-group">
-              <label class="form-label" for="paymentAmount">المبلغ <span class="req">*</span></label>
-              <input type="number" class="form-input" id="paymentAmount" min="0.01" step="0.01" placeholder="0" />
+              <label class="form-label" for="cvPaymentAmount">المبلغ <span class="req">*</span></label>
+              <input type="number" class="form-input" id="cvPaymentAmount" min="0.01" step="0.01" placeholder="0" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="paymentDate">تاريخ ووقت الدفع <span class="req">*</span></label>
-              <input type="datetime-local" class="form-input" id="paymentDate" />
+              <label class="form-label" for="cvPaymentDate">تاريخ ووقت الدفع <span class="req">*</span></label>
+              <input type="datetime-local" class="form-input" id="cvPaymentDate" />
             </div>
             <div class="form-group" style="grid-column:1/-1">
-              <label class="form-label" for="paymentBooking">الحجز المرتبط بالدفعة</label>
-              <select class="form-input" id="paymentBooking"></select>
+              <label class="form-label" for="cvPaymentBooking">الحجز المرتبط بالدفعة</label>
+              <select class="form-input" id="cvPaymentBooking"></select>
             </div>
           </div>
 
@@ -830,8 +834,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="paymentNotes">ملاحظات</label>
-            <textarea class="form-input" id="paymentNotes" rows="3" placeholder="ملاحظات الدفعة"></textarea>
+            <label class="form-label" for="cvPaymentNotes">ملاحظات</label>
+            <textarea class="form-input" id="cvPaymentNotes" rows="3" placeholder="ملاحظات الدفعة"></textarea>
           </div>
         </div>
       </div>
@@ -843,55 +847,85 @@
   </div>
 
   <!-- ===================== Status Modal ===================== -->
-  <div class="cv-modal" id="statusModal">
-    <div class="cv-modal-overlay" data-close="statusModal"></div>
+  <div class="cv-modal" id="cvStatusModal">
+    <div class="cv-modal-overlay" data-close="cvStatusModal"></div>
     <div class="cv-modal-dialog">
       <div class="cv-modal-header">
-        <h3 id="statusModalTitle">تغيير حالة الحجز</h3>
-        <button type="button" class="cv-modal-close" data-close="statusModal">
+        <h3 id="cvStatusModalTitle">تغيير حالة الحجز</h3>
+        <button type="button" class="cv-modal-close" data-close="cvStatusModal">
           <i class="fas fa-times"></i>
         </button>
       </div>
 
       <div class="cv-modal-body">
-        <div class="cv-status-options" id="statusOptions">
+        <div class="cv-status-options" id="cvStatusOptions">
           <label class="cv-status-opt">
-            <input type="radio" name="newStatus" value="new">
+            <input type="radio" name="cvNewStatus" value="new">
             <i class="fas fa-circle" style="color:#f59e0b;font-size:8px"></i> جديد
           </label>
           <label class="cv-status-opt">
-            <input type="radio" name="newStatus" value="confirmed">
+            <input type="radio" name="cvNewStatus" value="confirmed">
             <i class="fas fa-circle" style="color:#10b981;font-size:8px"></i> مؤكد
           </label>
           <label class="cv-status-opt">
-            <input type="radio" name="newStatus" value="completed">
+            <input type="radio" name="cvNewStatus" value="completed">
             <i class="fas fa-circle" style="color:#6366f1;font-size:8px"></i> مكتمل
           </label>
           <label class="cv-status-opt">
-            <input type="radio" name="newStatus" value="cancelled">
+            <input type="radio" name="cvNewStatus" value="cancelled">
             <i class="fas fa-circle" style="color:#ef4444;font-size:8px"></i> ملغي
           </label>
         </div>
 
-        <div class="cv-pay-box" id="paymentSectionX">
+        <div class="cv-pay-box" id="cvStatusPaymentSection">
           <div class="title"><i class="fas fa-money-bill-wave"></i> تسجيل دفعة الإكمال</div>
           <div class="row">
-            <label for="paymentAmountX">المبلغ المتبقي</label>
-            <input type="number" id="paymentAmountX" min="0" step="0.01" placeholder="0">
+            <label for="cvStatusPaymentAmount">المبلغ المتبقي</label>
+            <input type="number" id="cvStatusPaymentAmount" min="0" step="0.01" placeholder="0">
           </div>
           <div class="row">
-            <label for="paymentMethodX">طريقة الدفع</label>
-            <select id="paymentMethodX"></select>
+            <label for="cvStatusPaymentMethod">طريقة الدفع</label>
+            <select id="cvStatusPaymentMethod"></select>
           </div>
-          <div class="hint" id="paymentHintX">
+          <div class="hint" id="cvStatusPaymentHint">
             سيتم تسجيل هذا المبلغ كدفعة مرتبطة بالحجز.
           </div>
         </div>
       </div>
 
       <div class="cv-modal-footer">
-        <button type="button" class="btn-cancel" data-close="statusModal">إلغاء</button>
-        <button type="button" class="btn-confirm" id="confirmStatusBtn">تأكيد</button>
+        <button type="button" class="btn-cancel" data-close="cvStatusModal">إلغاء</button>
+        <button type="button" class="btn-confirm" id="cvConfirmStatusBtn">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- تأكيدات خاصة بصفحة العميل، مستقلة عن المكون العام -->
+  <div class="cv-modal" id="cvConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="cvConfirmHeading">
+    <div class="cv-modal-overlay" data-cv-confirm="cancel"></div>
+    <div class="cv-modal-dialog">
+      <div class="cv-modal-header"><h3 id="cvConfirmHeading">تأكيد العملية</h3></div>
+      <div class="cv-modal-body"><p id="cvConfirmMessage" style="line-height:1.8;white-space:pre-line"></p></div>
+      <div class="cv-modal-footer">
+        <button type="button" class="btn-cancel" data-cv-confirm="cancel">إلغاء</button>
+        <button type="button" class="btn-confirm" data-cv-confirm="accept" style="background:var(--danger,#b91c1c)">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cv-modal" id="cvRefundDialog" role="dialog" aria-modal="true" aria-labelledby="cvRefundHeading">
+    <div class="cv-modal-overlay" data-cv-refund="cancel"></div>
+    <div class="cv-modal-dialog">
+      <div class="cv-modal-header"><h3 id="cvRefundHeading">إرجاع تأمين الصحون</h3></div>
+      <div class="cv-modal-body">
+        <p id="cvRefundMessage" style="line-height:1.8"></p>
+        <label for="cvRefundAmount" class="form-label">المبلغ المُعاد الآن</label>
+        <input id="cvRefundAmount" type="number" class="form-input" min="0.01" step="0.01" inputmode="decimal" />
+        <p style="font-size:12px;color:var(--text-muted)">يُضاف المبلغ إلى إجمالي التأمين المرتجع المسجل للحجز. لا تُسجل هذه العملية كدفعة عميل جديدة.</p>
+      </div>
+      <div class="cv-modal-footer">
+        <button type="button" class="btn-cancel" data-cv-refund="cancel">إلغاء</button>
+        <button type="button" class="btn-confirm" id="cvRefundSave">تسجيل الاسترداد</button>
       </div>
     </div>
   </div>

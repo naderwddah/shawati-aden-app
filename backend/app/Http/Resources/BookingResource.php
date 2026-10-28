@@ -31,6 +31,7 @@ class BookingResource extends JsonResource
             'mark' => $this->mark,
 
             'items_quantity' => (float) ($this->items_sum_quantity ?? 0),
+            'items' => BookingItemResource::collection($this->whenLoaded('items')),
 
             'total_amount' => $totalAmount,
 

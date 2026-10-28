@@ -47,6 +47,9 @@
         color: var(--danger);
       }
 
+      .customer-finance-warning:not([hidden]) { padding:12px 14px; background:#fff7ed; border:1px solid #fcd34d; color:#92400e; border-radius:12px; margin-bottom:12px; font-size:13px; font-weight:700; }
+      .financial-warning { color:#b45309; font-weight:700; }
+      .customers-summary .summary-value { overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
       .customer-card {
         display: flex;
         align-items: stretch;
@@ -348,7 +351,7 @@
             </div>
 
             <div class="summary-item">
-              <span class="summary-label">إجمالي المحصل</span>
+              <span class="summary-label">صافي المحصل</span>
               <span class="summary-value" id="customersCollected">0 ر.س</span>
             </div>
           </div>
@@ -363,6 +366,7 @@
             />
           </div>
 
+          <div id="customerAccountsWarning" class="customer-finance-warning" role="alert" hidden></div>
           <div id="customersList"></div>
         </main>
       </div>
