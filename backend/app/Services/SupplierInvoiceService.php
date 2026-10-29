@@ -18,6 +18,7 @@ class SupplierInvoiceService
                 'supplier_id' => $supplier->id,
                 'invoice_number' => $data['invoice_number'] ?? null,
                 'invoice_date' => $data['invoice_date'],
+                'invoice_time' => $data['invoice_time'] ?? null,
                 'details' => $data['details'],
                 'total_amount' => $data['total_amount'],
                 'notes' => $data['notes'] ?? null,
@@ -43,6 +44,7 @@ class SupplierInvoiceService
                     ? $data['invoice_number']
                     : $invoice->invoice_number,
                 'invoice_date' => $data['invoice_date'] ?? $invoice->invoice_date,
+                'invoice_time' => array_key_exists('invoice_time', $data) ? $data['invoice_time'] : $invoice->invoice_time,
                 'details' => $data['details'] ?? $invoice->details,
                 'total_amount' => $data['total_amount'] ?? $invoice->total_amount,
                 'notes' => array_key_exists('notes', $data)

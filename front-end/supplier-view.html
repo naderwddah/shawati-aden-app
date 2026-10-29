@@ -505,6 +505,9 @@
     .supplier-ledger-tile.due strong{color:var(--danger)}
     .supplier-ledger-tile.credit{background:rgba(22,163,74,.05)}
     .supplier-ledger-tile.credit strong{color:var(--success)}
+    .supplier-invoice-time-note{display:block;color:var(--text-muted);font-size:11px;line-height:1.5;margin-top:5px}
+    .supplier-ledger-time-hint{background:#fffaf0;border:1px solid #e9d5a4;border-radius:11px;padding:10px 13px;font-size:12px;line-height:1.8;color:#714e11;margin-bottom:14px}
+    .supplier-ledger-time-hint i{margin-inline-end:6px}
     .supplier-ledger-table-wrap{overflow-x:auto;width:100%;border:1px solid var(--border);border-radius:11px}
     .supplier-ledger-table{width:100%;border-collapse:collapse;font-size:12px;min-width:660px}
     .supplier-ledger-table th{background:var(--surface-soft);font-size:11px;color:var(--text-secondary);padding:13px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:800}
@@ -572,6 +575,15 @@
     .supplier-doc-statement .supplier-ledger-table-wrap{overflow:visible}
     .supplier-pdf-mount{position:fixed;top:0;left:-12000px;width:760px;background:#fff;z-index:-1}
     .supplier-pdf-mount .supplier-doc-paper{width:760px;max-width:none;min-height:0;padding:44px 45px;box-shadow:none}
+    .supplier-pdf-mount .supplier-ledger-table{display:table!important;min-width:0!important;width:100%!important}
+    .supplier-pdf-mount .supplier-ledger-table thead{display:table-header-group!important}
+    .supplier-pdf-mount .supplier-ledger-table tbody{display:table-row-group!important}
+    .supplier-pdf-mount .supplier-ledger-table tfoot{display:table-footer-group!important}
+    .supplier-pdf-mount .supplier-ledger-entry{display:table-row!important;grid-template-columns:none!important;padding:0!important;margin:0!important;border:0!important}
+    .supplier-pdf-mount .supplier-ledger-entry td{display:table-cell!important;padding:8px 5px!important;white-space:normal!important;text-align:right!important;border-bottom:1px solid #eee!important}
+    .supplier-pdf-mount .supplier-ledger-entry td::before{display:none!important;content:none!important}
+    .supplier-pdf-mount .supplier-ledger-table-wrap{overflow:visible!important}
+
     #supplierPrintRoot{display:none}
     @media(max-width:850px){.supplier-ledger-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.supplier-statement-controls{align-items:stretch;flex-direction:column}}
     @media(max-width:620px){
@@ -626,7 +638,15 @@
       #supplierPrintRoot .supplier-ledger-table{display:table;min-width:0}
       #supplierPrintRoot .supplier-ledger-table thead{display:table-header-group}
       #supplierPrintRoot .supplier-ledger-table tbody{display:table-row-group}
-      #supplierPrintRoot .supplier-ledger-table tr{break-inside:avoid}
+      #supplierPrintRoot .supplier-ledger-table tr{break-inside:avoid;page-break-inside:avoid}
+      #supplierPrintRoot .supplier-ledger-table-wrap{overflow:visible!important;width:100%!important}
+      #supplierPrintRoot .supplier-ledger-entry{display:table-row!important;grid-template-columns:none!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important}
+      #supplierPrintRoot .supplier-ledger-entry td{display:table-cell!important;padding:7px 4px!important;white-space:normal!important;vertical-align:top!important;border-bottom:1px solid #ddd!important;text-align:right!important;min-width:0!important}
+      #supplierPrintRoot .supplier-ledger-entry td::before{display:none!important;content:none!important}
+      #supplierPrintRoot .supplier-doc-heading,#supplierPrintRoot .supplier-doc-details,#supplierPrintRoot .supplier-doc-total,#supplierPrintRoot .supplier-doc-amount{break-inside:avoid}
+      #supplierPrintRoot .supplier-doc-prose{white-space:pre-wrap!important;overflow:visible!important;max-height:none!important}
+      #supplierPrintRoot *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
       #supplierPrintRoot .supplier-ledger-table tfoot{display:table-footer-group}
       #supplierPrintRoot .supplier-ledger-table td,#supplierPrintRoot .supplier-ledger-table th{padding:7px 4px}
       #supplierPrintRoot .supplier-doc-section{break-inside:auto}
@@ -717,6 +737,12 @@
               class="form-input"
               id="invoiceDate"
             >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="invoiceTime">وقت الفاتورة <span style="font-weight:400;color:var(--text-muted)">(لترتيب الكشف)</span></label>
+            <input type="time" class="form-input" id="invoiceTime" step="60">
+            <small class="supplier-invoice-time-note">اختر الساعة الفعلية لإصدار الفاتورة. الفواتير القديمة دون وقت تُرتب حسب اليوم فقط.</small>
           </div>
 
           <div class="form-group">

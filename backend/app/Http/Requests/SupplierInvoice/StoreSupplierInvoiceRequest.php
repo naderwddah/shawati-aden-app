@@ -17,6 +17,7 @@ class StoreSupplierInvoiceRequest extends FormRequest
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
             'invoice_number' => ['nullable', 'string', 'max:100'],
             'invoice_date' => ['required', 'date'],
+            'invoice_time' => ['nullable', 'date_format:H:i'],
             'details' => ['required', 'string'],
             'total_amount' => ['required', 'numeric', 'gt:0'],
             'notes' => ['nullable', 'string'],

@@ -14,6 +14,7 @@ class SupplierInvoiceResource extends JsonResource
             'supplier_id' => $this->supplier_id,
             'invoice_number' => $this->invoice_number,
             'invoice_date' => $this->invoice_date,
+            'invoice_time' => $this->invoice_time,
             'details' => $this->details,
             'total_amount' => (float) $this->total_amount,
             'notes' => $this->notes,

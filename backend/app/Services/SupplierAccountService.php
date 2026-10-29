@@ -50,7 +50,8 @@ class SupplierAccountService
             $transactions->push([
                 'type' => 'invoice',
                 'id' => $invoice->id,
-                'date' => $invoice->invoice_date,
+                'date' => $invoice->invoice_date . ($invoice->invoice_time ? ' ' . $invoice->invoice_time : ''),
+                'invoice_time' => $invoice->invoice_time,
                 'description' => 'فاتورة مورد #' . $invoice->id,
                 'debit' => (float) $invoice->total_amount,
                 'credit' => 0,
