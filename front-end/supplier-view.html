@@ -479,6 +479,160 @@
         grid-column:auto;
       }
     }
+
+    /* =======================================================
+       Supplier financial statement and printable documents
+       ======================================================= */
+    .supplier-doc-icon{border:1px solid var(--border);color:var(--primary);background:var(--surface-card);border-radius:8px;min-width:32px;height:32px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+    .supplier-doc-icon:hover{background:var(--primary-soft)}
+    .transaction-actions{flex-wrap:wrap;justify-content:flex-end}
+    .supplier-statement-panel{border:1px solid var(--border);border-radius:17px;background:var(--surface-card);padding:18px;box-shadow:var(--shadow-sm)}
+    .supplier-statement-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:17px;flex-wrap:wrap}
+    .supplier-statement-top h3{font-size:18px;font-weight:800;color:var(--text);margin:0}
+    .supplier-statement-top p{color:var(--text-muted);font-size:12px;margin:5px 0 0}
+    .supplier-period-chip{font-size:11px;border-radius:99px;background:var(--primary-soft);color:var(--primary);padding:7px 11px;font-weight:800}
+    .supplier-statement-controls{display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:12px;padding:13px;background:var(--surface-soft);border:1px solid var(--border);border-radius:12px;margin-bottom:14px}
+    .supplier-range-fields{display:flex;gap:8px;flex-wrap:wrap}
+    .supplier-range-fields label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:700;color:var(--text-secondary)}
+    .supplier-range-fields input{font-family:inherit;min-height:36px;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface-card);color:var(--text);min-width:135px}
+    .supplier-statement-actions{display:flex;flex-wrap:wrap;gap:6px}
+    .supplier-statement-actions .btn{white-space:nowrap}
+    .supplier-ledger-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+    .supplier-ledger-tile{padding:13px;background:var(--surface-card);border:1px solid var(--border);border-radius:11px;min-width:0}
+    .supplier-ledger-tile span{display:block;color:var(--text-muted);font-size:11px;margin-bottom:8px}
+    .supplier-ledger-tile strong{display:block;color:var(--text);font-weight:800;font-size:15px;overflow-wrap:anywhere}
+    .supplier-ledger-tile.due{background:rgba(220,38,38,.04)}
+    .supplier-ledger-tile.due strong{color:var(--danger)}
+    .supplier-ledger-tile.credit{background:rgba(22,163,74,.05)}
+    .supplier-ledger-tile.credit strong{color:var(--success)}
+    .supplier-ledger-table-wrap{overflow-x:auto;width:100%;border:1px solid var(--border);border-radius:11px}
+    .supplier-ledger-table{width:100%;border-collapse:collapse;font-size:12px;min-width:660px}
+    .supplier-ledger-table th{background:var(--surface-soft);font-size:11px;color:var(--text-secondary);padding:13px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:800}
+    .supplier-ledger-table td{padding:12px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
+    .supplier-ledger-table tbody tr:nth-child(even){background:rgba(127,127,127,.025)}
+    .supplier-ledger-table tbody tr:last-child td{border-bottom:0}
+    .supplier-ledger-table td:nth-child(n+3),.supplier-ledger-table th:nth-child(n+3){text-align:center;white-space:nowrap}
+    .supplier-ledger-description{min-width:135px}
+    .supplier-ledger-description strong,.supplier-ledger-description span{display:block}
+    .supplier-ledger-description span{font-size:10px;color:var(--text-muted);margin-top:4px}
+    .supplier-ledger-debit{font-weight:800;color:var(--danger)!important}
+    .supplier-ledger-credit{font-weight:800;color:var(--success)!important}
+    .supplier-ledger-balance{font-weight:800}
+    .supplier-ledger-balance.is-credit{color:var(--success)!important}
+    .supplier-ledger-date{white-space:nowrap;font-size:11px}
+    .supplier-ledger-table tfoot td{background:var(--surface-soft);border-top:2px solid var(--border);font-weight:800}
+    .supplier-ledger-empty{text-align:center!important;padding:25px!important;color:var(--text-muted)!important}
+    .supplier-statement-note{color:var(--text-muted);font-size:11px;line-height:1.7;margin:12px 0 0}
+    .balance-badge.credit{background:rgba(22,163,74,.12);color:var(--success)}
+    /* Preview modal and A4 sheets */
+    body.supplier-document-open{overflow:hidden}
+    .supplier-doc-modal{position:fixed;inset:0;z-index:2300;display:none;align-items:center;justify-content:center;padding:12px}
+    .supplier-doc-modal.active{display:flex}
+    .supplier-doc-overlay{position:absolute;inset:0;background:rgba(16,19,24,.74)}
+    .supplier-doc-dialog{position:relative;z-index:1;display:flex;flex-direction:column;width:min(980px,100%);height:min(96vh,1050px);background:#f3f2ef;border-radius:15px;overflow:hidden;box-shadow:0 15px 60px #0005}
+    .supplier-doc-toolbar{padding:12px 17px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;border-bottom:1px solid #ddd}
+    .supplier-doc-toolbar h3{font-size:15px;color:#421518;font-weight:800;margin:0}
+    .supplier-doc-toolbar .supplier-doc-buttons{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .supplier-doc-toolbar button{font-family:inherit;border:1px solid #d8c9c5;background:#fff;color:#552025;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+    .supplier-doc-toolbar button[data-supplier-doc="share"]{background:#5a2024;color:#fff;border-color:#5a2024}
+    .supplier-doc-toolbar button:disabled{opacity:.5;cursor:wait}
+    .supplier-doc-content{overflow:auto;padding:22px 12px;flex:1}
+    .supplier-doc-paper{width:190mm;max-width:100%;min-height:250mm;margin:0 auto;background:white;color:#28292c;direction:rtl;padding:20mm 15mm 15mm;box-shadow:0 7px 30px #0001;font-family:Tajawal,Arial,sans-serif;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+    .supplier-doc-header{display:flex;justify-content:space-between;align-items:center;gap:15px;padding-bottom:18px;border-bottom:3px solid #612127}
+    .supplier-doc-brand{display:flex;gap:10px;align-items:center}
+    .supplier-doc-brand img{width:54px;height:54px;object-fit:contain}
+    .supplier-doc-brand strong{display:block;font-size:18px;color:#541c20}
+    .supplier-doc-brand span{display:block;font-size:11px;color:#777}
+    .supplier-doc-header-meta{text-align:left;display:flex;flex-direction:column;gap:3px;color:#777;font-size:11px}
+    .supplier-doc-header-meta strong{font-size:15px;color:#541c20}
+    .supplier-doc-heading{margin:26px 0 21px}
+    .supplier-doc-heading>span{color:#8c6f66;font-size:12px;font-weight:800}
+    .supplier-doc-heading h2{color:#451c21;margin:2px 0 4px;font-size:25px;font-weight:900}
+    .supplier-doc-heading p{font-size:12px;color:#777;margin:0}
+    .supplier-doc-details{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:15px 16px;background:#faf8f6;border:1px solid #e7dedb;border-radius:10px;margin-bottom:17px}
+    .supplier-doc-details>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .supplier-doc-details span{color:#777;font-size:11px}
+    .supplier-doc-details strong{color:#33272a;font-size:13px}
+    .supplier-doc-section{margin:19px 0;padding:17px;border:1px solid #e5dedd;border-radius:10px;break-inside:avoid-page}
+    .supplier-doc-section h3{color:#542026;font-size:14px;font-weight:800;margin:0 0 9px}
+    .supplier-doc-prose{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}
+    .supplier-doc-total{margin-top:28px;padding:16px 20px;border-radius:10px;background:#5a2024;color:white;display:flex;align-items:center;justify-content:space-between;gap:10px;break-inside:avoid}
+    .supplier-doc-total strong{font-size:25px}
+    .supplier-doc-amount{padding:22px;background:#f8f0ef;text-align:center;margin:20px 0;border-radius:12px}
+    .supplier-doc-amount span{font-size:12px;color:#777;display:block}
+    .supplier-doc-amount strong{display:block;font-size:32px;color:#542026;margin-top:8px}
+    .supplier-doc-disclaimer{border-top:1px dashed #d7c6c3;padding-top:14px;margin:26px 0 0;color:#777;font-size:11px;break-inside:avoid}
+    .supplier-doc-footer{margin-top:28px;padding-top:12px;border-top:2px solid #5a2024;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#777;font-size:10px;break-inside:avoid}
+    .supplier-doc-footer strong{color:#5a2024}
+    .supplier-doc-statement .supplier-ledger-summary{grid-template-columns:repeat(4,1fr)}
+    .supplier-doc-statement .supplier-ledger-tile{padding:9px}
+    .supplier-doc-statement .supplier-ledger-tile strong{font-size:12px}
+    .supplier-doc-statement .supplier-ledger-table{min-width:0;font-size:10px}
+    .supplier-doc-statement .supplier-ledger-table th,.supplier-doc-statement .supplier-ledger-table td{padding:9px 5px}
+    .supplier-doc-statement .supplier-ledger-table-wrap{overflow:visible}
+    .supplier-pdf-mount{position:fixed;top:0;left:-12000px;width:760px;background:#fff;z-index:-1}
+    .supplier-pdf-mount .supplier-doc-paper{width:760px;max-width:none;min-height:0;padding:44px 45px;box-shadow:none}
+    #supplierPrintRoot{display:none}
+    @media(max-width:850px){.supplier-ledger-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.supplier-statement-controls{align-items:stretch;flex-direction:column}}
+    @media(max-width:620px){
+      .supplier-statement-panel{padding:11px}
+      .supplier-ledger-summary{gap:7px}
+      .supplier-ledger-tile{padding:10px}
+      .supplier-ledger-tile strong{font-size:12px}
+      .supplier-statement-actions .btn{flex:1;min-width:75px}
+      .supplier-range-fields>*{flex:1;min-width:0}
+      .supplier-range-fields input{width:100%;min-width:0}
+      .supplier-ledger-table-wrap{border:0;overflow:visible}
+      .supplier-ledger-table{display:block;min-width:0;width:100%}
+      .supplier-ledger-table thead{display:none}
+      .supplier-ledger-table tbody{display:block}
+      .supplier-ledger-table .supplier-ledger-entry{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px;margin-bottom:9px;border:1px solid var(--border);border-radius:11px;background:var(--surface-card)}
+      .supplier-ledger-table .supplier-ledger-entry td{display:block;padding:0;border:0;min-width:0;white-space:normal;text-align:right!important;font-size:11px}
+      .supplier-ledger-table .supplier-ledger-entry td::before{display:block;content:attr(data-label);font-size:9px;color:var(--text-muted);margin-bottom:3px;font-weight:500}
+      .supplier-ledger-table .supplier-ledger-entry .supplier-ledger-date{grid-column:1/2}
+      .supplier-ledger-table .supplier-ledger-entry .supplier-ledger-description{grid-column:2/4}
+      .supplier-ledger-table .supplier-ledger-entry .supplier-ledger-debit,.supplier-ledger-table .supplier-ledger-entry .supplier-ledger-credit,.supplier-ledger-table .supplier-ledger-entry .supplier-ledger-balance{grid-column:auto}
+      .supplier-ledger-table tfoot{display:none}
+      .supplier-doc-modal{padding:0}
+      .supplier-doc-dialog{height:100dvh;border-radius:0}
+      .supplier-doc-content{padding:9px}
+      .supplier-doc-paper{min-height:0;padding:20px 15px}
+      .supplier-doc-brand strong{font-size:13px}
+      .supplier-doc-brand img{width:40px;height:40px}
+      .supplier-doc-header-meta{font-size:10px}
+      .supplier-doc-heading{margin:17px 0}
+      .supplier-doc-heading h2{font-size:19px}
+      .supplier-doc-details{gap:9px;padding:12px}
+      .supplier-doc-paper .supplier-ledger-table{display:table}
+      .supplier-doc-paper .supplier-ledger-table thead{display:table-header-group}
+      .supplier-doc-paper .supplier-ledger-table tbody{display:table-row-group}
+      .supplier-doc-paper .supplier-ledger-table .supplier-ledger-entry{display:table-row;padding:0;border:0}
+      .supplier-doc-paper .supplier-ledger-table .supplier-ledger-entry td{display:table-cell;padding:7px 4px;font-size:10px}
+      .supplier-doc-paper .supplier-ledger-table .supplier-ledger-entry td::before{display:none}
+      .supplier-doc-paper .supplier-ledger-table tfoot{display:table-footer-group}
+      .supplier-doc-paper .supplier-ledger-table{min-width:620px}
+      .supplier-doc-paper .supplier-ledger-table-wrap{overflow-x:auto}
+      .supplier-doc-toolbar{padding:8px}
+      .supplier-doc-toolbar button{padding:7px 9px;font-size:11px}
+    }
+    @media print{
+      @page{size:A4 portrait;margin:11mm}
+      body{padding:0!important;margin:0!important;background:white!important}
+      body> :not(#supplierPrintRoot){display:none!important}
+      #supplierPrintRoot{display:block!important;width:100%!important}
+      #supplierPrintRoot .supplier-doc-paper{width:100%!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;box-shadow:none!important;font-size:11px}
+      #supplierPrintRoot .supplier-doc-header{break-inside:avoid}
+      #supplierPrintRoot .supplier-ledger-summary{grid-template-columns:repeat(4,1fr)!important}
+      #supplierPrintRoot .supplier-ledger-table{display:table;min-width:0}
+      #supplierPrintRoot .supplier-ledger-table thead{display:table-header-group}
+      #supplierPrintRoot .supplier-ledger-table tbody{display:table-row-group}
+      #supplierPrintRoot .supplier-ledger-table tr{break-inside:avoid}
+      #supplierPrintRoot .supplier-ledger-table tfoot{display:table-footer-group}
+      #supplierPrintRoot .supplier-ledger-table td,#supplierPrintRoot .supplier-ledger-table th{padding:7px 4px}
+      #supplierPrintRoot .supplier-doc-section{break-inside:auto}
+      #supplierPrintRoot .supplier-doc-footer{margin-top:18px}
+    }
+
   </style>
 </head>
 
@@ -660,10 +814,28 @@
   </div>
 </div>
 
+<div id="supplierDocumentModal" class="supplier-doc-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="معاينة المستند المالي">
+  <div class="supplier-doc-overlay" data-supplier-doc="close"></div>
+  <div class="supplier-doc-dialog">
+    <div class="supplier-doc-toolbar">
+      <h3 id="supplierDocumentTitle">معاينة المستند</h3>
+      <div class="supplier-doc-buttons">
+        <button type="button" data-supplier-doc="print"><i class="fas fa-print"></i> طباعة</button>
+        <button type="button" data-supplier-doc="pdf"><i class="fas fa-file-pdf"></i> تنزيل PDF</button>
+        <button type="button" data-supplier-doc="share"><i class="fas fa-share-nodes"></i> مشاركة PDF</button>
+        <button type="button" data-supplier-doc="close"><i class="fas fa-xmark"></i> إغلاق</button>
+      </div>
+    </div>
+    <div class="supplier-doc-content" id="supplierDocumentContent"></div>
+  </div>
+</div>
+<div id="supplierPrintRoot" aria-hidden="true"></div>
+
 <script src="assets/js/core/utils.js"></script>
 <script src="assets/js/core/api.js"></script>
 <script src="assets/js/components/layout.js"></script>
-<script src="assets/js/pages/supplier-view.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+ <script src="assets/js/pages/supplier-view.js"></script>
 
 </body>
 </html>

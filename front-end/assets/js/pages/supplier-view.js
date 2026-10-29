@@ -14,7 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     saving: false,
     activeTab: 'invoices',
     invoicesReady: false, paymentsReady: false, statementReady: false,
-    dataIssues: []
+    dataIssues: [],
+    statementFrom: '', statementTo: '',
+    document: null, documentBusy: false
   };
 
   const el = {
@@ -35,7 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
     paymentDate: document.getElementById('paymentDate'),
     paymentAmount: document.getElementById('paymentAmount'),
     paymentMethod: document.getElementById('paymentMethod'),
-    paymentNotes: document.getElementById('paymentNotes')
+    paymentNotes: document.getElementById('paymentNotes'),
+    documentModal: document.getElementById('supplierDocumentModal'),
+    documentContent: document.getElementById('supplierDocumentContent'),
+    documentTitle: document.getElementById('supplierDocumentTitle'),
+    printRoot: document.getElementById('supplierPrintRoot')
   };
 
   function toast(message, type = 'info') {
@@ -362,7 +368,9 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div class="transaction-actions">
-
+            <button type="button" class="btn-icon-sm supplier-doc-icon" data-action="view-invoice" title="عرض الفاتورة" aria-label="عرض الفاتورة"><i class="fas fa-eye"></i></button>
+            <button type="button" class="btn-icon-sm supplier-doc-icon" data-action="print-invoice" title="طباعة الفاتورة" aria-label="طباعة الفاتورة"><i class="fas fa-print"></i></button>
+            <button type="button" class="btn-icon-sm supplier-doc-icon" data-action="share-invoice" title="مشاركة PDF" aria-label="مشاركة فاتورة PDF"><i class="fas fa-share-nodes"></i></button>
             <button
               class="btn-icon-sm btn-icon-primary"
               data-action="edit-invoice"
@@ -454,7 +462,9 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div class="transaction-actions">
-
+            <button type="button" class="btn-icon-sm supplier-doc-icon" data-action="view-payment" title="عرض سند الصرف" aria-label="عرض سند الصرف"><i class="fas fa-eye"></i></button>
+            <button type="button" class="btn-icon-sm supplier-doc-icon" data-action="print-payment" title="طباعة سند الصرف" aria-label="طباعة سند الصرف"><i class="fas fa-print"></i></button>
+            <button type="button" class="btn-icon-sm supplier-doc-icon" data-action="share-payment" title="مشاركة PDF" aria-label="مشاركة سند الصرف PDF"><i class="fas fa-share-nodes"></i></button>
             <button
               class="btn-icon-sm btn-icon-primary"
               data-action="edit-payment"
@@ -478,57 +488,306 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
+  // ===== سجل المورد: يعتمد على الحركات المالية الأصلية لا على التقديرات =====
   function buildStatement() {
     if (state.statementReady) {
-      return [...state.statement].map(row => {
-        const isInvoice = row.type === 'invoice' || row.type === 'debit';
-        const debit = Number(row.debit ?? (isInvoice ? row.amount : 0)) || 0;
-        const credit = Number(row.credit ?? (!isInvoice ? row.amount : 0)) || 0;
-        return { ...row, debit, credit };
-      }).sort((a, b) => String(a.date ?? a.created_at ?? '').localeCompare(String(b.date ?? b.created_at ?? '')));
+      return [...state.statement].map((row, index) => {
+        const invoice = row.type === 'invoice' || row.type === 'debit';
+        const debit = Number(row.debit ?? (invoice ? row.amount : 0)) || 0;
+        const credit = Number(row.credit ?? (invoice ? 0 : row.amount)) || 0;
+        return { ...row, debit, credit, _sequence: index,
+          date: row.date ?? row.created_at ?? '',
+          type: invoice ? 'invoice' : 'payment' };
+      }).sort((a, b) => String(a.date).localeCompare(String(b.date)) || a._sequence - b._sequence);
     }
     if (!(state.invoicesReady && state.paymentsReady)) return null;
     return [
-      ...state.invoices.map(invoice => ({ type:'invoice', date:invoice.invoice_date,
-        description:invoice.invoice_number || invoice.details || `فاتورة #${invoice.id}`, debit:Number(invoice.total_amount)||0, credit:0 })),
-      ...state.payments.map(payment => ({ type:'payment', date:payment.payment_date,
-        description:paymentMethodName(payment), debit:0, credit:Number(payment.amount)||0 }))
-    ].sort((a,b) => String(a.date).localeCompare(String(b.date)));
+      ...state.invoices.map(invoice => ({ type: 'invoice', id: invoice.id,
+        date: invoice.invoice_date, invoice_number: invoice.invoice_number,
+        description: invoice.invoice_number ? `فاتورة ${invoice.invoice_number}` : `فاتورة #${invoice.id}`,
+        debit: Number(invoice.total_amount) || 0, credit: 0 })),
+      ...state.payments.map(payment => ({ type: 'payment', id: payment.id, date: payment.payment_date,
+        payment_method: paymentMethodName(payment), description: `دفعة للمورد #${payment.id}`,
+        debit: 0, credit: Number(payment.amount) || 0 }))
+    ].sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.type === 'invoice' ? -1 : 1));
   }
 
-  function renderStatement() {
-    const rows = buildStatement();
-    if (rows === null) return '<div class="empty-state"><h4>كشف الحساب غير متاح</h4><p>تعذر تحميل الحركات المالية</p></div>';
-    if (!rows.length) return '<div class="empty-state"><i class="fas fa-receipt"></i><h4>كشف الحساب فارغ</h4><p>لا توجد حركات مالية</p></div>';
-    let balance = 0;
-    return `<div class="section-header"><span class="section-title">كشف الحساب</span><button class="btn btn-secondary btn-sm" type="button" id="printSupplierStatement"><i class="fas fa-print"></i> طباعة الكشف</button></div>
-      <div class="statement"><div class="statement-row statement-head"><span>البيان</span><span>مدين</span><span>دائن</span><span>الرصيد</span></div>
-        ${rows.map(row => {
-          const debit = Number(row.debit)||0, credit = Number(row.credit)||0;
-          balance = Math.round((balance + debit - credit)*100)/100;
-          const displayBalance = balance < -0.005 ? `دائن ${currency(-balance)}` : currency(balance);
-          return `<div class="statement-row"><div><strong>${escapeHtml(row.description || row.notes || (debit ? 'فاتورة' : 'دفعة'))}</strong><div style="font-size:11px;color:var(--text-muted)">${escapeHtml(normalizeDate(row.date || row.created_at || row.createdAt))}</div></div>
-          <span class="statement-debit">${debit ? currency(debit) : '—'}</span><span class="statement-credit">${credit ? currency(credit) : '—'}</span><span class="statement-balance ${balance < -0.005 ? 'credit' : ''}">${displayBalance}</span></div>`;
-        }).join('')}</div>`;
+  function dateText(value) {
+    const date = normalizeDate(value);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return '—';
+    const [y, m, d] = date.split('-');
+    return `${d}/${m}/${y}`;
   }
-
-  function printStatement() {
+  function dateTimeText(value) {
+    const v = String(value || '');
+    const match = v.match(/(\d{2}:\d{2})/);
+    return `${dateText(v)}${match ? ' · ' + match[1] : ''}`;
+  }
+  function balanceText(value) {
+    const amount = Math.round(Number(value || 0) * 100) / 100;
+    if (amount > 0.005) return `مستحق ${currency(amount)}`;
+    if (amount < -0.005) return `رصيد دائن ${currency(-amount)}`;
+    return 'مسدد';
+  }
+  function statementModel() {
     const rows = buildStatement();
-    if (!rows) return toast('كشف الحساب غير متاح للطباعة', 'error');
-    const win = window.open('', '_blank');
-    if (!win) return toast('تعذر فتح نافذة الطباعة', 'error');
-    let balance = 0;
-    const tbody = rows.map(row => {
-      const debit = Number(row.debit)||0, credit = Number(row.credit)||0;
-      balance = Math.round((balance + debit - credit)*100)/100;
-      return `<tr><td>${escapeHtml(normalizeDate(row.date))}</td><td>${escapeHtml(row.description || '')}</td><td>${debit ? currency(debit) : '—'}</td><td>${credit ? currency(credit) : '—'}</td><td>${balance < 0 ? 'دائن ' + currency(-balance) : currency(balance)}</td></tr>`;
+    if (rows === null) return null;
+    const from = state.statementFrom;
+    const to = state.statementTo;
+    let opening = 0;
+    let debitTotal = 0;
+    let creditTotal = 0;
+    const visible = [];
+    for (const row of rows) {
+      const date = normalizeDate(row.date);
+      const debit = Number(row.debit) || 0;
+      const credit = Number(row.credit) || 0;
+      if (from && date && date < from) { opening += debit - credit; continue; }
+      if ((from || to) && !date) continue;
+      if (to && date > to) continue;
+      debitTotal += debit;
+      creditTotal += credit;
+      visible.push({ ...row, debit, credit });
+    }
+    let running = Math.round(opening * 100) / 100;
+    const calculated = visible.map(row => {
+      running = Math.round((running + row.debit - row.credit) * 100) / 100;
+      return { ...row, balance: running };
+    });
+    return { rows: calculated, opening: Math.round(opening * 100) / 100,
+      debitTotal: Math.round(debitTotal * 100) / 100,
+      creditTotal: Math.round(creditTotal * 100) / 100,
+      closing: running, from, to };
+  }
+  function statementPeriodLabel(model) {
+    if (!model.from && !model.to) return 'جميع الحركات المسجلة';
+    return `من ${model.from ? dateText(model.from) : 'البداية'} إلى ${model.to ? dateText(model.to) : 'اليوم'}`;
+  }
+  function ledgerRowsHtml(model, forDocument = false) {
+    if (!model.rows.length) return '<tr><td class="supplier-ledger-empty" colspan="5">لا توجد حركات في الفترة المحددة</td></tr>';
+    return model.rows.map(row => {
+      const invoice = row.type === 'invoice';
+      const ref = invoice
+        ? (row.invoice_number ? `فاتورة ${row.invoice_number}` : `فاتورة #${row.id || '—'}`)
+        : `دفعة #${row.id || '—'}`;
+      const title = row.description || ref;
+      const sub = invoice ? 'فاتورة مشتريات' : `سند صرف${row.payment_method ? ' · ' + row.payment_method : ''}`;
+      return `<tr class="supplier-ledger-entry">
+        <td data-label="التاريخ" class="supplier-ledger-date">${escapeHtml(dateTimeText(row.date))}</td>
+        <td data-label="البيان" class="supplier-ledger-description"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(sub)}</span></td>
+        <td data-label="مدين" class="supplier-ledger-debit">${row.debit ? currency(row.debit) : '—'}</td>
+        <td data-label="دائن" class="supplier-ledger-credit">${row.credit ? currency(row.credit) : '—'}</td>
+        <td data-label="الرصيد" class="supplier-ledger-balance ${row.balance < -0.005 ? 'is-credit' : ''}">${escapeHtml(balanceText(row.balance))}</td>
+      </tr>`;
     }).join('');
-    win.document.open();
-    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف حساب - ${escapeHtml(state.supplier?.name)}</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#111}table{border-collapse:collapse;width:100%;margin-top:20px}td,th{border:1px solid #ccc;padding:9px;font-size:12px;text-align:right}th{background:#eee}h1{font-size:20px}</style></head><body><h1>كشف حساب المورد: ${escapeHtml(state.supplier?.name)}</h1><p>تاريخ الطباعة: ${today()}</p><table><thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>${tbody}</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>`);
-    win.document.close();
+  }
+  function summaryTiles(model) {
+    return `<div class="supplier-ledger-summary">
+      <div class="supplier-ledger-tile"><span>رصيد أول الفترة</span><strong>${escapeHtml(balanceText(model.opening))}</strong></div>
+      <div class="supplier-ledger-tile"><span>الفواتير (مدين)</span><strong>${currency(model.debitTotal)}</strong></div>
+      <div class="supplier-ledger-tile"><span>المدفوع (دائن)</span><strong>${currency(model.creditTotal)}</strong></div>
+      <div class="supplier-ledger-tile ${model.closing > 0.005 ? 'due' : model.closing < -0.005 ? 'credit' : ''}"><span>الرصيد الختامي</span><strong>${escapeHtml(balanceText(model.closing))}</strong></div>
+    </div>`;
+  }
+  function ledgerTableHtml(model) {
+    return `<div class="supplier-ledger-table-wrap"><table class="supplier-ledger-table">
+      <thead><tr><th>التاريخ</th><th>البيان</th><th>مدين (فواتير)</th><th>دائن (دفعات)</th><th>الرصيد بعد الحركة</th></tr></thead>
+      <tbody>${ledgerRowsHtml(model)}</tbody>
+      <tfoot><tr><td colspan="2">الإجمالي خلال الفترة</td><td>${currency(model.debitTotal)}</td><td>${currency(model.creditTotal)}</td><td>${escapeHtml(balanceText(model.closing))}</td></tr></tfoot>
+    </table></div>`;
+  }
+  function renderStatement() {
+    const model = statementModel();
+    if (model === null) return '<div class="empty-state"><h4>كشف الحساب غير متاح</h4><p>تعذر تحميل الحركات المالية، أعد المحاولة قبل الطباعة</p></div>';
+    return `<section class="supplier-statement-panel">
+      <div class="supplier-statement-top"><div><h3>كشف حساب المورد</h3><p>ملخص المستحقات والمدفوعات مع الرصيد المتراكم</p></div>
+        <span class="supplier-period-chip">${escapeHtml(statementPeriodLabel(model))}</span></div>
+      <div class="supplier-statement-controls"><div class="supplier-range-fields">
+        <label>من تاريخ<input type="date" id="supplierStatementFrom" value="${escapeHtml(state.statementFrom)}"></label>
+        <label>إلى تاريخ<input type="date" id="supplierStatementTo" value="${escapeHtml(state.statementTo)}"></label></div>
+        <div class="supplier-statement-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="supplierStatementApply">تطبيق</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="supplierStatementReset">الكل</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-doc-statement="view"><i class="fas fa-eye"></i> معاينة</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-doc-statement="print"><i class="fas fa-print"></i> طباعة</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-doc-statement="pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" class="btn btn-primary btn-sm" data-doc-statement="share"><i class="fas fa-share-nodes"></i> مشاركة</button>
+        </div></div>
+      ${summaryTiles(model)}
+      ${ledgerTableHtml(model)}
+      <p class="supplier-statement-note">مدين = فواتير المورد، دائن = ما دُفع للمورد. الرصيد الدائن يعني زيادة المدفوع على قيمة الفواتير.</p>
+    </section>`;
   }
 
-    function setMode(mode) {
+  // ===== قوالب المستندات: الفاتورة، سند الصرف، كشف الحساب =====
+  function docHeader(type, reference, date) {
+    return `<header class="supplier-doc-header">
+      <div class="supplier-doc-brand"><img src="assets/images/logo.png" alt="" onerror="this.style.display='none'">
+        <div><strong>مطابخ شواطئ عدن</strong><span>سجلات الموردين والحسابات</span></div></div>
+      <div class="supplier-doc-header-meta"><span>${escapeHtml(type)}</span><strong>${escapeHtml(reference)}</strong><small>${escapeHtml(date)}</small></div>
+    </header>`;
+  }
+  function docDetails(entries) {
+    return `<div class="supplier-doc-details">${entries.map(([key, value]) => `<div><span>${escapeHtml(key)}</span><strong>${escapeHtml(value ?? '—')}</strong></div>`).join('')}</div>`;
+  }
+  function docFooter() {
+    return `<footer class="supplier-doc-footer"><strong>مطابخ شواطئ عدن</strong><span>مستند صادر من سجلات النظام في ${escapeHtml(new Date().toLocaleString('ar-SA'))}</span></footer>`;
+  }
+  function invoiceDocument(invoice) {
+    const id = Number(invoice.id);
+    const reference = invoice.invoice_number || `#${id}`;
+    const html = `<article class="supplier-doc-paper">
+      ${docHeader('فاتورة مورد مسجلة', reference, dateText(invoice.invoice_date))}
+      <div class="supplier-doc-heading"><span>فاتورة مشتريات</span><h2>بيانات فاتورة المورد</h2><p>ملخص فاتورة محفوظة في سجلات المطعم</p></div>
+      ${docDetails([['اسم المورد', state.supplier.name], ['رقم الجوال', state.supplier.phone || '—'],
+        ['رقم الفاتورة', reference], ['تاريخ الفاتورة', dateText(invoice.invoice_date)]])}
+      <section class="supplier-doc-section"><h3>تفاصيل الفاتورة</h3><div class="supplier-doc-prose">${escapeHtml(invoice.details || 'لا توجد تفاصيل')}</div></section>
+      ${invoice.notes ? `<section class="supplier-doc-section"><h3>ملاحظات</h3><div class="supplier-doc-prose">${escapeHtml(invoice.notes)}</div></section>` : ''}
+      <div class="supplier-doc-total"><span>إجمالي الفاتورة</span><strong>${currency(invoice.total_amount)}</strong></div>
+      <p class="supplier-doc-disclaimer">نسخة من فاتورة مورد مسجلة بالنظام؛ ليست فاتورة ضريبية صادرة من المورد ولا تؤكد سدادها.</p>
+      ${docFooter()}</article>`;
+    return { type: 'invoice', title: `فاتورة مورد ${reference}`, filename: `supplier-invoice-${id}.pdf`, html };
+  }
+  function paymentDocument(payment) {
+    const id = Number(payment.id);
+    const html = `<article class="supplier-doc-paper">
+      ${docHeader('سند صرف مسجل', `#${id}`, dateTimeText(payment.payment_date))}
+      <div class="supplier-doc-heading"><span>مدفوعات الموردين</span><h2>سند صرف للمورد</h2><p>بيانات دفعة مسجلة في حساب المورد</p></div>
+      <div class="supplier-doc-amount"><span>المبلغ المدفوع</span><strong>${currency(payment.amount)}</strong></div>
+      ${docDetails([['اسم المورد', state.supplier.name], ['رقم الجوال', state.supplier.phone || '—'],
+        ['رقم السند', `#${id}`], ['تاريخ ووقت الدفع', dateTimeText(payment.payment_date)],
+        ['طريقة الدفع', paymentMethodName(payment)]])}
+      ${payment.notes ? `<section class="supplier-doc-section"><h3>ملاحظات الدفعة</h3><div class="supplier-doc-prose">${escapeHtml(payment.notes)}</div></section>` : ''}
+      <p class="supplier-doc-disclaimer">السند يثبت تسجيل الدفعة في النظام فقط، ولا يُعد إثباتًا مصرفيًا لإتمام التحويل.</p>
+      ${docFooter()}</article>`;
+    return { type: 'payment', title: `سند صرف #${id}`, filename: `supplier-payment-${id}.pdf`, html };
+  }
+  function statementDocument() {
+    const model = statementModel();
+    if (!model) throw new Error('كشف الحساب غير متاح؛ أعد تحميل بيانات المورد');
+    const html = `<article class="supplier-doc-paper supplier-doc-statement">
+      ${docHeader('كشف حساب مورد', `#${state.supplierId}`, statementPeriodLabel(model))}
+      <div class="supplier-doc-heading"><span>الحسابات المالية</span><h2>كشف حساب المورد</h2><p>${escapeHtml(statementPeriodLabel(model))}</p></div>
+      ${docDetails([['اسم المورد', state.supplier.name], ['رقم الجوال', state.supplier.phone || '—']])}
+      ${summaryTiles(model)}
+      ${ledgerTableHtml(model)}
+      <p class="supplier-doc-disclaimer">المدين: فواتير المورد. الدائن: الدفعات المصروفة له. يظهر رصيد أول الفترة عند تطبيق فلتر التواريخ.</p>
+      ${docFooter()}</article>`;
+    return { type: 'statement', title: 'كشف حساب المورد', filename: `supplier-statement-${state.supplierId}-${today()}.pdf`, html };
+  }
+  function openDocument(doc) {
+    if (!doc || !el.documentModal || !el.documentContent) return;
+    state.document = doc;
+    el.documentTitle.textContent = doc.title;
+    el.documentContent.innerHTML = doc.html;
+    el.documentModal.classList.add('active');
+    el.documentModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('supplier-document-open');
+  }
+  function closeDocument() {
+    if (state.documentBusy) return;
+    el.documentModal?.classList.remove('active');
+    el.documentModal?.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('supplier-document-open');
+    state.document = null;
+    if (el.printRoot) el.printRoot.innerHTML = '';
+  }
+  function documentFor(type, id) {
+    if (!state.supplier) throw new Error('ملف المورد غير متاح');
+    if (type === 'statement') return statementDocument();
+    if (type === 'invoice') {
+      if (!state.invoicesReady) throw new Error('الفواتير غير محملة');
+      const entry = state.invoices.find(x => Number(x.id) === Number(id));
+      if (!entry) throw new Error('الفاتورة غير موجودة');
+      return invoiceDocument(entry);
+    }
+    if (!state.paymentsReady) throw new Error('الدفعات غير محملة');
+    const entry = state.payments.find(x => Number(x.id) === Number(id));
+    if (!entry) throw new Error('الدفعة غير موجودة');
+    return paymentDocument(entry);
+  }
+  function printDocument() {
+    const doc = state.document;
+    if (!doc || !el.printRoot) return;
+    el.printRoot.innerHTML = doc.html;
+    window.print();
+  }
+  function pdfAvailable() {
+    if (typeof window.html2pdf !== 'function') {
+      toast('تعذر تحميل مكتبة PDF. استخدم طباعة ثم اختر حفظ كـ PDF من المتصفح.', 'warning');
+      return false;
+    }
+    return true;
+  }
+  async function makePdf(doc) {
+    if (!pdfAvailable()) return null;
+    const paper = el.documentContent?.querySelector('.supplier-doc-paper');
+    if (!paper) throw new Error('محتوى المستند غير متاح');
+    // Clone at a printable A4 width so mobile preview never becomes a narrow PDF.
+    const clone = paper.cloneNode(true);
+    const mount = document.createElement('div');
+    mount.className = 'supplier-pdf-mount';
+    mount.appendChild(clone);
+    document.body.appendChild(mount);
+    try {
+      if (document.fonts?.ready) await document.fonts.ready;
+      const images = [...clone.querySelectorAll('img')];
+      await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+        img.onload = resolve; img.onerror = resolve;
+      })));
+      return await window.html2pdf().set({
+        margin: [10, 9, 10, 9], filename: doc.filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 900 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.supplier-doc-section', '.supplier-doc-total', '.supplier-doc-amount', '.supplier-ledger-tile'] }
+      }).from(clone).outputPdf('blob');
+    } finally { mount.remove(); }
+  }
+  function downloadPdf(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  async function pdfAction(share = false) {
+    if (!state.document || state.documentBusy) return;
+    if (!pdfAvailable()) return;
+    const doc = state.document;
+    state.documentBusy = true;
+    const buttons = [...el.documentModal.querySelectorAll('[data-supplier-doc]')];
+    buttons.forEach(b => { if (b.dataset.supplierDoc !== 'close') b.disabled = true; });
+    try {
+      const blob = await makePdf(doc);
+      if (!blob) return;
+      if (share && typeof File === 'function' && typeof navigator.share === 'function') {
+        const file = new File([blob], doc.filename, { type: 'application/pdf' });
+        if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ title: doc.title, files: [file] }); return; }
+          catch (err) { if (err.name === 'AbortError') return; }
+        }
+      }
+      downloadPdf(blob, doc.filename);
+      toast(share ? 'تم تنزيل PDF. يمكنك إرساله من جهازك؛ مشاركة الملفات المباشرة غير متاحة هنا.' : 'تم تنزيل ملف PDF', 'success');
+    } catch (err) {
+      console.error('supplier PDF error', err);
+      toast('تعذر إنشاء PDF. استخدم زر الطباعة ثم اختر حفظ كـ PDF.', 'error');
+    } finally {
+      state.documentBusy = false;
+      buttons.forEach(b => { b.disabled = false; });
+    }
+  }
+  function handleDocumentAction(type, id, action) {
+    try {
+      openDocument(documentFor(type, id));
+      if (action === 'print') printDocument();
+      if (action === 'pdf') pdfAction(false);
+      if (action === 'share') pdfAction(true);
+    } catch (err) { toast(err.message || 'تعذر عرض المستند', 'error'); }
+  }
+
+function setMode(mode) {
     state.mode = mode;
 
     document.querySelectorAll('#transactionModal [data-mode]').forEach(button => {
@@ -830,8 +1089,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function bindStatementActions() {
+    document.getElementById('supplierStatementReset')?.addEventListener('click', () => {
+      state.statementFrom = ''; state.statementTo = '';
+      document.getElementById('tab-statement').innerHTML = renderStatement();
+      bindStatementActions();
+    });
+    document.getElementById('supplierStatementApply')?.addEventListener('click', () => {
+      const from = document.getElementById('supplierStatementFrom')?.value || '';
+      const to = document.getElementById('supplierStatementTo')?.value || '';
+      if (from && to && from > to) { toast('تاريخ البداية يجب أن يسبق تاريخ النهاية', 'warning'); return; }
+      state.statementFrom = from; state.statementTo = to;
+      document.getElementById('tab-statement').innerHTML = renderStatement();
+      bindStatementActions();
+    });
+    document.querySelectorAll('[data-doc-statement]').forEach(button => {
+      button.addEventListener('click', () => handleDocumentAction('statement', null, button.dataset.docStatement));
+    });
+  }
+
   function bindRenderedEvents() {
-    document.getElementById('printSupplierStatement')?.addEventListener('click', printStatement);
+    bindStatementActions();
     document.querySelectorAll('[data-tab]').forEach(button => {
       button.addEventListener('click', () => {
         state.activeTab = button.dataset.tab;
@@ -900,6 +1178,30 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
+  function bindDocuments() {
+    el.content?.addEventListener('click', event => {
+      const btn = event.target.closest('[data-action]');
+      if (!btn) return;
+      const match = /^(view|print|share)-(invoice|payment)$/.exec(btn.dataset.action);
+      if (!match) return;
+      const card = btn.closest(match[2] === 'invoice' ? '[data-invoice-id]' : '[data-payment-id]');
+      const id = Number(card?.dataset[match[2] === 'invoice' ? 'invoiceId' : 'paymentId']);
+      if (id > 0) handleDocumentAction(match[2], id, match[1]);
+    });
+    el.documentModal?.addEventListener('click', event => {
+      const btn = event.target.closest('[data-supplier-doc]');
+      if (!btn) return;
+      const action = btn.dataset.supplierDoc;
+      if (action === 'close') closeDocument();
+      else if (action === 'print') printDocument();
+      else if (action === 'pdf') pdfAction(false);
+      else if (action === 'share') pdfAction(true);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && el.documentModal?.classList.contains('active')) closeDocument();
+    });
+  }
+
   function bindEvents() {
     // Layout replaces the FAB with a clone. Listen to its event, not the old node.
     document.querySelectorAll('#transactionModal [data-mode]').forEach(button => {
@@ -955,6 +1257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     bindEvents();
+    bindDocuments();
 
     await Promise.all([
       loadPaymentMethods(),

@@ -30,6 +30,8 @@
     statementDraft: { from: '', to: '' },
     receiptPayment: null,
     receiptRequest: 0,
+    financialDocument: null,
+    documentBusy: false,
     activeTab: 'bookings',
     statusBookingId: null,
     savingStatus: false
@@ -498,7 +500,7 @@
             <i class="fas fa-exchange-alt"></i> الحالة
           </button>
           <button class="cv-action primary" data-action="printBooking" data-id="${booking.id}">
-            <i class="fas fa-receipt"></i> الفاتورة
+            <i class="fas fa-receipt"></i> الفاتورة / PDF
           </button>
           ${pendingReturn > 0 && paid > returned ? `<button class="cv-action warning" data-action="refundDeposit" data-id="${booking.id}" title="إرجاع تأمين الصحون"><i class="fas fa-rotate-left"></i> إرجاع تأمين</button>` : ''}
           <button class="cv-action danger" data-action="deleteBooking" data-id="${booking.id}">
@@ -515,7 +517,7 @@
             <i class="fas fa-exchange-alt"></i> الحالة
           </button>
           <button class="cv-action secondary" data-action="printBooking" data-id="${booking.id}">
-            <i class="fas fa-print"></i>
+            <i class="fas fa-receipt"></i> الفاتورة / PDF
           </button>
           ${pendingReturn > 0 && paid > returned ? `<button class="cv-action warning" data-action="refundDeposit" data-id="${booking.id}" title="إرجاع تأمين الصحون"><i class="fas fa-rotate-left"></i> إرجاع تأمين</button>` : ''}
           <button class="cv-action danger" data-action="deleteBooking" data-id="${booking.id}">
@@ -609,6 +611,8 @@
           <div class="cv-pay-actions">
             <button type="button" class="cv-small-action" data-action="viewPayment" data-id="${id}" title="عرض إيصال الدفعة"><i class="fas fa-eye"></i> عرض</button>
             <button type="button" class="cv-small-action" data-action="printPayment" data-id="${id}" title="طباعة إيصال الدفعة"><i class="fas fa-print"></i> طباعة</button>
+            <button type="button" class="cv-small-action" data-action="pdfPayment" data-id="${id}" title="تنزيل PDF"><i class="fas fa-file-pdf"></i> PDF</button>
+            <button type="button" class="cv-small-action" data-action="sharePayment" data-id="${id}" title="مشاركة PDF"><i class="fas fa-share-nodes"></i> مشاركة</button>
             <button type="button" class="cv-pay-del" data-action="deletePayment" data-id="${id}" title="حذف الدفعة" aria-label="حذف الدفعة"><i class="fas fa-trash"></i></button>
           </div>
         </div>
@@ -638,7 +642,7 @@
     const bid = payment.booking_id ?? payment.bookingId;
     const method = paymentMethodName(payment);
     const id = esc(payment.id);
-    return `<div class="cv-receipt-paper">
+    return `<div class="cv-receipt-paper cv-fin-paper">
       <div class="cv-receipt-brand"><i class="fas fa-utensils"></i> مطابخ شواطئ عدن</div>
       <h3>إيصال استلام دفعة</h3>
       <div class="cv-receipt-number">رقم الإيصال: <strong>#${id}</strong></div>
@@ -655,29 +659,65 @@
     </div>`;
   }
 
-  async function viewPaymentReceipt(id) {
+  function setFinancialButtons(enabled) {
+    ['cvPrintReceiptBtn', 'cvDownloadPdfBtn', 'cvSharePdfBtn'].forEach(id => {
+      const button = $(id);
+      if (button) button.disabled = !enabled;
+    });
+  }
+
+  function openFinancialPreview(doc) {
+    const modal = $('cvPaymentReceiptModal');
+    const content = $('cvPaymentReceiptContent');
+    if (!modal || !content) throw new Error('نافذة المستندات غير متاحة');
+    state.financialDocument = doc;
+    $('cvPaymentReceiptTitle').textContent = doc.title;
+    content.innerHTML = doc.html;
+    setFinancialButtons(true);
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function receiptDocument(payment) {
+    const id = Number(payment.id);
+    return {type: 'payment', title: `إيصال دفعة #${id}`,
+      filename: `customer-payment-${id}.pdf`, html: receiptContent(payment)};
+  }
+
+  async function fetchPaymentReceipt(id) {
+    const payment = await apiCall(['getCustomerPayment'], Number(id));
+    if (!payment?.id || Number(payment.id) !== Number(id) ||
+        Number(payment.customer_id ?? payment.customer?.id ?? state.customerId) !== Number(state.customerId)) {
+      throw new Error('الإيصال لا يطابق هذا العميل');
+    }
+    return payment;
+  }
+
+  async function viewPaymentReceipt(id, action = 'view') {
     const old = state.payments.find(p => Number(p.id) === Number(id));
     if (!old) { toast('الدفعة غير موجودة', 'error'); return; }
+    const requestNumber = ++state.receiptRequest;
     const modal = $('cvPaymentReceiptModal');
     const content = $('cvPaymentReceiptContent');
     if (!modal || !content) { toast('نافذة الإيصال غير متاحة', 'error'); return; }
-    content.innerHTML = '<div class="cv-receipt-loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل إيصال الدفعة...</div>';
     state.receiptPayment = null;
-    const requestNumber = ++state.receiptRequest;
-    $('cvPrintReceiptBtn').disabled = true;
+    state.financialDocument = null;
+    content.innerHTML = '<div class="cv-receipt-loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الدفعة...</div>';
+    setFinancialButtons(false);
+    $('cvPaymentReceiptTitle').textContent = 'جاري تحميل إيصال الدفعة';
     modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     try {
-      const payment = await apiCall(['getCustomerPayment'], Number(id));
-      if (!payment?.id || Number(payment.id) !== Number(id) ||
-          Number(payment.customer_id ?? payment.customer?.id ?? state.customerId) !== Number(state.customerId)) {
-        throw new Error('الإيصال لا يطابق هذا العميل');
-      }
-      if (!modal.classList.contains('active') || requestNumber !== state.receiptRequest) return;
+      const payment = await fetchPaymentReceipt(id);
+      if (requestNumber !== state.receiptRequest || !modal.classList.contains('active')) return;
       state.receiptPayment = payment;
-      content.innerHTML = receiptContent(payment);
-      $('cvPrintReceiptBtn').disabled = false;
+      const doc = receiptDocument(payment);
+      openFinancialPreview(doc);
+      if (action === 'print') printFinancialDocument();
+      else if (action === 'pdf') await financialPdfAction(false);
+      else if (action === 'share') await financialPdfAction(true);
     } catch (error) {
       if (requestNumber !== state.receiptRequest) return;
       content.innerHTML = `<div class="cv-receipt-error">${esc(error.message || 'تعذر تحميل الدفعة')}</div>`;
@@ -686,46 +726,99 @@
   }
 
   function closePaymentReceipt() {
+    if (state.documentBusy) return;
     state.receiptRequest++;
     $('cvPaymentReceiptModal')?.classList.remove('active');
     $('cvPaymentReceiptModal')?.setAttribute('aria-hidden', 'true');
-    $('cvPrintReceiptBtn').disabled = true;
+    setFinancialButtons(false);
     state.receiptPayment = null;
+    state.financialDocument = null;
     document.body.style.overflow = '';
   }
 
-  function printDocument(title, body, extraCss = '') {
-    const win = window.open('', '_blank');
-    if (!win) { toast('يرجى السماح بفتح النوافذ لطباعة المستند', 'error'); return; }
-    const css = `@page{size:A4;margin:13mm}*{box-sizing:border-box}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;color:#251d1d;background:#fff;margin:0;padding:14px;font-size:12px}
-      h3{color:#481b1a}table{width:100%;border-collapse:collapse;table-layout:auto}th,td{border-bottom:1px solid #e8e3e1;padding:10px 7px;text-align:right;vertical-align:top}
-      thead th{background:#f8f2ef;color:#542021;font-weight:800}tfoot th{background:#f8f2ef}tr{break-inside:avoid}
-      .cv-receipt-paper{max-width:480px;margin:0 auto;border:1px solid #d9c8c4;border-radius:12px;padding:22px}
-      .cv-receipt-brand{text-align:center;color:#601d22;font-weight:800}.cv-receipt-paper h3{text-align:center;font-size:22px;margin:14px 0}
-      .cv-receipt-number{text-align:center;color:#777}.cv-receipt-amount{background:#f6edea;border-radius:10px;padding:18px;text-align:center;margin:20px 0}
-      .cv-receipt-amount span{display:block;font-size:12px}.cv-receipt-amount strong{display:block;font-size:27px;margin-top:8px;color:#601d22}
-      .cv-receipt-fields{margin:0}.cv-receipt-fields div{display:flex;justify-content:space-between;gap:12px;padding:11px 3px;border-bottom:1px dashed #ddd}
-      .cv-receipt-fields dt{color:#777}.cv-receipt-fields dd{margin:0;font-weight:800;overflow-wrap:anywhere}
-      .cv-receipt-footer{color:#777;text-align:center;margin-top:24px;font-size:11px}
-      .cv-stmt-type{font-weight:700}.cv-stmt-money{text-align:left;white-space:nowrap;direction:ltr}.cv-stmt-detail{margin:7px 0;padding:6px 10px;background:#faf8f6}
-      .cv-stmt-detail-row{display:grid;grid-template-columns:1fr 55px 70px 80px;gap:10px;padding:5px;border-bottom:1px solid #eee}
-      .cv-stmt-info-grid{display:grid;grid-template-columns:100px 1fr;gap:8px}.cv-stmt-expander summary{display:none}
-      .cv-stmt-refunds{margin-top:16px;padding:12px;border:1px solid #eee}.cv-stmt-refunds p,.cv-stmt-footnote{font-size:11px;color:#666}
-      .cv-stmt-refunds-list span{display:block;margin:4px}.cv-stmt-opening{background:#fafafa}.cv-stmt-description{min-width:140px}
-      ${extraCss}`;
-    win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
-    win.document.open();
-    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"><style>${css}</style></head><body>${body}</body></html>`);
-    win.document.close();
-    win.focus();
-    // User-initiated preview opens a separate print window.
+  // The same A4 paper is used for preview, browser printing and PDF export.
+  function printFinancialDocument() {
+    const doc = state.financialDocument;
+    const root = $('cvFinancialPrintRoot');
+    if (!doc || !root) { toast('لا يوجد مستند جاهز للطباعة', 'warning'); return; }
+    root.innerHTML = doc.html;
+    // A print root inside THIS page avoids popup blockers and missing popup CSS/fonts.
+    window.print();
+  }
+
+  function pdfLibraryAvailable() {
+    if (typeof window.html2pdf !== 'function') {
+      toast('مكتبة PDF غير متاحة. استخدم الطباعة ثم اختر حفظ كـ PDF.', 'warning');
+      return false;
+    }
+    return true;
+  }
+
+  async function makeFinancialPdf(doc) {
+    if (!pdfLibraryAvailable()) return null;
+    const mount = document.createElement('div');
+    mount.className = 'cv-fin-pdf-mount';
+    mount.innerHTML = doc.html;
+    document.body.appendChild(mount);
+    try {
+      if (document.fonts?.ready) await document.fonts.ready;
+      await Promise.all([...mount.querySelectorAll('img')].map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+        img.onload = resolve; img.onerror = resolve;
+      })));
+      const paper = mount.firstElementChild;
+      return await window.html2pdf().set({
+        margin: [10, 10, 12, 10],
+        filename: doc.filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true, windowWidth: 950, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.cv-fin-no-break', '.cv-receipt-amount', '.cv-stmt-detail', '.cv-fin-doc-summary', '.cv-fin-doc-header'] }
+      }).from(paper).outputPdf('blob');
+    } finally { mount.remove(); }
+  }
+
+  function downloadFinancialPdf(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  async function financialPdfAction(share = false) {
+    const doc = state.financialDocument;
+    if (!doc || state.documentBusy || !pdfLibraryAvailable()) return;
+    state.documentBusy = true;
+    setFinancialButtons(false);
+    try {
+      const blob = await makeFinancialPdf(doc);
+      if (!blob) return;
+      if (share && typeof File === 'function' && typeof navigator.share === 'function') {
+        const file = new File([blob], doc.filename, { type: 'application/pdf' });
+        if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ title: doc.title, files: [file] }); return; }
+          catch (error) { if (error.name === 'AbortError') return; }
+        }
+      }
+      downloadFinancialPdf(blob, doc.filename);
+      toast(share ? 'تم تنزيل PDF؛ يمكنك إرساله يدويًا.' : 'تم تنزيل PDF', 'success');
+    } catch (error) {
+      console.error('PDF error:', error);
+      toast('تعذر تجهيز PDF. اضغط طباعة واختر حفظ كـ PDF.', 'error');
+    } finally {
+      state.documentBusy = false;
+      setFinancialButtons(Boolean(state.financialDocument));
+    }
   }
 
   function printPaymentReceipt(paymentOrId) {
-    const payment = typeof paymentOrId === 'object' ? paymentOrId :
-      state.payments.find(p => Number(p.id) === Number(paymentOrId));
-    if (!payment) { toast('الدفعة غير موجودة', 'error'); return; }
-    printDocument(`إيصال دفعة #${payment.id}`, receiptContent(payment));
+    if (typeof paymentOrId === 'object' && paymentOrId?.id) {
+      openFinancialPreview(receiptDocument(paymentOrId));
+      printFinancialDocument();
+    } else viewPaymentReceipt(paymentOrId, 'print');
   }
 
   /* =========================================================
@@ -850,7 +943,10 @@
             <button type="button" class="cv-stmt-btn ${!detailed ? 'active' : ''}" data-view="normal">مختصر</button>
             <button type="button" class="cv-stmt-btn ${detailed ? 'active' : ''}" data-view="detailed">تفصيلي</button>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" data-action="printStatement"><i class="fas fa-print"></i> طباعة الكشف</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="viewStatement"><i class="fas fa-eye"></i> معاينة</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="printStatement"><i class="fas fa-print"></i> طباعة</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="pdfStatement"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="shareStatement"><i class="fas fa-share-nodes"></i> مشاركة</button>
         </div>
       </div>
       <div class="cv-stmt-card"><div class="cv-stmt-table-scroll"><table class="cv-stmt-table">
@@ -1691,24 +1787,49 @@ $$('.cv-status-opt').forEach((label) => {
    * 17) طباعة كشف الحساب
    * ========================================================= */
 
-  function printStatement() {
+  function statementFinancialDocument() {
+    if (!state.customer) throw new Error('بيانات العميل غير متاحة');
     const model = statementModel();
     const detailed = state.statementView === 'detailed';
-    const rangeLabel = state.statementRange.from || state.statementRange.to
+    const period = state.statementRange.from || state.statementRange.to
       ? `${formatDateDisplay(state.statementRange.from)} — ${formatDateDisplay(state.statementRange.to)}`
       : 'جميع الحركات المسجلة';
-    const body = `<div class="cv-stmt-print-head" style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #5b1c20;padding-bottom:14px;margin-bottom:18px">
-       <div><div style="color:#5b1c20;font-weight:800;font-size:18px">مطابخ شواطئ عدن</div><h2 style="margin:6px 0 0">كشف حساب عميل ${detailed ? 'تفصيلي' : ''}</h2></div>
-       <div style="text-align:left"><div>${esc(todayString())}</div><div>${esc(rangeLabel)}</div></div>
-      </div>
-      <div style="margin:10px 0 17px">العميل: <strong>${esc(state.customer?.name || '—')}</strong>　|　الجوال: <strong>${esc(state.customer?.phone || '—')}</strong></div>
-      <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap"><div>المدين: <strong>${money(model.debit)}</strong></div><div>الدائن: <strong>${money(model.credit)}</strong></div><div>رصيد آخر الفترة: <strong>${money(Math.abs(model.closing))}</strong> (${signedBalanceText(model.closing)})</div></div>
-      <table class="cv-stmt-table"><thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
-      <tbody>${statementTableRows(model, detailed, true)}</tbody><tfoot><tr><th colspan="3">إجمالي الفترة</th><th>${money(model.debit)}</th><th>${money(model.credit)}</th><th>${money(model.closing)}</th></tr></tfoot></table>
+    const title = `كشف حساب العميل${detailed ? ' التفصيلي' : ''}`;
+    const body = `<article class="cv-fin-paper cv-fin-statement">
+      <header class="cv-fin-doc-header">
+        <div><strong class="cv-fin-doc-brand">مطابخ شواطئ عدن</strong><span>كشف حساب مالي من سجلات النظام</span></div>
+        <div class="cv-fin-doc-meta"><strong>${esc(title)}</strong><span>${esc(todayString())}</span></div>
+      </header>
+      <div class="cv-fin-doc-heading"><span>الحسابات المالية</span><h2>${esc(title)}</h2><p>${esc(period)}</p></div>
+      <div class="cv-fin-doc-details"><span>العميل: <strong>${esc(state.customer.name || '—')}</strong></span><span>الجوال: <strong dir="ltr">${esc(state.customer.phone || '—')}</strong></span></div>
+      <section class="cv-fin-doc-summary">
+        <div><span>رصيد أول الفترة</span><strong>${money(model.opening)}</strong></div>
+        <div><span>إجمالي المدين</span><strong>${money(model.debit)}</strong></div>
+        <div><span>إجمالي الدائن</span><strong>${money(model.credit)}</strong></div>
+        <div class="cv-fin-doc-highlight"><span>رصيد آخر الفترة</span><strong>${money(Math.abs(model.closing))}</strong><small>${signedBalanceText(model.closing)}</small></div>
+      </section>
+      <div class="cv-fin-doc-table-wrap"><table class="cv-fin-statement-table">
+        <thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+        <tbody>${statementTableRows(model, detailed, true)}</tbody>
+        <tfoot><tr><th colspan="3">إجمالي الفترة</th><th>${money(model.debit)}</th><th>${money(model.credit)}</th><th>${money(Math.abs(model.closing))}</th></tr></tfoot>
+      </table></div>
       ${statementRefundNotes(model.refunds)}
-      <p class="cv-stmt-footnote">يعبر الرصيد الدائن عن المبلغ المستحق للعميل. والتأمين المرتجع مسجل بشكل تراكمي دون تاريخ لكل إرجاع، ولا يُضاف إلى الحركات المالية المؤرخة في الكشف.</p>`;
-    printDocument(`كشف حساب - ${state.customer?.name || 'عميل'}`, body);
+      <p class="cv-fin-doc-note">يشير الرصيد الدائن إلى مبلغ لصالح العميل. يعرض تأمين الصحون المرتجع تراكميًا دون إدخاله مجددًا ضمن الحركات المالية المؤرخة.</p>
+      <footer class="cv-fin-doc-footer">مطابخ شواطئ عدن · تاريخ إصدار الكشف: ${esc(todayString())}</footer>
+    </article>`;
+    return { type: 'statement', title, filename: `customer-statement-${state.customerId}-${todayString()}.pdf`, html: body };
   }
+
+  function openStatementDocument(action = 'view') {
+    try {
+      openFinancialPreview(statementFinancialDocument());
+      if (action === 'print') printFinancialDocument();
+      if (action === 'pdf') financialPdfAction(false);
+      if (action === 'share') financialPdfAction(true);
+    } catch (error) { toast(error.message || 'تعذر عرض كشف الحساب', 'error'); }
+  }
+
+  function printStatement() { openStatementDocument('print'); }
 
     /* =========================================================
    * 18) الأحداث
@@ -1747,7 +1868,9 @@ $$('.cv-status-opt').forEach((label) => {
         case 'deleteBooking': deleteBooking(id); break;
         case 'deletePayment': deletePayment(id); break;
         case 'viewPayment': viewPaymentReceipt(id); break;
-        case 'printPayment': printPaymentReceipt(id); break;
+        case 'printPayment': viewPaymentReceipt(id, 'print'); break;
+        case 'pdfPayment': viewPaymentReceipt(id, 'pdf'); break;
+        case 'sharePayment': viewPaymentReceipt(id, 'share'); break;
         case 'applyStatement': {
           const from = state.statementDraft.from;
           const to = state.statementDraft.to;
@@ -1764,6 +1887,9 @@ $$('.cv-status-opt').forEach((label) => {
           break;
         }
         case 'printStatement': printStatement(); break;
+        case 'viewStatement': openStatementDocument(); break;
+        case 'pdfStatement': openStatementDocument('pdf'); break;
+        case 'shareStatement': openStatementDocument('share'); break;
         case 'refundDeposit': openRefundDialog(id); break;
         case 'gotoBooking': {
           e.preventDefault();
@@ -1845,9 +1971,9 @@ $$('.cv-status-opt').forEach((label) => {
     });
     $('cvConfirmStatusBtn')?.addEventListener('click', confirmStatusChange);
     $('cvRefundSave')?.addEventListener('click', saveRefund);
-    $('cvPrintReceiptBtn')?.addEventListener('click', () => {
-      if (state.receiptPayment) printPaymentReceipt(state.receiptPayment);
-    });
+    $('cvPrintReceiptBtn')?.addEventListener('click', printFinancialDocument);
+    $('cvDownloadPdfBtn')?.addEventListener('click', () => financialPdfAction(false));
+    $('cvSharePdfBtn')?.addEventListener('click', () => financialPdfAction(true));
     $$('[data-close="cvPaymentReceiptModal"]').forEach(btn => btn.addEventListener('click', closePaymentReceipt));
     $$('[data-cv-refund="cancel"]').forEach(b => b.addEventListener('click', closeRefundDialog));
 

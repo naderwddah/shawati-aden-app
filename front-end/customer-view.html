@@ -751,6 +751,73 @@
     }
     @media(max-width:350px){.cv-small-action{padding:7px 8px}}
 
+  
+    /* v9: one source of truth for preview, browser printing and exported PDF. */
+    .cv-receipt-dialog{max-width:min(780px,calc(100vw - 20px))}
+    .cv-receipt-dialog .cv-modal-body{max-height:calc(100dvh - 200px);overflow:auto;padding:15px}
+    .cv-receipt-dialog .cv-modal-footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+    .cv-fin-paper{direction:rtl;background:#fff;color:#241f20;font-family:Tajawal,Arial,sans-serif;line-height:1.65;box-sizing:border-box;width:100%;max-width:100%;overflow-wrap:anywhere}
+    .cv-fin-paper *{box-sizing:border-box}
+    .cv-fin-paper.cv-receipt-paper{max-width:570px;margin:0 auto}
+    .cv-fin-doc-header{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:3px solid #6b2029;padding:0 0 18px;margin:0 0 20px}
+    .cv-fin-doc-header>div{display:flex;flex-direction:column;gap:4px}
+    .cv-fin-doc-brand{font-size:19px;color:#681c24;font-weight:900}
+    .cv-fin-doc-header span{font-size:11px;color:#665e60}
+    .cv-fin-doc-meta{text-align:left}
+    .cv-fin-doc-meta strong{font-size:12px;color:#562128}
+    .cv-fin-doc-heading{text-align:center;margin:20px 0}
+    .cv-fin-doc-heading>span{font-size:11px;color:#8a595d;font-weight:800}
+    .cv-fin-doc-heading h2{color:#4c181e;margin:4px 0;font-size:23px}
+    .cv-fin-doc-heading p{color:#716666;font-size:12px;margin:0}
+    .cv-fin-doc-details{background:#fbf7f6;border:1px solid #ebdedb;border-radius:11px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px;margin-bottom:14px;font-size:12px}
+    .cv-fin-doc-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0 18px}
+    .cv-fin-doc-summary>div{border:1px solid #e9e0dd;border-radius:10px;padding:12px 8px;background:#fff;min-width:0}
+    .cv-fin-doc-summary span,.cv-fin-doc-summary small{display:block;font-size:10px;color:#78696c}
+    .cv-fin-doc-summary strong{display:block;font-size:15px;margin-top:5px;color:#442024;overflow-wrap:anywhere}
+    .cv-fin-doc-summary .cv-fin-doc-highlight{background:#fbf1ef;border-color:#e4c5c1}
+    .cv-fin-doc-summary .cv-fin-doc-highlight strong{color:#71212b}
+    .cv-fin-doc-table-wrap{width:100%;overflow-x:auto}
+    .cv-fin-statement-table{width:100%;min-width:0;border-collapse:collapse;table-layout:fixed;font-size:11px}
+    .cv-fin-statement-table th{font-weight:800;background:#f7eeec;color:#5e292e}
+    .cv-fin-statement-table th,.cv-fin-statement-table td{padding:9px 5px;text-align:right;border-bottom:1px solid #ede7e5;vertical-align:top;overflow-wrap:anywhere}
+    .cv-fin-statement-table th:nth-child(1){width:13%}
+    .cv-fin-statement-table th:nth-child(2){width:10%}
+    .cv-fin-statement-table th:nth-child(3){width:29%}
+    .cv-fin-statement-table th:nth-child(n+4){width:16%}
+    .cv-fin-statement-table .cv-stmt-description{min-width:0;max-width:none}
+    .cv-fin-statement-table .cv-stmt-money{white-space:normal;direction:rtl;font-size:10px}
+    .cv-fin-statement-table .cv-stmt-detail{min-width:0}
+    .cv-fin-statement-table .cv-stmt-detail-row{grid-template-columns:minmax(80px,1fr) 42px 54px 60px}
+    .cv-fin-statement-table .cv-stmt-type{white-space:normal}
+    .cv-fin-doc-note{color:#736568;font-size:10px;margin:18px 0;line-height:1.8}
+    .cv-fin-doc-footer{border-top:1px solid #e8dedc;text-align:center;margin-top:20px;padding-top:12px;font-size:10px;color:#7c6d6e}
+    .cv-fin-pdf-mount{position:fixed;left:-12000px;top:0;width:760px;background:white;z-index:-1}
+    .cv-fin-pdf-mount>.cv-fin-paper{width:760px;max-width:none;padding:35px 37px;border:0;border-radius:0;box-shadow:none}
+    #cvFinancialPrintRoot{display:none}
+    @media(max-width:620px){
+      .cv-fin-doc-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .cv-fin-doc-summary strong{font-size:13px}
+      .cv-fin-statement-table{min-width:570px}
+      .cv-receipt-dialog .cv-modal-body{padding:10px}
+      .cv-receipt-dialog .cv-modal-footer .btn-confirm{flex:1;min-width:130px}
+    }
+    @media print{
+      @page{size:A4 portrait;margin:12mm}
+      html,body{background:#fff!important;margin:0!important;padding:0!important;overflow:visible!important;height:auto!important}
+      body> :not(#cvFinancialPrintRoot){display:none!important}
+      #cvFinancialPrintRoot{display:block!important;position:static!important;margin:0!important;padding:0!important;width:100%!important;visibility:visible!important}
+      #cvFinancialPrintRoot>.cv-fin-paper{width:100%!important;max-width:none!important;min-height:0!important;border:0!important;box-shadow:none!important;border-radius:0!important;padding:0!important;margin:0!important;overflow:visible!important}
+      #cvFinancialPrintRoot .cv-fin-doc-summary{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+      #cvFinancialPrintRoot .cv-fin-statement-table{display:table!important;width:100%!important;min-width:0!important;font-size:10px!important}
+      #cvFinancialPrintRoot .cv-fin-doc-table-wrap{overflow:visible!important}
+      #cvFinancialPrintRoot thead{display:table-header-group}
+      #cvFinancialPrintRoot tfoot{display:table-footer-group}
+      #cvFinancialPrintRoot .cv-fin-statement-table tr{break-inside:avoid;page-break-inside:avoid}
+      #cvFinancialPrintRoot .cv-fin-doc-header,#cvFinancialPrintRoot .cv-fin-doc-heading,#cvFinancialPrintRoot .cv-fin-doc-summary{break-inside:avoid}
+      #cvFinancialPrintRoot .cv-stmt-detail{break-inside:avoid}
+      #cvFinancialPrintRoot *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+
   </style>
 </head>
 
@@ -1033,7 +1100,9 @@
       <div class="cv-modal-body" id="cvPaymentReceiptContent"></div>
       <div class="cv-modal-footer">
         <button type="button" class="btn-cancel" data-close="cvPaymentReceiptModal">إغلاق</button>
-        <button type="button" class="btn-confirm" id="cvPrintReceiptBtn" disabled><i class="fas fa-print"></i> طباعة الإيصال</button>
+        <button type="button" class="btn-confirm" id="cvPrintReceiptBtn" disabled><i class="fas fa-print"></i> طباعة</button>
+        <button type="button" class="btn-confirm" id="cvDownloadPdfBtn" disabled><i class="fas fa-file-pdf"></i> تنزيل PDF</button>
+        <button type="button" class="btn-confirm" id="cvSharePdfBtn" disabled><i class="fas fa-share-nodes"></i> مشاركة PDF</button>
       </div>
     </div>
   </div>
@@ -1060,9 +1129,11 @@
     }
   </script>
 
+  <div id="cvFinancialPrintRoot" aria-hidden="true"></div>
   <script src="assets/js/core/utils.js"></script>
   <script src="assets/js/core/api.js"></script>
   <script src="assets/js/components/layout.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="assets/js/pages/customer-view.js"></script>
 </body>
 </html>
