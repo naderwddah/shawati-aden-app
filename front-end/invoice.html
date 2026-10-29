@@ -249,6 +249,65 @@
     @media screen and (max-width: 160mm) { .invoice-page { transform: scale(0.85); margin: -15px 0; } }
     @media screen and (max-width: 130mm) { .invoice-page { transform: scale(0.7); margin: -30px 0; } }
     @media screen and (max-width: 110mm) { .invoice-page { transform: scale(0.55); margin: -45px 0; } }
+
+    /* V6 — محافظة على النموذج المعتمد مع ضمان وضوح المبالغ والملاحظات */
+    .invoice-inner { background: transparent; }
+    .header { align-items: center; }
+    .social-box { min-width: 0; }
+    .social-icons { gap: 6px; }
+    .social-icon { width: 24px; height: 24px; font-size: 16px; }
+    .social-text { font-size: 13px; }
+    .social-text.en { font-size: 9px; direction:ltr; color:#111; font-weight:800; }
+    .header-right .title { font-size: 16px; }
+    .header-right .subtitle { font-size: 10px; }
+    .header-right .phone { font-size: 20px; white-space: nowrap; }
+    .main-logo { width: 30mm; max-height: 29mm; }
+    .invoice-bar { padding: 0 5mm 1mm; }
+    .invoice-no { font-size: 11px; font-weight: 900; }
+    .invoice-badge { padding: 5px 16px; font-size: 12px; }
+    .invoice-state { font-size: 10px; font-weight: 700; color: #805a39; }
+    .customer-box { height: 26mm; padding: 3mm; margin: 2mm 5mm; }
+    .customer-row { gap: 4px; min-width: 0; font-size: 10px; }
+    .customer-field { min-width: 0; flex:1; }
+    .customer-value { min-width: 0; flex:1; overflow-wrap: anywhere; margin-inline: 3px; }
+    .customer-value.wide { flex:1.7; }
+    .issue-date { color:#805a39; text-align:left; padding:0 5mm; font-size:8px; }
+    .table-container { flex: none; margin:2mm 5mm; }
+    .items-table td { height:8mm; }
+    .items-table .line-name { text-align: right; padding-right:6px; }
+    .items-table .deposit-item { color:#956c20; font-weight:900; }
+    .items-table .line-total, .items-table .line-no { font-weight:900; }
+    /* V6.1: صندوق ملاحظة ثابت دائمًا؛ فواصل الأسطر تتحول لفواصل عربية. */
+    .invoice-notes { margin:0 5mm 2mm; border:1.5px solid #420a09; border-radius:6px; height:18mm; padding:2mm 4mm; background:#fff; font-size:11px; color:#420a09; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; }
+    .invoice-notes > span { display:block; font-size:13px; font-weight:900; flex-shrink:0; }
+    .invoice-notes .note-viewport { flex:1; min-height:0; margin-top:1mm; overflow:hidden; }
+    .invoice-notes .note-content { white-space:normal; overflow-wrap:anywhere; word-break:normal; font-weight:700; font-size:11px; line-height:1.2; margin:0; padding:0; }
+    .invoice-totals { margin:0 5mm; border:1.5px solid #420a09; border-radius:6px; padding:2.2mm 3mm; display:flex; align-items:center; justify-content:space-between; gap:2mm; background:#fff; font-size:13px; color:#420a09; flex-shrink:0; }
+    .invoice-totals strong { font-size:12px; flex:1; }
+    .invoice-totals b { font-size:17px; flex:1; text-align:center; white-space:nowrap; }
+    .invoice-totals .paid-summary { font-size:9px; line-height:1.4; flex:1; text-align:left; color:#420a09; }
+    .paid-summary em { font-style:normal; color:#16855b; font-weight:800; }
+    .paid-summary em.pending { color:#b4232f; }
+    .deposit-summary { margin:1mm 5mm 0; font-size:9px; color:#805a39; text-align:right; font-weight:800; flex-shrink:0; }
+    .page-subtotal { opacity:.8; }
+    .footer-wave { height:9mm; margin-top:auto; }
+    .footer-wave svg { display:block; width:100%; height:100%; }
+    .warning-note { margin:0 5mm; padding:1mm 1mm; font-size:11px; font-weight:900; text-align:center; color:#420a09; background:#fff; flex-shrink:0; }
+    .footer-content { margin-bottom:5mm; height:27mm; grid-template-columns:1fr 2.4fr 1fr; padding:0 4mm 2mm; gap:1mm; }
+    .footer-center { gap:1mm; min-width:0; }
+    .footer-contact { display:flex; justify-content:space-between; align-items:center; gap:2mm; width:100%; }
+    .address-location { display:flex; align-items:center; gap:1.5mm; font-size:10px; color:#420a09; font-weight:700; max-width:55%; }
+    .address-location i { font-size:17px; flex-shrink:0; }
+    .phones { display:flex; flex-direction:column; gap:3px; font-size:9px; font-weight:700; color:#420a09; white-space:nowrap; direction:ltr; }
+    .payment-box { width:100%; font-size:10px; }
+    .payment-line { display:inline-flex; align-items:center; justify-content:center; width:32mm; height:6mm; background:#fafbf6; overflow:hidden; padding:0 3px; }
+    .qr-image { width:17mm; height:17mm; }
+    .invoice-error { padding:32px 20px; border-radius:15px; background:white; border:1px solid #e8dbd2; max-width:560px; margin:80px auto; text-align:center; color:#420a09; }
+    .invoice-error i { font-size:28px; color:#a52a2a; }
+    .invoice-error h2 { margin:8px 0; }
+    .invoice-error a { color:white; background:#420a09; text-decoration:none; display:inline-block; padding:10px 20px; border-radius:8px; margin-top:15px; }
+    .actions button:disabled { opacity:.6; cursor:not-allowed; }
+    @media print { .invoice-page { break-after:page; } .invoice-page:last-child { break-after:auto; } }
   </style>
 </head>
 <body>
@@ -256,7 +315,7 @@
   <div class="invoice-pages-wrapper" id="pagesWrapper"></div>
 
   <div class="actions">
-    <button class="action-btn btn-back" onclick="window.location.href='bookings.html'">
+    <button class="action-btn btn-back" onclick="invoiceBack()">
       <i class="fas fa-arrow-right"></i> رجوع
     </button>
     <button class="action-btn btn-print" onclick="window.print()">
@@ -267,6 +326,6 @@
     </button>
   </div>
 
-  <script src="/assets/js/pages/invoice.js"></script>
+  <script src="assets/js/pages/invoice.js"></script>
 </body>
 </html>

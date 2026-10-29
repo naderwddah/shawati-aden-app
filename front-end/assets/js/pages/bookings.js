@@ -957,6 +957,8 @@
       const invoiceData = {
         id: fullBooking.id,
         status: fullBooking.status,
+        invoiceDate: fullBooking.invoice_date || null,
+        generatedAt: new Date().toISOString(),
 
         customer: {
           name: fullBooking.customer?.name || fullBooking.customer_name || '',
@@ -972,12 +974,18 @@
           deliveryTime: fullBooking.delivery_period || timeInfo.period || 'ظهراً'
         },
 
-        paymentMethod: paymentMethodName,
+        paymentMethod: (() => {
+          const labels = (Array.isArray(fullBooking.payments) ? fullBooking.payments : [])
+            .map(p => p.payment_method?.name || paymentMethods.find(m => Number(getPaymentMethodId(m)) === Number(p.payment_method_id))?.name)
+            .filter(Boolean);
+          return [...new Set(labels)].join(' / ') || (paidAmount ? paymentMethodName : 'لم يتم الدفع');
+        })(),
 
         items: items,
 
         total: totalAmount,
         deposit: paidAmount,
+        paidTotal: paidAmount,
         remaining: remaining,
 
         platesDeposit: Number(fullBooking.plate_deposit || 0),
@@ -991,7 +999,9 @@
         }
       };
 
-      localStorage.setItem('preview_invoice_data', JSON.stringify(invoiceData));
+      sessionStorage.setItem('preview_invoice_data', JSON.stringify(invoiceData));
+      sessionStorage.setItem('invoice_return_to', 'bookings.html');
+      localStorage.removeItem('preview_invoice_data');
       window.location.href = 'invoice.html';
 
     } catch (error) {

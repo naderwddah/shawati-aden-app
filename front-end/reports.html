@@ -209,6 +209,23 @@
             box-shadow: 0 5px 14px rgba(143, 23, 32, .15);
         }
 
+        [data-page="reports"] .date-help {
+            display: block;
+            padding-top: 24px;
+            color: var(--reports-muted);
+            font-size: 11px;
+            line-height: 1.6;
+        }
+        [data-page="reports"] .period-button:focus-visible {
+            outline: 3px solid var(--reports-primary);
+            outline-offset: 2px;
+        }
+        [data-page="reports"] .period-button[data-period="live"].active {
+            background: #167c5b;
+            border-color: #167c5b;
+        }
+        [data-page="reports"] .reports-page-subtitle { max-width: 760px; }
+
         [data-page="reports"] .date-range-panel {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1001,7 +1018,7 @@
             }
 
             [data-page="reports"] .period-buttons {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -1239,7 +1256,7 @@
                         </h1>
 
                         <p class="reports-page-subtitle">
-                            تقرير شامل للحجوزات والعملاء والموردين والحركة المالية خلال الفترة المحددة.
+                            الحجوزات حسب تاريخ المناسبة، والفواتير حسب تاريخها، والدفعات حسب تاريخ دفعها. الأرقام النقدية ليست صافي الربح.
                         </p>
 
                     </div>
@@ -1290,7 +1307,7 @@
                                 </h2>
 
                                 <p>
-                                    اختر اليوم أو الفترة التي تريد استخراج التقرير عنها.
+                                    اختر التقرير اللحظي أو تاريخًا يوميًا أو أسبوعًا أو فترة بين تاريخين.
                                 </p>
 
                             </div>
@@ -1302,58 +1319,30 @@
 
                     <div class="report-filter-body">
 
-                        <div
-                            class="period-buttons"
-                            id="reportPeriodButtons"
-                        >
-
-                            <button
-                                type="button"
-                                class="period-button active"
-                                data-period="day"
-                            >
-                                <i class="fas fa-calendar-day"></i>
-                                اليوم
+                        <div class="period-buttons" id="reportPeriodButtons">
+                            <button type="button" class="period-button active" data-period="live" aria-pressed="true">
+                                <i class="fas fa-satellite-dish"></i> لحظي
                             </button>
-
-                            <button
-                                type="button"
-                                class="period-button"
-                                data-period="yesterday"
-                            >
-                                <i class="fas fa-calendar-minus"></i>
-                                أمس
+                            <button type="button" class="period-button" data-period="day" aria-pressed="false">
+                                <i class="fas fa-calendar-day"></i> يومي
                             </button>
-
-                            <button
-                                type="button"
-                                class="period-button"
-                                data-period="week"
-                            >
-                                <i class="fas fa-calendar-week"></i>
-                                هذا الأسبوع
+                            <button type="button" class="period-button" data-period="week" aria-pressed="false">
+                                <i class="fas fa-calendar-week"></i> أسبوعي
                             </button>
-
-                            <button
-                                type="button"
-                                class="period-button"
-                                data-period="month"
-                            >
-                                <i class="fas fa-calendar"></i>
-                                هذا الشهر
+                            <button type="button" class="period-button" data-period="custom" aria-pressed="false">
+                                <i class="fas fa-calendar-days"></i> من تاريخ إلى تاريخ
                             </button>
-
-                            <button
-                                type="button"
-                                class="period-button"
-                                data-period="custom"
-                            >
-                                <i class="fas fa-sliders"></i>
-                                فترة مخصصة
-                            </button>
-
                         </div>
 
+                        <div class="date-range-panel hidden" id="singleDatePanel">
+                            <div class="date-field">
+                                <label for="reportSingleDate" id="reportSingleDateLabel">التاريخ</label>
+                                <input type="date" id="reportSingleDate" class="form-input">
+                            </div>
+                            <div class="date-field" id="singleDateExplanation">
+                                <span class="date-help" id="reportSingleDateHelp">اختر تاريخًا لعرض التقرير.</span>
+                            </div>
+                        </div>
 
                         <div
                             id="customDateRange"
@@ -1398,7 +1387,7 @@
                                 <i class="fas fa-calendar-check"></i>
 
                                 <span id="selectedReportPeriod">
-                                    تقرير اليوم
+                                    تقرير لحظي — اليوم حتى الآن
                                 </span>
 
                             </div>
@@ -1447,11 +1436,11 @@
                         <span class="report-status-dot"></span>
 
                         <strong id="reportStatusTitle">
-                            التقرير جاهز
+                            التقرير لحظي — تحديث كل 30 ثانية
                         </strong>
 
                         <span id="reportStatusDescription">
-                            يتم عرض بيانات الفترة المحددة.
+                            تُجلب آخر البيانات من الخادم بشكل تلقائي عندما تكون الصفحة مفتوحة.
                         </span>
 
                     </div>
@@ -1515,7 +1504,7 @@
                             </div>
 
                             <div class="report-kpi-label">
-                                إجمالي الفواتير
+                                إجمالي المطلوب للحجوزات
                             </div>
 
                             <div
@@ -1575,7 +1564,7 @@
                             </div>
 
                             <div class="report-kpi-label">
-                                المتبقي على العملاء
+                                متبقي حجوزات الفترة
                             </div>
 
                             <div
@@ -1638,7 +1627,7 @@
                             </h2>
 
                             <p class="report-section-subtitle">
-                                مقارنة الفواتير والمدفوعات والمبالغ المستحقة للعملاء والموردين.
+                                مقارنة المطلوب على حجوزات الفترة والمدفوعات النقدية خلالها وفرق فواتير الموردين عن مدفوعاتهم.
                             </p>
 
                         </div>
@@ -1753,7 +1742,7 @@
                                 </div>
 
                                 <div class="financial-card-title">
-                                    مستحقات العملاء
+                                    متبقي حجوزات الفترة
                                 </div>
 
                             </div>
@@ -1768,7 +1757,7 @@
                             <div class="financial-card-meta">
 
                                 <span>
-                                    إجمالي المتبقي
+                                    متبقي حجوزات الفترة
                                 </span>
 
                                 <strong id="customerRemainingCount">
@@ -1885,7 +1874,7 @@
                                 </div>
 
                                 <div class="financial-card-title">
-                                    مستحقات الموردين
+                                    فرق فواتير ومدفوعات الفترة
                                 </div>
 
                             </div>
@@ -1900,7 +1889,7 @@
                             <div class="financial-card-meta">
 
                                 <span>
-                                    إجمالي المستحق
+                                    الفرق الحسابي
                                 </span>
 
                                 <strong id="supplierRemainingCount">
@@ -1915,6 +1904,18 @@
 
                 </section>
 
+
+                <section class="report-section" id="platesDepositReportSection">
+                    <div class="report-section-header"><div>
+                        <h2 class="report-section-title"><i class="fas fa-plate-wheat"></i> تأمين الصحون</h2>
+                        <p class="report-section-subtitle">تأمين قابل للاسترداد للحجوزات الواقعة ضمن الفترة. تاريخ إرجاع التأمين غير متاح حاليًا لذلك لا يُحسب ضمن التدفق النقدي اليومي.</p>
+                    </div></div>
+                    <div class="supplier-summary-grid">
+                        <div class="supplier-summary-card"><div class="supplier-summary-card-label">التأمين المطلوب</div><div class="supplier-summary-card-value" id="reportPlateDeposits">—</div></div>
+                        <div class="supplier-summary-card"><div class="supplier-summary-card-label">المبلغ المعاد حتى الآن</div><div class="supplier-summary-card-value paid" id="reportPlateReturns">—</div></div>
+                        <div class="supplier-summary-card"><div class="supplier-summary-card-label">المتبقي للإرجاع</div><div class="supplier-summary-card-value due" id="reportPlatePending">—</div></div>
+                    </div>
+                </section>
 
                 <!-- =================================================
                      OPERATIONAL SUMMARY
@@ -2198,7 +2199,7 @@
                                             "
                                         ></i>
 
-                                        المبالغ المتبقية
+                                        متبقي حجوزات الفترة
 
                                     </div>
 
@@ -2239,7 +2240,7 @@
                             </h2>
 
                             <p class="report-section-subtitle">
-                                جميع الحجوزات الواقعة ضمن الفترة المحددة.
+                                الحجوزات حسب تاريخ المناسبة؛ المدفوع والمتبقي لكل حجز يشمل دفعاته المسجلة حتى الآن.
                             </p>
 
                         </div>
@@ -2365,7 +2366,7 @@
                             </h2>
 
                             <p class="report-section-subtitle">
-                                ملخص فواتير الموردين ومدفوعاتهم والمبالغ المستحقة.
+                                ملخص فواتير الموردين ومدفوعاتهم خلال الفترة والفرق الحسابي بينهما.
                             </p>
 
                         </div>
@@ -2410,7 +2411,7 @@
                         <div class="supplier-summary-card">
 
                             <div class="supplier-summary-card-label">
-                                إجمالي المستحق للموردين
+                                فرق فواتير ومدفوعات الفترة
                             </div>
 
                             <div
@@ -2488,7 +2489,7 @@
                                         </th>
 
                                         <th>
-                                            الحالة
+                                            التفاصيل
                                         </th>
 
                                     </tr>
@@ -2721,6 +2722,12 @@
 
                 </section>
 
+
+                <p class="report-period-note" style="color:var(--reports-muted);font-size:11px;line-height:1.8;margin-bottom:15px;">
+                    <i class="fas fa-circle-info"></i>
+                    المتبقي على حجوزات الفترة يشمل مدفوعات تلك الحجوزات حتى الآن، أما المقبوض والمدفوع للموردين فيعكسان حركات الدفع التي تمت خلال الفترة المختارة.
+                    تأمين الصحون لا يمثل إيرادًا نهائيًا، وإرجاعه لا يُخصم من الحركة النقدية للفترة لعدم وجود تاريخ مستقل لكل استرداد.
+                </p>
 
                 <!-- =================================================
                      REPORT FOOTER SUMMARY

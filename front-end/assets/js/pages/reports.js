@@ -12,7 +12,7 @@
      */
 
     const state = {
-        period: "day",
+        period: "live",
         range: {
             start: "",
             end: "",
@@ -37,6 +37,10 @@
 
         financialLoaded: false,
         loading: false,
+        requestId: 0,
+        lastSuccessful: false,
+        lastUpdated: null,
+        liveTimer: null,
     };
 
     const STATUS_LABELS = {
@@ -65,90 +69,107 @@
 
     const PAYMENT_METHOD_FALLBACK = "غير محددة";
 
+    const LIVE_REFRESH_MS = 30000;
     document.addEventListener("DOMContentLoaded", init);
 
     async function init() {
         setupPeriodButtons();
         setupDateInputs();
         setupActions();
+        setupLiveVisibility();
 
         setDefaultPeriod();
         updateSelectedPeriodLabel();
 
         await loadReport();
+        scheduleLiveRefresh();
+    }
+
+    function scheduleLiveRefresh() {
+        if (state.liveTimer) clearInterval(state.liveTimer);
+        state.liveTimer = null;
+        if (state.period !== "live") return;
+        state.liveTimer = setInterval(() => {
+            if (document.visibilityState === "hidden" || state.loading) return;
+            setRangeFromPeriod("live");
+            loadReport();
+        }, LIVE_REFRESH_MS);
+    }
+
+    function setupLiveVisibility() {
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && state.period === "live" && !state.loading) {
+                setRangeFromPeriod("live");
+                loadReport();
+            }
+        });
+        window.addEventListener("beforeunload", () => {
+            if (state.liveTimer) clearInterval(state.liveTimer);
+        });
     }
 
     /* ============================================================
        Filters / Actions
     ============================================================ */
 
+    function updatePeriodPanels() {
+        const isDay = state.period === "day";
+        const isWeek = state.period === "week";
+        const panel = document.getElementById("singleDatePanel");
+        const custom = document.getElementById("customDateRange");
+        panel?.classList.toggle("hidden", !(isDay || isWeek));
+        custom?.classList.toggle("hidden", state.period !== "custom");
+        setText("reportSingleDateLabel", isWeek ? "اختر يومًا من الأسبوع المطلوب" : "تاريخ التقرير");
+        setText("reportSingleDateHelp", isWeek
+            ? "يعرض الأسبوع من السبت إلى الجمعة الذي يقع فيه هذا التاريخ."
+            : "تقرير يوم محدد، ويمكنك اختيار أي تاريخ سابق.");
+        document.querySelectorAll("[data-period]").forEach(button => {
+            const active = button.dataset.period === state.period;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-pressed", String(active));
+        });
+    }
+
     function setupPeriodButtons() {
-        document.querySelectorAll("[data-period]").forEach((button) => {
+        document.querySelectorAll("[data-period]").forEach(button => {
             button.addEventListener("click", async () => {
-                document
-                    .querySelectorAll("[data-period]")
-                    .forEach((item) => item.classList.remove("active"));
-
-                button.classList.add("active");
-
-                state.period = button.dataset.period || "day";
-
-                const customPanel =
-                    document.getElementById("customDateRange");
-
-                if (state.period === "custom") {
-                    if (customPanel) {
-                        customPanel.classList.remove("hidden");
-                        customPanel.style.display = "";
-                    }
-
-                    updateSelectedPeriodLabel();
-                    return;
+                state.period = button.dataset.period || "live";
+                if (state.period === "live") {
+                    setRangeFromPeriod("live");
+                } else if (state.period === "day" || state.period === "week") {
+                    const selected = document.getElementById("reportSingleDate")?.value || formatDate(new Date());
+                    setRangeFromPeriod(state.period, selected);
+                } else {
+                    if (!state.range.start || !state.range.end) setRangeFromPeriod("day");
                 }
-
-                if (customPanel) {
-                    customPanel.classList.add("hidden");
-                    customPanel.style.display = "none";
-                }
-
-                setRangeFromPeriod(state.period);
+                updatePeriodPanels();
                 updateSelectedPeriodLabel();
-
-                await loadReport();
+                scheduleLiveRefresh();
+                if (state.period !== "custom") await loadReport();
             });
         });
     }
 
     function setupDateInputs() {
-        const start = document.getElementById("reportStartDate");
-        const end = document.getElementById("reportEndDate");
-
-        const validateCustomRange = () => {
-            if (state.period !== "custom") return true;
-
-            const startValue = start?.value || "";
-            const endValue = end?.value || "";
-
-            if (!startValue || !endValue) return false;
-
-            if (startValue > endValue) {
-                showToast("تاريخ البداية يجب أن يكون قبل تاريخ النهاية");
-                return false;
-            }
-
-            state.range.start = startValue;
-            state.range.end = endValue;
+        const single = document.getElementById("reportSingleDate");
+        single?.addEventListener("change", async () => {
+            if (!single.value || !["day", "week"].includes(state.period)) return;
+            setRangeFromPeriod(state.period, single.value);
             updateSelectedPeriodLabel();
-
-            return true;
-        };
-
-        if (start) {
-            start.addEventListener("change", validateCustomRange);
-        }
-
-        if (end) {
-            end.addEventListener("change", validateCustomRange);
+            await loadReport();
+        });
+        for (const id of ["reportStartDate", "reportEndDate"]) {
+            document.getElementById(id)?.addEventListener("change", () => {
+                if (state.period === "custom") {
+                    const start = document.getElementById("reportStartDate")?.value;
+                    const end = document.getElementById("reportEndDate")?.value;
+                    if (start && end && start <= end) {
+                        state.range.start = start;
+                        state.range.end = end;
+                        updateSelectedPeriodLabel();
+                    }
+                }
+            });
         }
     }
 
@@ -204,6 +225,7 @@
             resetButton.addEventListener("click", async () => {
                 setDefaultPeriod();
                 updateSelectedPeriodLabel();
+                scheduleLiveRefresh();
                 await loadReport();
             });
         }
@@ -214,6 +236,7 @@
 
         if (printButton) {
             printButton.addEventListener("click", () => {
+                if (!state.lastSuccessful || state.loading) { showToast("التقرير غير مكتمل، حدّث البيانات أولًا"); return; }
                 window.print();
             });
         }
@@ -228,78 +251,52 @@
     }
 
     function setDefaultPeriod() {
-        state.period = "day";
-
-        document
-            .querySelectorAll("[data-period]")
-            .forEach((button) => {
-                button.classList.toggle(
-                    "active",
-                    button.dataset.period === "day"
-                );
-            });
-
-        setRangeFromPeriod("day");
-
-        const customPanel =
-            document.getElementById("customDateRange");
-
-        if (customPanel) {
-            customPanel.classList.add("hidden");
-            customPanel.style.display = "none";
-        }
+        state.period = "live";
+        setRangeFromPeriod("live");
+        updatePeriodPanels();
     }
 
-    function setRangeFromPeriod(period) {
-        const today = new Date();
-
-        let start = new Date(today);
-        let end = new Date(today);
-
-        if (period === "yesterday") {
-            start.setDate(start.getDate() - 1);
+    function setRangeFromPeriod(period, pickedDate = "") {
+        const base = pickedDate ? parseLocalDate(pickedDate) : parseLocalDate(todayInRiyadh());
+        let start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        let end = new Date(start);
+        if (period === "week") {
+            // Week starts Saturday, ends Friday (Saudi calendar convention).
+            const daysSinceSaturday = (start.getDay() + 1) % 7;
+            start.setDate(start.getDate() - daysSinceSaturday);
             end = new Date(start);
-        } else if (period === "week") {
-            start.setDate(start.getDate() - 6);
-        } else if (period === "month") {
-            start.setDate(start.getDate() - 29);
+            end.setDate(end.getDate() + 6);
         }
-
         state.range.start = formatDate(start);
         state.range.end = formatDate(end);
-
+        if (period === "live") setInputValue("reportSingleDate", state.range.start);
+        else if (period === "day" || period === "week") setInputValue("reportSingleDate", pickedDate || formatDate(base));
         setInputValue("reportStartDate", state.range.start);
         setInputValue("reportEndDate", state.range.end);
     }
 
+    function todayInRiyadh() {
+        const fields = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit",
+        }).formatToParts(new Date()).filter(part => part.type !== "literal").map(part => [part.type, part.value]));
+        return `${fields.year}-${fields.month}-${fields.day}`;
+    }
+
+    function parseLocalDate(value) {
+        const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return new Date();
+        return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+
     function updateSelectedPeriodLabel() {
-        const label =
-            document.getElementById("selectedReportPeriod");
-
+        const label = document.getElementById("selectedReportPeriod");
         if (!label) return;
-
-        if (state.period === "day") {
-            label.textContent = "تقرير اليوم";
-            return;
-        }
-
-        if (state.period === "yesterday") {
-            label.textContent = "تقرير أمس";
-            return;
-        }
-
-        if (state.period === "week") {
-            label.textContent = "تقرير هذا الأسبوع";
-            return;
-        }
-
-        if (state.period === "month") {
-            label.textContent = "تقرير هذا الشهر";
-            return;
-        }
-
-        label.textContent =
-            `فترة مخصصة: ${formatDateDisplay(state.range.start)} - ${formatDateDisplay(state.range.end)}`;
+        const start = formatDateDisplay(state.range.start);
+        const end = formatDateDisplay(state.range.end);
+        if (state.period === "live") label.textContent = `لحظي — ${start} (تحديث كل 30 ثانية)`;
+        else if (state.period === "day") label.textContent = `يومي — ${start}`;
+        else if (state.period === "week") label.textContent = `أسبوعي (السبت–الجمعة) — ${start} إلى ${end}`;
+        else label.textContent = `من ${start} إلى ${end}`;
     }
 
     /* ============================================================
@@ -311,217 +308,92 @@
             renderError("واجهة API غير متاحة");
             return;
         }
-
-        if (!state.range.start || !state.range.end) {
-            setRangeFromPeriod(state.period);
+        if (state.period === "live") {
+            setRangeFromPeriod("live");
+            updateSelectedPeriodLabel();
         }
-
+        if (!state.range.start || !state.range.end || state.range.start > state.range.end) {
+            showToast("تحقق من تاريخ البداية والنهاية");
+            return;
+        }
+        const requestId = ++state.requestId;
+        const range = { ...state.range };
         state.loading = true;
+        state.lastSuccessful = false;
         renderLoading();
-        updateStatus("جاري إنشاء التقرير...", "يتم تحميل بيانات الفترة المحددة.");
-
+        updateStatus("جاري تحديث التقرير...", "يتم جلب أحدث البيانات من قاعدة البيانات.");
+        const freshness = String(Date.now());
         try {
             const results = await Promise.allSettled([
-                loadFinancialSummary(),
-                loadCustomers(),
-                loadSuppliers(),
-                loadBookings(),
-                loadCustomerPayments(),
-                loadSupplierInvoices(),
-                loadSupplierPayments(),
+                loadFinancialSummary(range, freshness),
+                loadCustomers(freshness), loadSuppliers(freshness),
+                loadBookings(range, freshness), loadCustomerPayments(range, freshness),
+                loadSupplierInvoices(range, freshness), loadSupplierPayments(range, freshness),
             ]);
-
-            const [
-                financialResult,
-                customersResult,
-                suppliersResult,
-                bookingsResult,
-                customerPaymentsResult,
-                supplierInvoicesResult,
-                supplierPaymentsResult,
-            ] = results;
-
-            state.financialLoaded =
-                financialResult.status === "fulfilled";
-
-            state.financial = normalizeFinancial(
-                financialResult.status === "fulfilled"
-                    ? financialResult.value
-                    : null
-            );
-
-            state.customers = extractArray(
-                customersResult.status === "fulfilled"
-                    ? customersResult.value
-                    : []
-            );
-
-            state.suppliers = extractArray(
-                suppliersResult.status === "fulfilled"
-                    ? suppliersResult.value
-                    : []
-            );
-
-            state.bookings = filterBookingsByRange(
-                extractArray(
-                    bookingsResult.status === "fulfilled"
-                        ? bookingsResult.value
-                        : []
-                )
-            );
-
-            state.customerPayments =
-                filterCustomerPaymentsByRange(
-                    extractArray(
-                        customerPaymentsResult.status === "fulfilled"
-                            ? customerPaymentsResult.value
-                            : []
-                    )
-                );
-
-            state.supplierInvoices =
-                filterSupplierInvoicesByRange(
-                    extractArray(
-                        supplierInvoicesResult.status === "fulfilled"
-                            ? supplierInvoicesResult.value
-                            : []
-                    )
-                );
-
-            state.supplierPayments =
-                filterSupplierPaymentsByRange(
-                    extractArray(
-                        supplierPaymentsResult.status === "fulfilled"
-                            ? supplierPaymentsResult.value
-                            : []
-                    )
-                );
-
-            /*
-             * إذا فشل financial-summary، نحسب القيم من البيانات
-             * التي تم تحميلها فعليًا حتى لا تظهر الصفحة فارغة.
-             */
-            if (!state.financialLoaded) {
-                state.financial = buildFinancialFallback();
+            if (requestId !== state.requestId) return;
+            const [fin, cust, suppl, book, cp, inv, sp] = results;
+            const required = [fin, book, cp, inv, sp];
+            const missing = required.filter(x => x.status !== "fulfilled");
+            if (missing.length) {
+                // Financial totals must not be presented as zero or complete after a partial failure.
+                throw new Error(`تعذر جلب ${missing.length} من مصادر التقرير المالية. أعد المحاولة.`);
             }
-
+            state.financialLoaded = true;
+            state.financial = normalizeFinancial(fin.value);
+            state.customers = cust.status === "fulfilled" ? extractArray(cust.value) : [];
+            state.suppliers = suppl.status === "fulfilled" ? extractArray(suppl.value) : [];
+            state.bookings = filterBookingsByRange(extractArray(book.value), range);
+            state.customerPayments = filterCustomerPaymentsByRange(extractArray(cp.value), range);
+            state.supplierInvoices = filterSupplierInvoicesByRange(extractArray(inv.value), range);
+            state.supplierPayments = filterSupplierPaymentsByRange(extractArray(sp.value), range);
+            state.lastSuccessful = true;
+            state.lastUpdated = new Date();
             renderAll();
-
-            const failedEndpoints =
-                results.filter(
-                    (result) => result.status === "rejected"
-                ).length;
-
+            const extraError = [cust, suppl].some(x => x.status !== "fulfilled");
             updateStatus(
-                "التقرير جاهز",
-                failedEndpoints
-                    ? "تم إنشاء التقرير مع تعذر تحميل بعض البيانات."
-                    : "يتم عرض بيانات الفترة المحددة."
+                state.period === "live" ? "التقرير اللحظي محدّث" : "التقرير جاهز",
+                extraError ? "الأرقام المالية مكتملة، لكن بعض الأسماء قد تكون غير متاحة." :
+                    (state.period === "live" ? "تحديث تلقائي كل 30 ثانية أثناء فتح الصفحة." : "بيانات الفترة المحددة من الخادم.")
             );
-
-            setText(
-                "reportGeneratedAt",
-                `آخر تحديث: ${new Date().toLocaleTimeString("ar-SA", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                })}`
-            );
-
-            setText(
-                "printReportPeriod",
-                `${formatDateDisplay(state.range.start)} - ${formatDateDisplay(state.range.end)}`
-            );
-
-            console.log("📊 Report loaded successfully", {
-                range: state.range,
-                customers: state.customers.length,
-                suppliers: state.suppliers.length,
-                bookings: state.bookings.length,
-                customerPayments: state.customerPayments.length,
-                supplierInvoices: state.supplierInvoices.length,
-                supplierPayments: state.supplierPayments.length,
-                financial: state.financial,
-            });
+            setText("reportGeneratedAt", `آخر جلب: ${state.lastUpdated.toLocaleTimeString("ar-SA", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`);
+            setText("printReportPeriod", state.period === "live" ?
+                `لحظي — ${formatDateDisplay(range.start)} — آخر جلب ${state.lastUpdated.toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })}` :
+                `${formatDateDisplay(range.start)} - ${formatDateDisplay(range.end)}`);
         } catch (error) {
+            if (requestId !== state.requestId) return;
             console.error("Reports Error:", error);
+            state.lastSuccessful = false;
+            renderLoading();
             renderError(error?.message || "تعذر تحميل التقرير");
         } finally {
-            state.loading = false;
+            if (requestId === state.requestId) state.loading = false;
         }
     }
 
-    async function loadFinancialSummary() {
-        if (
-            !window.API.reports ||
-            typeof window.API.reports.financialSummary !== "function"
-        ) {
-            throw new Error("واجهة الملخص المالي غير متاحة");
-        }
-
-        return window.API.reports.financialSummary(
-            state.range.start,
-            state.range.end
-        );
-    }
-
-    async function loadCustomers() {
-        if (typeof window.API.getCustomers !== "function") {
-            throw new Error("واجهة العملاء غير متاحة");
-        }
-
-        return window.API.getCustomers();
-    }
-
-    async function loadSuppliers() {
-        if (typeof window.API.getSuppliers !== "function") {
-            throw new Error("واجهة الموردين غير متاحة");
-        }
-
-        return window.API.getSuppliers();
-    }
-
-    async function loadBookings() {
-        if (typeof window.API.getBookings !== "function") {
-            throw new Error("واجهة الحجوزات غير متاحة");
-        }
-
-        return window.API.getBookings({
-            from_date: state.range.start,
-            to_date: state.range.end,
+    async function loadFinancialSummary(range, fresh) {
+        // API.request is part of the installed V4 API and can pass freshness query.
+        const response = await window.API.request("/reports/financial-summary", {
+            query: { from_date: range.start, to_date: range.end, _fresh: fresh },
         });
+        return response?.data ?? response;
     }
-
-    async function loadCustomerPayments() {
-        if (typeof window.API.getCustomerPayments !== "function") {
-            throw new Error("واجهة دفعات العملاء غير متاحة");
-        }
-
-        return window.API.getCustomerPayments({
-            from_date: state.range.start,
-            to_date: state.range.end,
-        });
+    async function loadCustomers(fresh) {
+        return window.API.getCustomers({ _fresh: fresh });
     }
-
-    async function loadSupplierInvoices() {
-        if (typeof window.API.getSupplierInvoices !== "function") {
-            throw new Error("واجهة فواتير الموردين غير متاحة");
-        }
-
-        return window.API.getSupplierInvoices({
-            from_date: state.range.start,
-            to_date: state.range.end,
-        });
+    async function loadSuppliers(fresh) {
+        return window.API.getSuppliers({ _fresh: fresh });
     }
-
-    async function loadSupplierPayments() {
-        if (typeof window.API.getSupplierPayments !== "function") {
-            throw new Error("واجهة دفعات الموردين غير متاحة");
-        }
-
-        return window.API.getSupplierPayments({
-            from_date: state.range.start,
-            to_date: state.range.end,
-        });
+    async function loadBookings(range, fresh) {
+        return window.API.getBookings({ from_date: range.start, to_date: range.end, _fresh: fresh });
+    }
+    async function loadCustomerPayments(range, fresh) {
+        return window.API.getCustomerPayments({ from_date: range.start, to_date: range.end, _fresh: fresh });
+    }
+    async function loadSupplierInvoices(range, fresh) {
+        return window.API.getSupplierInvoices({ from_date: range.start, to_date: range.end, _fresh: fresh });
+    }
+    async function loadSupplierPayments(range, fresh) {
+        return window.API.getSupplierPayments({ from_date: range.start, to_date: range.end, _fresh: fresh });
     }
 
     /* ============================================================
@@ -624,7 +496,7 @@
         };
     }
 
-    function filterBookingsByRange(bookings) {
+    function filterBookingsByRange(bookings, range = state.range) {
         return bookings.filter((booking) => {
             const date = normalizeDate(
                 booking?.event_date ??
@@ -635,13 +507,13 @@
 
             return isDateInRange(
                 date,
-                state.range.start,
-                state.range.end
+                range.start,
+                range.end
             );
         });
     }
 
-    function filterCustomerPaymentsByRange(payments) {
+    function filterCustomerPaymentsByRange(payments, range = state.range) {
         return payments.filter((payment) => {
             const date = normalizeDate(
                 payment?.payment_date ??
@@ -651,13 +523,13 @@
 
             return isDateInRange(
                 date,
-                state.range.start,
-                state.range.end
+                range.start,
+                range.end
             );
         });
     }
 
-    function filterSupplierInvoicesByRange(invoices) {
+    function filterSupplierInvoicesByRange(invoices, range = state.range) {
         return invoices.filter((invoice) => {
             const date = normalizeDate(
                 invoice?.invoice_date ??
@@ -667,13 +539,13 @@
 
             return isDateInRange(
                 date,
-                state.range.start,
-                state.range.end
+                range.start,
+                range.end
             );
         });
     }
 
-    function filterSupplierPaymentsByRange(payments) {
+    function filterSupplierPaymentsByRange(payments, range = state.range) {
         return payments.filter((payment) => {
             const date = normalizeDate(
                 payment?.payment_date ??
@@ -683,8 +555,8 @@
 
             return isDateInRange(
                 date,
-                state.range.start,
-                state.range.end
+                range.start,
+                range.end
             );
         });
     }
@@ -703,18 +575,43 @@
         renderCustomerPayments();
         renderSupplierPayments();
         renderFinalFinancialSummary();
+        renderDepositSummary();
     }
 
     /* ============================================================
        Main Financial KPIs
     ============================================================ */
 
+    function bookingPayable(booking) {
+        return number(booking?.payable_total ?? booking?.payableTotal ??
+            (number(booking?.total_amount ?? booking?.totalAmount) + number(booking?.plate_deposit ?? booking?.plateDeposit)));
+    }
+
+    function bookingReceivable(booking) {
+        return Math.max(0, bookingPayable(booking) - getBookingPaidAmount(booking));
+    }
+
+    function periodBookingReceivables() {
+        return sumBy(state.bookings, bookingReceivable);
+    }
+
+    function renderDepositSummary() {
+        let deposits = 0, returned = 0;
+        state.bookings.forEach(b => {
+            deposits += number(b.plate_deposit ?? b.plateDeposit);
+            returned += number(b.plate_deposit_returned ?? b.plateDepositReturned);
+        });
+        setText("reportPlateDeposits", `${formatMoney(deposits)} ر.س`);
+        setText("reportPlateReturns", `${formatMoney(returned)} ر.س`);
+        setText("reportPlatePending", `${formatMoney(Math.max(0, deposits - returned))} ر.س`);
+    }
+
     function renderMainSummary() {
         const financial = state.financial;
 
         setText(
             "totalInvoicesAmount",
-            `${formatMoney(financial.sales_total)} ر.س`
+            `${formatMoney(sumBy(state.bookings, bookingPayable))} ر.س`
         );
 
         setText(
@@ -724,7 +621,7 @@
 
         setText(
             "totalCustomerRemaining",
-            `${formatMoney(Math.max(0, financial.customer_balance))} ر.س`
+            `${formatMoney(periodBookingReceivables())} ر.س`
         );
 
         setText(
@@ -740,17 +637,12 @@
     function renderDetailedFinancialSummary() {
         const financial = state.financial;
 
-        const customerInvoicesTotal =
-            number(financial.sales_total);
+        const customerInvoicesTotal = sumBy(state.bookings, bookingPayable);
 
         const customerPaymentsTotal =
             number(financial.customer_payments_total);
 
-        const customerRemainingTotal =
-            Math.max(
-                0,
-                number(financial.customer_balance)
-            );
+        const customerRemainingTotal = periodBookingReceivables();
 
         const supplierInvoicesTotal =
             number(financial.purchases_total);
@@ -758,11 +650,7 @@
         const supplierPaymentsTotal =
             number(financial.supplier_payments_total);
 
-        const supplierRemainingTotal =
-            Math.max(
-                0,
-                number(financial.supplier_balance)
-            );
+        const supplierRemainingTotal = number(financial.supplier_balance);
 
         setText(
             "customerInvoicesTotal",
@@ -839,11 +727,7 @@
 
             if (!customerId) return;
 
-            const total =
-                number(
-                    booking?.total_amount ??
-                    booking?.totalAmount
-                );
+            const total = bookingPayable(booking);
 
             const paid =
                 getBookingPaidAmount(booking);
@@ -931,13 +815,7 @@
     function renderOperationalSummary() {
         const bookings = state.bookings;
 
-        const bookingTotal =
-            sumBy(bookings, (booking) =>
-                number(
-                    booking?.total_amount ??
-                    booking?.totalAmount
-                )
-            );
+        const bookingTotal = sumBy(bookings, bookingPayable);
 
         const confirmed =
             bookings.filter(
@@ -1029,7 +907,7 @@
 
         setText(
             "customerRemainingSummary",
-            `${formatMoney(Math.max(0, state.financial.customer_balance))} ر.س`
+            `${formatMoney(periodBookingReceivables())} ر.س`
         );
     }
 
@@ -1112,11 +990,7 @@
                     booking?.eventDate
                 );
 
-            const total =
-                number(
-                    booking?.total_amount ??
-                    booking?.totalAmount
-                );
+            const total = bookingPayable(booking);
 
             const paid =
                 getBookingPaidAmount(booking);
@@ -1217,8 +1091,7 @@
                 number(payment?.amount)
             );
 
-        const remaining =
-            Math.max(0, invoiceTotal - paymentTotal);
+        const remaining = invoiceTotal - paymentTotal;
 
         setText(
             "suppliersInvoicesAmount",
@@ -1303,11 +1176,7 @@
                         invoice?.amount
                     );
 
-                const status =
-                    invoice?.status ??
-                    invoice?.invoice_status ??
-                    invoice?.invoiceStatus ??
-                    "completed";
+                const details = invoice?.details ?? invoice?.notes ?? "—";
 
                 return `
                     <tr>
@@ -1344,7 +1213,7 @@
                         </td>
 
                         <td>
-                            ${statusBadge(status)}
+                            ${escapeHtml(details)}
                         </td>
                     </tr>
                 `;
@@ -1411,13 +1280,6 @@
                 payment?.customer_name ||
                 "عميل غير معروف";
 
-            const booking =
-                payment?.booking ||
-                findBooking(
-                    payment?.booking_id ??
-                    payment?.bookingId
-                );
-
             const bookingId =
                 payment?.booking_id ??
                 payment?.bookingId ??
@@ -1434,9 +1296,7 @@
 
             return `
                 <tr>
-                    <td>
-                        ${formatDateDisplay(date)}
-                    </td>
+                    <td>#${escapeHtml(payment?.id ?? "-")}</td>
 
                     <td>
                         <div class="report-main-cell">
@@ -1466,6 +1326,8 @@
                         }
                     </td>
 
+                    <td>${formatDateDisplay(date)}</td>
+
                     <td>
                         ${escapeHtml(
                             getPaymentMethodName(payment)
@@ -1478,13 +1340,6 @@
                         </span>
                     </td>
 
-                    <td>
-                        ${
-                            payment?.notes
-                                ? escapeHtml(payment.notes)
-                                : "-"
-                        }
-                    </td>
                 </tr>
             `;
         }).join("");
@@ -1561,9 +1416,7 @@
 
             return `
                 <tr>
-                    <td>
-                        ${formatDateDisplay(date)}
-                    </td>
+                    <td>#${escapeHtml(payment?.id ?? "-")}</td>
 
                     <td>
                         <div class="report-main-cell">
@@ -1581,11 +1434,9 @@
                         }
                     </td>
 
-                    <td>
-                        <span class="money-cell paid">
-                            ${formatMoney(amount)} ر.س
-                        </span>
-                    </td>
+
+
+                    <td>${formatDateDisplay(date)}</td>
 
                     <td>
                         ${escapeHtml(
@@ -1594,12 +1445,11 @@
                     </td>
 
                     <td>
-                        ${
-                            payment?.notes
-                                ? escapeHtml(payment.notes)
-                                : "-"
-                        }
+                        <span class="money-cell paid">
+                            ${formatMoney(amount)} ر.س
+                        </span>
                     </td>
+
                 </tr>
             `;
         }).join("");
@@ -1830,6 +1680,7 @@
         });
 
         const valueIds = [
+            "reportPlateDeposits", "reportPlateReturns", "reportPlatePending",
             "totalInvoicesAmount",
             "totalCustomerPayments",
             "totalCustomerRemaining",
@@ -1932,6 +1783,7 @@
     ============================================================ */
 
     async function shareReport() {
+        if (!state.lastSuccessful || state.loading) { showToast("التقرير غير مكتمل، حدّث البيانات أولًا"); return; }
         const text = buildShareText();
 
         if (
@@ -1968,22 +1820,23 @@
             "",
             "الحجوزات",
             `عدد الحجوزات: ${formatNumber(state.bookings.length)}`,
-            `إجمالي الفواتير: ${formatMoney(f.sales_total)} ر.س`,
+            `المطلوب لحجوزات الفترة (شامل التأمين): ${formatMoney(sumBy(state.bookings, bookingPayable))} ر.س`,
             `المقبوض من العملاء: ${formatMoney(f.customer_payments_total)} ر.س`,
-            `المتبقي على العملاء: ${formatMoney(Math.max(0, f.customer_balance))} ر.س`,
+            `متبقي حجوزات الفترة حتى الآن: ${formatMoney(periodBookingReceivables())} ر.س`,
             "",
             "الموردون",
             `عدد فواتير الموردين: ${formatNumber(state.supplierInvoices.length)}`,
             `إجمالي الفواتير: ${formatMoney(f.purchases_total)} ر.س`,
             `المدفوع للموردين: ${formatMoney(f.supplier_payments_total)} ر.س`,
-            `المتبقي للموردين: ${formatMoney(Math.max(0, f.supplier_balance))} ر.س`,
+            `فرق فواتير ومدفوعات الموردين في الفترة: ${formatMoney(f.supplier_balance)} ر.س`,
             "",
-            "الحركة المالية",
+            "الحركة المالية (لا تشمل رد التأمين غير المؤرخ)",
             `صافي الحركة: ${formatMoney(f.customer_payments_total - f.supplier_payments_total)} ر.س`,
         ].join("\n");
     }
 
     function exportCSV() {
+        if (!state.lastSuccessful || state.loading) { showToast("التقرير غير مكتمل، حدّث البيانات أولًا"); return; }
         const rows = [];
 
         state.bookings.forEach((booking) => {
@@ -1995,17 +1848,11 @@
                     booking.event_date ??
                     booking.eventDate
                 ),
-                number(
-                    booking.total_amount ??
-                    booking.totalAmount
-                ),
+                bookingPayable(booking),
                 getBookingPaidAmount(booking),
                 Math.max(
                     0,
-                    number(
-                        booking.total_amount ??
-                        booking.totalAmount
-                    ) -
+                    bookingPayable(booking) -
                     getBookingPaidAmount(booking)
                 ),
                 STATUS_LABELS[
@@ -2099,6 +1946,7 @@
     }
 
     function exportJSON() {
+        if (!state.lastSuccessful || state.loading) { showToast("التقرير غير مكتمل، حدّث البيانات أولًا"); return; }
         const data = {
             report: "banquet-kitchen",
             period: {

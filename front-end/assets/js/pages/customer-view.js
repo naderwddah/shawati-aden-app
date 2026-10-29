@@ -1537,6 +1537,8 @@ $$('.cv-status-opt').forEach((label) => {
       const invoiceData = {
         id: booking.id,
         status: getStatus(booking.status),
+        invoiceDate: booking.invoice_date || null,
+        generatedAt: new Date().toISOString(),
         customer: {
           name: booking.customer?.name || booking.customer_name || '',
           phone: booking.customer?.phone || booking.customer_phone || '',
@@ -1549,17 +1551,26 @@ $$('.cv-status-opt').forEach((label) => {
           mark: booking.mark || '',
           deliveryTime: booking.delivery_period || timeInfo.period || 'ظهراً'
         },
-        paymentMethod,
+        paymentMethod: (() => {
+          const names = (Array.isArray(booking.payments) ? booking.payments : [])
+            .map(p => p.payment_method?.name || state.paymentMethods.find(m => Number(m.id) === Number(p.payment_method_id))?.name)
+            .filter(Boolean);
+          return [...new Set(names)].join(' / ') || (paid ? paymentMethod : 'لم يتم الدفع');
+        })(),
         items,
         total: totalAmount,
         deposit: paid,
+        paidTotal: paid,
         remaining,
         platesDeposit: number(booking.plate_deposit || 0),
+        platesDepositReturned: number(booking.plate_deposit_returned || 0),
         notes: booking.notes || '',
         restaurant: { ...restaurant, logo: buildLogo(restaurant.logo) }
       };
 
-      localStorage.setItem('preview_invoice_data', JSON.stringify(invoiceData));
+      sessionStorage.setItem('preview_invoice_data', JSON.stringify(invoiceData));
+      sessionStorage.setItem('invoice_return_to', `customer-view.html?id=${state.customerId}`);
+      localStorage.removeItem('preview_invoice_data');
       window.location.href = 'invoice.html';
     } catch (error) {
       console.error('printBooking failed:', error);
