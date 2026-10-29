@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('dashboard/receivables', [DashboardController::class, 'receivables']);
     Route::get('dashboard/overview', [DashboardController::class, 'overview']);
     Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('change-password', [AuthController::class, 'changePassword']);
 
     Route::apiResource('customers', CustomerController::class);
 

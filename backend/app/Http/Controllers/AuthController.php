@@ -68,6 +68,36 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Change the current user's password after verifying the existing one.
+     * Revokes API tokens after a successful change; the client logs in again.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $values = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed', 'different:current_password'],
+        ]);
+
+        $user = $request->user();
+        if (!Hash::check($values['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['كلمة المرور الحالية غير صحيحة.'],
+            ]);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($values['password']),
+        ])->save();
+
+        $user->tokens()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تغيير كلمة المرور بنجاح. يرجى تسجيل الدخول مجددًا.',
+        ]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $request->user()
