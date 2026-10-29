@@ -174,80 +174,33 @@
     }
 
     function setupActions() {
-        const applyButton =
-            document.getElementById("applyReportBtn");
-
-        const resetButton =
-            document.getElementById("resetReportBtn");
-
-        const shareButton =
-            document.getElementById("shareReportBtn");
-
-        const printButton =
-            document.getElementById("printReportBtn");
-
-        const csvButton =
-            document.getElementById("exportCsvBtn");
-
-        const jsonButton =
-            document.getElementById("exportJsonBtn");
-
-        if (applyButton) {
-            applyButton.addEventListener("click", async () => {
-                if (state.period === "custom") {
-                    const start =
-                        document.getElementById("reportStartDate")?.value || "";
-
-                    const end =
-                        document.getElementById("reportEndDate")?.value || "";
-
-                    if (!start || !end) {
-                        showToast("حدد تاريخ البداية والنهاية أولاً");
-                        return;
-                    }
-
-                    if (start > end) {
-                        showToast(
-                            "تاريخ البداية يجب أن يكون قبل تاريخ النهاية"
-                        );
-                        return;
-                    }
-
-                    state.range.start = start;
-                    state.range.end = end;
-                }
-
-                await loadReport();
-            });
-        }
-
-        if (resetButton) {
-            resetButton.addEventListener("click", async () => {
-                setDefaultPeriod();
+        document.getElementById("applyReportBtn")?.addEventListener("click", async () => {
+            if (state.period === "custom") {
+                const start = document.getElementById("reportStartDate")?.value || "";
+                const end = document.getElementById("reportEndDate")?.value || "";
+                if (!start || !end || start > end) { showToast("تحقق من تاريخ البداية والنهاية"); return; }
+                state.range.start = start;
+                state.range.end = end;
                 updateSelectedPeriodLabel();
-                scheduleLiveRefresh();
-                await loadReport();
-            });
-        }
-
-        if (shareButton) {
-            shareButton.addEventListener("click", shareReport);
-        }
-
-        if (printButton) {
-            printButton.addEventListener("click", () => {
-                if (!state.lastSuccessful || state.loading) { showToast("التقرير غير مكتمل، حدّث البيانات أولًا"); return; }
-                window.print();
-            });
-        }
-
-        if (csvButton) {
-            csvButton.addEventListener("click", exportCSV);
-        }
-
-        if (jsonButton) {
-            jsonButton.addEventListener("click", exportJSON);
-        }
+            }
+            await loadReport();
+        });
+        document.getElementById("resetReportBtn")?.addEventListener("click", async () => {
+            setDefaultPeriod(); updateSelectedPeriodLabel(); scheduleLiveRefresh(); await loadReport();
+        });
+        document.getElementById("previewReportBtn")?.addEventListener("click", previewReport);
+        document.getElementById("printReportBtn")?.addEventListener("click", printReportDocument);
+        document.getElementById("exportPdfBtn")?.addEventListener("click", () => pdfReport(false));
+        document.getElementById("exportExcelBtn")?.addEventListener("click", exportExcel);
+        document.getElementById("shareReportBtn")?.addEventListener("click", () => pdfReport(true));
+        document.getElementById("previewPrintBtn")?.addEventListener("click", printReportDocument);
+        document.getElementById("previewPdfBtn")?.addEventListener("click", () => pdfReport(false));
+        document.getElementById("closeReportPreviewBtn")?.addEventListener("click", closeReportPreview);
+        document.getElementById("reportPreviewModal")?.addEventListener("click", e => { if (e.target.id === "reportPreviewModal") closeReportPreview(); });
+        document.addEventListener("keydown", e => { if (e.key === "Escape") closeReportPreview(); });
+        window.addEventListener("afterprint", () => { document.body.classList.remove("report-document-print"); });
+        document.getElementById("exportCsvBtn")?.addEventListener("click", exportCSV);
+        document.getElementById("exportJsonBtn")?.addEventListener("click", exportJSON);
     }
 
     function setDefaultPeriod() {
@@ -1782,57 +1735,283 @@
        Share / Export
     ============================================================ */
 
-    async function shareReport() {
-        if (!state.lastSuccessful || state.loading) { showToast("التقرير غير مكتمل، حدّث البيانات أولًا"); return; }
-        const text = buildShareText();
+    /* ============================================================
+       V12: report documents, PDF share/export and multi-sheet Excel
+       Print/PDF share one complete, independent A4 template.
+       No API writes; all exports come from the same loaded snapshot.
+    ============================================================ */
+    let exportingReport = false;
 
-        if (
-            navigator.share &&
-            typeof navigator.share === "function"
-        ) {
-            try {
-                await navigator.share({
-                    title: "تقرير شواطئ عدن",
-                    text,
-                });
-                return;
-            } catch (error) {
-                if (error?.name === "AbortError") {
-                    return;
-                }
-            }
+    function requireReadyReport() {
+        if (!state.lastSuccessful || state.loading || !state.financialLoaded) {
+            showToast("التقرير غير مكتمل؛ حدّث البيانات ثم أعد المحاولة");
+            return false;
         }
+        if (exportingReport) return false;
+        return true;
+    }
 
-        try {
-            await navigator.clipboard.writeText(text);
-            showToast("تم نسخ التقرير للمشاركة");
-        } catch {
-            showToast("تعذر مشاركة التقرير");
+    function reportPeriodText() {
+        const start = formatDateDisplay(state.range.start);
+        const end = formatDateDisplay(state.range.end);
+        switch (state.period) {
+            case "live": return `لحظي — ${start} (آخر تحديث محفوظ)`;
+            case "day": return `يومي — ${start}`;
+            case "week": return `أسبوعي — ${start} إلى ${end}`;
+            default: return `من ${start} إلى ${end}`;
         }
     }
 
-    function buildShareText() {
-        const f = state.financial;
+    const reportNum = (v) => formatMoney(v);
+    const reportInt = (v) => Number(number(v).toFixed(2));
+    const reportDate = (v) => formatDateDisplay(normalizeDate(v));
+    const timeOf = v => {
+        const m = String(v || "").match(/(?:\s|T)(\d{2}:\d{2})/);
+        return m ? ` ${m[1]}` : "";
+    };
 
+    function reportDataset() {
+        const dateKey = (value) => String(value || "").replace(" ", "T");
+        const byLatest = (a, b) => dateKey(b.date).localeCompare(dateKey(a.date)) || Number(b.id || 0) - Number(a.id || 0);
+        const bookings = state.bookings.map(b => {
+            const payable = bookingPayable(b), paid = getBookingPaidAmount(b);
+            return {
+                id:b.id, date:b.event_date || b.eventDate || "", name:getCustomerDisplayName(b),
+                reference:b.mark || b.event_name || b.eventName || "—", amount:payable,
+                paid, remaining:Math.max(0,payable - paid),
+                status:STATUS_LABELS[normalizeStatus(b.status)] || "—",
+                deposit:number(b.plate_deposit ?? b.plateDeposit),
+                returned:number(b.plate_deposit_returned ?? b.plateDepositReturned),
+            };
+        }).sort(byLatest);
+        const customerPayments = state.customerPayments.map(p => ({
+            id:p.id, date:p.payment_date || p.paymentDate || "",
+            name:getCustomerDisplayName(p), reference:p.booking_id || p.bookingId || "—",
+            method:getPaymentMethodName(p), amount:number(p.amount),
+        })).sort(byLatest);
+        const supplierInvoices = state.supplierInvoices.map(i => ({
+            id:i.id, date:i.invoice_date || i.invoiceDate || "",
+            name:getSupplierDisplayName(i), reference:i.invoice_number || i.invoiceNumber || `#${i.id}`,
+            details:i.details || i.notes || "—", amount:number(i.total_amount ?? i.totalAmount ?? i.amount),
+        })).sort(byLatest);
+        const supplierPayments = state.supplierPayments.map(p => ({
+            id:p.id, date:p.payment_date || p.paymentDate || "", name:getSupplierDisplayName(p),
+            method:getPaymentMethodName(p), amount:number(p.amount),
+        })).sort(byLatest);
+        const financial=state.financial;
+        const depositTotal=sumBy(bookings,b=>b.deposit);
+        const refundedTotal=sumBy(bookings,b=>b.returned);
+        return {
+            bookings,customerPayments,supplierInvoices,supplierPayments,
+            summary:{
+                invoicesTotal:sumBy(bookings,b=>b.amount),
+                received:number(financial.customer_payments_total),
+                remaining:sumBy(bookings,b=>b.remaining),
+                purchases:number(financial.purchases_total),
+                paidSuppliers:number(financial.supplier_payments_total),
+                supplierDifference:number(financial.supplier_balance),
+                net:number(financial.customer_payments_total)-number(financial.supplier_payments_total),
+                plateDeposits:depositTotal, returnedDeposits:refundedTotal,
+                outstandingDeposits:Math.max(0,depositTotal-refundedTotal),
+            },
+            period:reportPeriodText(), start:state.range.start,end:state.range.end,
+            collectedAt:state.lastUpdated ? state.lastUpdated.toLocaleString("ar-SA",{timeZone:"Asia/Riyadh",dateStyle:"medium",timeStyle:"short"}):"—"
+        };
+    }
+
+    function reportTable(title, headers, rows, widths=[]) {
+        const th=headers.map((x,i)=>`<th${widths[i]?` style="width:${widths[i]}"`:""}>${escapeHtml(x)}</th>`).join("");
+        const body=rows.length?rows.map(row=>`<tr>${row.map((x,i)=>`<td${typeof x==='number'?' class="rp-numeric"':''}>${escapeHtml(typeof x==='number'?reportNum(x):x)}</td>`).join("")}</tr>`).join(""):
+            `<tr><td colspan="${headers.length}" class="rp-empty">لا توجد حركات خلال الفترة المحددة</td></tr>`;
+        return `<section class="rp-section"><h2 class="rp-title">${escapeHtml(title)} <small style="color:#87919e;font-size:11px;font-weight:500">(${rows.length})</small></h2><table class="rp-table"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></section>`;
+    }
+
+    function reportDocumentHtml(dataset) {
+        const s=dataset.summary;
+        const kpi=(label,value,color='')=>`<div class="rp-kpi ${color}"><span>${escapeHtml(label)}</span><strong>${reportNum(value)} ر.س</strong></div>`;
+        const bookingRows=dataset.bookings.map(b=>[
+            `#${b.id}`,b.name,b.reference,reportDate(b.date),b.amount,b.paid,b.remaining,b.status
+        ]);
+        const custRows=dataset.customerPayments.map(p=>[
+            `#${p.id}`,p.name,p.reference==='—'?'دفعة عامة':`حجز #${p.reference}`,
+            reportDate(p.date)+timeOf(p.date),p.method,p.amount
+        ]);
+        const invoiceRows=dataset.supplierInvoices.map(i=>[
+            i.reference,i.name,reportDate(i.date),i.details,i.amount
+        ]);
+        const suppRows=dataset.supplierPayments.map(p=>[
+            `#${p.id}`,p.name,reportDate(p.date)+timeOf(p.date),p.method,p.amount
+        ]);
+        const filenamePeriod= `${dataset.start} — ${dataset.end}`;
+        return `<article class="report-paper" lang="ar" dir="rtl">
+            <header class="rp-brand">
+                <div class="rp-company"><img class="rp-logo" src="assets/images/logo.png" alt="" onerror="this.style.display='none'"><div><strong>مطابخ شواطئ عدن</strong><small>تقارير الإدارة المالية والتشغيلية</small></div></div>
+                <div class="rp-type">التقرير الشامل<small>حجوزات • عملاء • موردون • مدفوعات</small></div>
+            </header>
+            <div class="rp-metadata">
+                <div><span>الفترة المحددة</span><strong>${escapeHtml(dataset.period)}</strong></div>
+                <div><span>من تاريخ — إلى تاريخ</span><strong>${escapeHtml(filenamePeriod)}</strong></div>
+                <div><span>آخر تحديث للبيانات (الرياض)</span><strong>${escapeHtml(dataset.collectedAt)}</strong></div>
+            </div>
+            <h2 class="rp-title">المؤشرات المالية الرئيسية</h2>
+            <div class="rp-kpis">${[
+                kpi('إجمالي الحجوزات شامل التأمين',s.invoicesTotal),
+                kpi('المقبوض من العملاء',s.received,'green'),
+                kpi('متبقي حجوزات الفترة',s.remaining,'orange'),
+                kpi('فواتير الموردين',s.purchases),
+                kpi('المدفوع للموردين',s.paidSuppliers,'blue'),
+                kpi('فرق فواتير ومدفوعات الموردين',s.supplierDifference,'orange'),
+                kpi('تأمين الصحون المطلوب',s.plateDeposits),
+                kpi('تأمين الصحون المُعاد (تراكمي)',s.returnedDeposits,'green'),
+            ].join('')}</div>
+            <div class="rp-summary"><span>صافي الحركة النقدية المسجلة خلال الفترة</span><strong>${reportNum(s.net)} ر.س</strong></div>
+            ${reportTable('الحجوزات',["رقم الحجز","العميل","المناسبة","التاريخ","الإجمالي","المدفوع","المتبقي","الحالة"],bookingRows,['9%','18%','15%','12%','12%','12%','12%','10%'])}
+            ${reportTable('المدفوعات المستلمة من العملاء',["رقم الدفعة","العميل","الحجز","التاريخ والوقت","طريقة الدفع","المبلغ"],custRows,['12%','22%','15%','19%','17%','15%'])}
+            ${reportTable('فواتير الموردين',["رقم الفاتورة","المورد","التاريخ","التفاصيل","المبلغ"],invoiceRows,['17%','21%','15%','32%','15%'])}
+            ${reportTable('المدفوعات للموردين',["رقم الدفعة","المورد","التاريخ والوقت","طريقة الدفع","المبلغ"],suppRows,['14%','26%','23%','22%','15%'])}
+            <div class="rp-legal"><strong>ملاحظات محاسبية:</strong> مبالغ الحجوزات تشمل تأمين الصحون القابل للاسترداد. صافي الحركة هو المقبوض من العملاء ناقص المدفوع للموردين خلال الفترة، ولا يمثل صافي الربح. المتبقي للحجوزات محسوب وفق الدفعات المرتبطة بها حتى آخر جلب. استردادات التأمين تُسجل تراكميًا دون تاريخ لكل حركة، لذلك لا تُخصم من صافي الحركة اليومية في هذا التقرير. عمليات الفواتير والحجوزات تُصفّى حسب تاريخ الفاتورة/المناسبة، والدفعات حسب تاريخ الدفع.</div>
+            <footer class="rp-footer"><span>مطابخ شواطئ عدن — تقرير صادر من سجلات النظام</span><span>${escapeHtml(filenamePeriod)} | ${escapeHtml(dataset.collectedAt)}</span></footer>
+        </article>`;
+    }
+
+    function previewReport() {
+        if (!requireReadyReport()) return;
+        const modal=document.getElementById('reportPreviewModal');
+        const content=document.getElementById('reportPreviewContent');
+        if (!modal || !content) return;
+        content.innerHTML=reportDocumentHtml(reportDataset());
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden','false');
+        document.body.style.overflow='hidden';
+        // Full-width A4 layout inside a scaled preview on narrow screens.
+        const paper=content.querySelector('.report-paper');
+        if (paper) paper.style.zoom=String(Math.min(1, Math.max(.24,(content.clientWidth-20)/1080)));
+    }
+    function closeReportPreview() {
+        document.getElementById('reportPreviewModal')?.classList.remove('active');
+        document.getElementById('reportPreviewModal')?.setAttribute('aria-hidden','true');
+        document.body.style.overflow='';
+    }
+    function printReportDocument() {
+        if (!requireReadyReport()) return;
+        const root=document.getElementById('reportPrintRoot');
+        if (!root) return;
+        root.innerHTML=reportDocumentHtml(reportDataset());
+        document.body.classList.add('report-document-print');
+        requestAnimationFrame(async () => {
+            if (document.fonts?.ready) await document.fonts.ready;
+            window.print();
+        });
+    }
+
+    function reportFileName(ext) {
+        return `shwati-aden-report-${state.range.start}-${state.range.end}.${ext}`;
+    }
+    async function pdfReport(share=false) {
+        if (!requireReadyReport()) return;
+        if (typeof window.html2pdf!=='function') {
+            showToast('مكتبة PDF غير متاحة؛ اختر «طباعة» ثم «حفظ كـ PDF» من المتصفح');
+            return;
+        }
+        exportingReport=true;
+        const exportButtons=['exportPdfBtn','shareReportBtn','previewPdfBtn'];
+        exportButtons.forEach(id=>{const btn=document.getElementById(id);if(btn)btn.disabled=true;});
+        const wrapper=document.createElement('div');wrapper.className='report-pdf-mount';
+        wrapper.innerHTML=reportDocumentHtml(reportDataset());
+        document.body.appendChild(wrapper);
+        try {
+            if (document.fonts?.ready) await document.fonts.ready;
+            await Promise.all([...wrapper.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
+            const blob=await window.html2pdf().set({
+                filename:reportFileName('pdf'),
+                margin:[8,8,8,8],
+                image:{type:'jpeg',quality:.96},
+                html2canvas:{scale:1.6,useCORS:true,backgroundColor:'#fff',windowWidth:1080,scrollX:0,scrollY:0},
+                jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+                pagebreak:{mode:['css','legacy'],avoid:['tr','.rp-kpi','.rp-metadata','.rp-summary']},
+            }).from(wrapper.querySelector('.report-paper')).outputPdf('blob');
+            const filename=reportFileName('pdf');
+            if (share && navigator.share && navigator.canShare && typeof File==='function') {
+                const file=new File([blob],filename,{type:'application/pdf'});
+                if(navigator.canShare({files:[file]})) {
+                    try { await navigator.share({title:'تقرير مطابخ شواطئ عدن',files:[file]});return; }
+                    catch(e){if(e?.name==='AbortError') return;}
+                }
+            }
+            downloadBlob(blob,filename);
+            showToast(share?'تم تنزيل PDF؛ شاركه من جهازك إذا كان المتصفح لا يدعم المشاركة':'تم تنزيل ملف PDF');
+        } catch(e){
+            console.error('reports PDF failed',e);
+            showToast('فشل إنشاء PDF؛ استخدم الطباعة ثم حفظ PDF من المتصفح');
+        } finally {
+            wrapper.remove();exportingReport=false;
+            exportButtons.forEach(id=>{const btn=document.getElementById(id);if(btn)btn.disabled=false;});
+        }
+    }
+    function downloadBlob(blob, filename) {
+        const url=URL.createObjectURL(blob),a=document.createElement('a');
+        a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),30000);
+    }
+
+    function exportWorkbookRows(ds) {
+        const s=ds.summary;
         return [
-            "تقرير شواطئ عدن",
-            `الفترة: ${formatDateDisplay(state.range.start)} - ${formatDateDisplay(state.range.end)}`,
-            "",
-            "الحجوزات",
-            `عدد الحجوزات: ${formatNumber(state.bookings.length)}`,
-            `المطلوب لحجوزات الفترة (شامل التأمين): ${formatMoney(sumBy(state.bookings, bookingPayable))} ر.س`,
-            `المقبوض من العملاء: ${formatMoney(f.customer_payments_total)} ر.س`,
-            `متبقي حجوزات الفترة حتى الآن: ${formatMoney(periodBookingReceivables())} ر.س`,
-            "",
-            "الموردون",
-            `عدد فواتير الموردين: ${formatNumber(state.supplierInvoices.length)}`,
-            `إجمالي الفواتير: ${formatMoney(f.purchases_total)} ر.س`,
-            `المدفوع للموردين: ${formatMoney(f.supplier_payments_total)} ر.س`,
-            `فرق فواتير ومدفوعات الموردين في الفترة: ${formatMoney(f.supplier_balance)} ر.س`,
-            "",
-            "الحركة المالية (لا تشمل رد التأمين غير المؤرخ)",
-            `صافي الحركة: ${formatMoney(f.customer_payments_total - f.supplier_payments_total)} ر.س`,
-        ].join("\n");
+            {name:'الملخص المالي',headers:['المؤشر','القيمة (ر.س)'],rows:[
+                ['إجمالي الحجوزات مع التأمين',s.invoicesTotal],['المقبوض من العملاء',s.received],
+                ['متبقي حجوزات الفترة',s.remaining],['فواتير الموردين',s.purchases],
+                ['المدفوع للموردين',s.paidSuppliers],['فرق فواتير ومدفوعات الموردين',s.supplierDifference],
+                ['صافي الحركة النقدية (ليس ربحًا)',s.net],['تأمين الصحون',s.plateDeposits],
+                ['التأمين المسترد تراكميًا',s.returnedDeposits],['التأمين غير المسترد',s.outstandingDeposits]
+            ]},
+            {name:'الحجوزات',headers:['رقم الحجز','اسم العميل','المناسبة','تاريخ المناسبة','الإجمالي','المدفوع','المتبقي','الحالة','تأمين الصحون','التأمين المسترد'],rows:ds.bookings.map(b=>[
+                b.id,b.name,b.reference,normalizeDate(b.date),b.amount,b.paid,b.remaining,b.status,b.deposit,b.returned])},
+            {name:'دفعات العملاء',headers:['رقم الدفعة','اسم العميل','رقم الحجز','تاريخ ووقت الدفع','طريقة الدفع','المبلغ'],rows:ds.customerPayments.map(p=>[
+                p.id,p.name,p.reference,p.date,p.method,p.amount])},
+            {name:'فواتير الموردين',headers:['رقم الفاتورة','اسم المورد','التاريخ','التفاصيل','المبلغ'],rows:ds.supplierInvoices.map(i=>[
+                i.reference,i.name,normalizeDate(i.date),i.details,i.amount])},
+            {name:'دفعات الموردين',headers:['رقم الدفعة','اسم المورد','تاريخ ووقت الدفع','طريقة الدفع','المبلغ'],rows:ds.supplierPayments.map(p=>[
+                p.id,p.name,p.date,p.method,p.amount])},
+        ];
+    }
+
+    // SheetJS .xlsx on browsers where loaded; Excel 2003 XML fallback opens without dependencies.
+    function exportExcel() {
+        if (!requireReadyReport()) return;
+        const ds=reportDataset(), sheets=exportWorkbookRows(ds);
+        if (typeof window.XLSX==='object') {
+            try {
+                const workbook=XLSX.utils.book_new();
+                sheets.forEach(({name,headers,rows})=>{
+                    const content=[['مطابخ شواطئ عدن — '+name],['الفترة',ds.period],['آخر تحديث',ds.collectedAt],[],headers,...rows];
+                    const sheet=XLSX.utils.aoa_to_sheet(content);
+                    sheet['!cols']=headers.map((h,i)=>({wch:Math.min(46,Math.max(16,h.length*1.8, ...rows.slice(0,150).map(r=>String(r[i]??'').length*1.08)))}));
+                    sheet['!autofilter']={ref:XLSX.utils.encode_range({s:{r:4,c:0},e:{r:Math.max(4,4+rows.length),c:headers.length-1}})};
+                    sheet['!sheetViews']=[{rightToLeft:true}];
+                    XLSX.utils.book_append_sheet(workbook,sheet,name);
+                });
+                XLSX.writeFile(workbook,reportFileName('xlsx'),{bookType:'xlsx',compression:true});
+                showToast('تم تصدير ملف Excel مع أوراق منفصلة لكل قسم');
+                return;
+            } catch(e){console.error('XLSX failed',e);}
+        }
+        exportExcelXml(sheets,ds); // offline Excel-compatible fallback (.xls XML)
+    }
+
+    function exportExcelXml(sheets,ds) {
+        const xmlText=(v)=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+        const cell=(v,style='')=>`<Cell${style?` ss:StyleID="${style}"`:''}><Data ss:Type="${typeof v==='number'?'Number':'String'}">${xmlText(v)}</Data></Cell>`;
+        const rowsXml=sheets.map(({name,headers,rows})=>{
+            const title=`<Row>${cell('مطابخ شواطئ عدن — '+name,'title')}</Row>`;
+            const meta=`<Row>${cell('الفترة','meta')}${cell(ds.period)}</Row><Row>${cell('آخر تحديث','meta')}${cell(ds.collectedAt)}</Row><Row></Row>`;
+            const headings=`<Row>${headers.map(h=>cell(h,'head')).join('')}</Row>`;
+            const body=rows.map((r,index)=>`<Row>${r.map(v=>cell(v,index%2?'shade':'')).join('')}</Row>`).join('');
+            const widths=headers.map(h=>`<Column ss:Width="${Math.max(100,Math.min(250,h.length*8+50))}"/>`).join('');
+            return `<Worksheet ss:Name="${xmlText(name)}"><Table>${widths}${title}${meta}${headings}${body}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><DisplayRightToLeft/></WorksheetOptions></Worksheet>`;
+        }).join('');
+        const xml=`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="title"><Font ss:Bold="1" ss:Size="15" ss:Color="#751B27"/></Style><Style ss:ID="meta"><Font ss:Bold="1"/></Style><Style ss:ID="head"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#76212D" ss:Pattern="Solid"/></Style><Style ss:ID="shade"><Interior ss:Color="#F2F4F6" ss:Pattern="Solid"/></Style></Styles>${rowsXml}</Workbook>`;
+        downloadBlob(new Blob([xml],{type:'application/vnd.ms-excel;charset=utf-8'}),reportFileName('xls'));
+        showToast('تم تصدير ملف Excel المتوافق (.xls)؛ تعذر تحميل مكتبة XLSX الحديثة');
     }
 
     function exportCSV() {
@@ -2163,7 +2342,10 @@
     }
 
     function csvCell(value) {
-        return `"${String(value ?? "").replaceAll('"', '""')}"`;
+        // Prevent Excel/LibreOffice from treating untrusted free-text cells as formulas.
+        const safe = String(value ?? "").replace(/^[\s\x00-\x1f]*([=+@-])/, (full, sign) =>
+            (typeof value === "number" ? full : "'" + full));
+        return `"${safe.replaceAll('"', '""')}"`;
     }
 
     function downloadFile(content, filename, type) {

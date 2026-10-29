@@ -209,23 +209,6 @@
             box-shadow: 0 5px 14px rgba(143, 23, 32, .15);
         }
 
-        [data-page="reports"] .date-help {
-            display: block;
-            padding-top: 24px;
-            color: var(--reports-muted);
-            font-size: 11px;
-            line-height: 1.6;
-        }
-        [data-page="reports"] .period-button:focus-visible {
-            outline: 3px solid var(--reports-primary);
-            outline-offset: 2px;
-        }
-        [data-page="reports"] .period-button[data-period="live"].active {
-            background: #167c5b;
-            border-color: #167c5b;
-        }
-        [data-page="reports"] .reports-page-subtitle { max-width: 760px; }
-
         [data-page="reports"] .date-range-panel {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1018,7 +1001,7 @@
             }
 
             [data-page="reports"] .period-buttons {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1157,6 +1140,67 @@
                 overflow: visible;
             }
         }
+
+        /* ===== نسخة الطباعة/المشاركة: قالب مستقل ثابت لا يتأثر بشاشة الجوال ===== */
+        [data-page="reports"] .reports-header-actions{gap:7px}
+        [data-page="reports"] .reports-header-actions .btn{white-space:nowrap}
+        .report-preview-modal{position:fixed;inset:0;z-index:9999;background:rgba(15,18,25,.78);display:none;padding:20px;overflow:hidden}
+        .report-preview-modal.active{display:flex;align-items:center;justify-content:center}
+        .report-preview-box{display:flex;flex-direction:column;width:min(1140px,100%);max-height:calc(100dvh - 40px);border-radius:16px;overflow:hidden;background:#eceef0;box-shadow:0 22px 80px rgba(0,0,0,.3)}
+        .report-preview-toolbar{background:#fff;border-bottom:1px solid #eee;display:flex;gap:12px;justify-content:space-between;align-items:center;padding:12px 17px;color:#3a1116}
+        .report-preview-actions{display:flex;flex-wrap:wrap;gap:7px}
+        .report-preview-content{overflow:auto;min-height:0;padding:20px}
+        #reportPrintRoot{display:none}
+        .report-pdf-mount{position:absolute;left:-25000px;top:0;width:1080px;background:#fff}
+        .report-paper{direction:rtl;text-align:right;box-sizing:border-box;width:1080px;max-width:none;background:#fff;color:#26313e;padding:34px 38px 42px;font-family:"Tajawal",Arial,sans-serif;font-size:13px;line-height:1.6}
+        .report-paper *{box-sizing:border-box}
+        .report-paper .rp-brand{display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:3px solid #791d2b;padding-bottom:17px;margin-bottom:20px}
+        .report-paper .rp-company{display:flex;gap:13px;align-items:center}
+        .report-paper .rp-logo{height:63px;width:63px;object-fit:contain}
+        .report-paper .rp-brand strong{display:block;font-size:21px;color:#611620;line-height:1.4}
+        .report-paper .rp-brand small{color:#697483;font-size:12px}
+        .report-paper .rp-type{color:#791d2b;font-size:22px;font-weight:800;text-align:left}
+        .report-paper .rp-type small{display:block;color:#647085;font-size:11px;font-weight:500}
+        .report-paper .rp-metadata{background:#f7f7f8;border:1px solid #e7e9ec;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:12px 16px;border-radius:10px;margin-bottom:18px}
+        .report-paper .rp-metadata span{display:block;color:#79808d;font-size:10px}
+        .report-paper .rp-metadata strong{display:block;font-size:12px;color:#252d3b;overflow-wrap:anywhere}
+        .report-paper .rp-title{font-size:16px;color:#611620;border-right:4px solid #851f30;padding-right:10px;margin:22px 0 10px;font-weight:800}
+        .report-paper .rp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+        .report-paper .rp-kpi{background:#fbf9f9;border:1px solid #e8dde0;border-radius:10px;padding:11px;min-height:67px}
+        .report-paper .rp-kpi span{display:block;font-size:10px;color:#6a7280}
+        .report-paper .rp-kpi strong{display:block;margin-top:4px;font-weight:800;font-size:15px;color:#621823;direction:rtl;unicode-bidi:plaintext}
+        .report-paper .rp-kpi.green strong{color:#137f55}
+        .report-paper .rp-kpi.orange strong{color:#a85a11}
+        .report-paper .rp-kpi.blue strong{color:#305f9e}
+        .report-paper .rp-table{table-layout:fixed;width:100%;border-collapse:collapse;margin:7px 0 17px;font-size:11px;direction:rtl}
+        .report-paper .rp-table thead{display:table-header-group}
+        .report-paper .rp-table tr{break-inside:avoid;page-break-inside:avoid}
+        .report-paper .rp-table th{background:#76212d;color:white;text-align:right;padding:9px 8px;font-weight:700;vertical-align:middle;border:1px solid #76212d}
+        .report-paper .rp-table td{padding:8px;vertical-align:top;border:1px solid #e7e7e9;overflow-wrap:anywhere;word-break:normal}
+        .report-paper .rp-table tbody tr:nth-child(even){background:#f8f9fa}
+        .report-paper .rp-table .rp-numeric{direction:ltr;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+        .report-paper .rp-table .rp-muted{color:#647084;font-size:10px}
+        .report-paper .rp-summary{background:#f7f3f4;border-right:4px solid #791d2b;display:flex;justify-content:space-between;gap:16px;margin:14px 0;padding:15px 20px;font-weight:800}
+        .report-paper .rp-summary strong{font-size:19px;color:#7a1e29}
+        .report-paper .rp-legal{border:1px solid #ececec;border-radius:8px;background:#fbfbfb;color:#576374;font-size:11px;padding:13px 16px;margin-top:20px}
+        .report-paper .rp-footer{margin-top:26px;border-top:1px solid #e4e4e8;padding-top:10px;display:flex;justify-content:space-between;gap:20px;color:#87909c;font-size:10px}
+        .report-paper .rp-section{break-before:auto;page-break-before:auto}
+        .report-paper .rp-empty{text-align:center;color:#8d96a3;padding:16px}
+        @media(max-width:700px){.report-preview-modal{padding:6px}.report-preview-box{max-height:calc(100dvh - 12px)}.report-preview-toolbar{flex-wrap:wrap}.report-preview-content{padding:9px}.report-preview-content .report-paper{transform:none}}
+        @media print {
+            @page{size:A4 landscape;margin:10mm}
+            html,body{width:auto!important;height:auto!important;margin:0!important;padding:0!important;background:#fff!important}
+            body.report-document-print > *:not(#reportPrintRoot){display:none!important}
+            body.report-document-print #reportPrintRoot{display:block!important;position:static!important;width:100%!important;overflow:visible!important}
+            body.report-document-print #reportPrintRoot .report-paper{width:auto!important;max-width:none!important;margin:0!important;padding:0!important;box-shadow:none!important}
+            body.report-document-print #reportPrintRoot .rp-brand{margin-bottom:13px}
+            body.report-document-print #reportPrintRoot .rp-section{break-inside:auto!important}
+            body.report-document-print #reportPrintRoot .rp-table{font-size:9.3px}
+            body.report-document-print #reportPrintRoot .rp-table th,body.report-document-print #reportPrintRoot .rp-table td{padding:5px 6px}
+            body.report-document-print #reportPrintRoot .rp-kpi{break-inside:avoid}
+            body.report-document-print #reportPrintRoot .rp-footer{margin-top:14px}
+            *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+        }
     </style>
 </head>
 
@@ -1256,29 +1300,27 @@
                         </h1>
 
                         <p class="reports-page-subtitle">
-                            الحجوزات حسب تاريخ المناسبة، والفواتير حسب تاريخها، والدفعات حسب تاريخ دفعها. الأرقام النقدية ليست صافي الربح.
+                            تقرير شامل للحجوزات والعملاء والموردين والحركة المالية خلال الفترة المحددة.
                         </p>
 
                     </div>
 
                     <div class="reports-header-actions">
 
-                        <button
-                            type="button"
-                            class="btn btn-secondary btn-sm"
-                            id="printReportBtn"
-                        >
-                            <i class="fas fa-print"></i>
-                            طباعة التقرير
+                        <button type="button" class="btn btn-secondary btn-sm" id="previewReportBtn">
+                            <i class="fas fa-eye"></i> معاينة التقرير
                         </button>
-
-                        <button
-                            type="button"
-                            class="btn btn-primary btn-sm"
-                            id="shareReportBtn"
-                        >
-                            <i class="fas fa-share-alt"></i>
-                            مشاركة
+                        <button type="button" class="btn btn-secondary btn-sm" id="printReportBtn">
+                            <i class="fas fa-print"></i> طباعة
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="exportPdfBtn">
+                            <i class="fas fa-file-pdf"></i> تنزيل PDF
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="exportExcelBtn">
+                            <i class="fas fa-file-excel"></i> تصدير Excel
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="shareReportBtn">
+                            <i class="fas fa-share-nodes"></i> مشاركة PDF
                         </button>
 
                     </div>
@@ -1307,7 +1349,7 @@
                                 </h2>
 
                                 <p>
-                                    اختر التقرير اللحظي أو تاريخًا يوميًا أو أسبوعًا أو فترة بين تاريخين.
+                                    اختر اليوم أو الفترة التي تريد استخراج التقرير عنها.
                                 </p>
 
                             </div>
@@ -1319,30 +1361,58 @@
 
                     <div class="report-filter-body">
 
-                        <div class="period-buttons" id="reportPeriodButtons">
-                            <button type="button" class="period-button active" data-period="live" aria-pressed="true">
-                                <i class="fas fa-satellite-dish"></i> لحظي
+                        <div
+                            class="period-buttons"
+                            id="reportPeriodButtons"
+                        >
+
+                            <button
+                                type="button"
+                                class="period-button active"
+                                data-period="day"
+                            >
+                                <i class="fas fa-calendar-day"></i>
+                                اليوم
                             </button>
-                            <button type="button" class="period-button" data-period="day" aria-pressed="false">
-                                <i class="fas fa-calendar-day"></i> يومي
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="yesterday"
+                            >
+                                <i class="fas fa-calendar-minus"></i>
+                                أمس
                             </button>
-                            <button type="button" class="period-button" data-period="week" aria-pressed="false">
-                                <i class="fas fa-calendar-week"></i> أسبوعي
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="week"
+                            >
+                                <i class="fas fa-calendar-week"></i>
+                                هذا الأسبوع
                             </button>
-                            <button type="button" class="period-button" data-period="custom" aria-pressed="false">
-                                <i class="fas fa-calendar-days"></i> من تاريخ إلى تاريخ
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="month"
+                            >
+                                <i class="fas fa-calendar"></i>
+                                هذا الشهر
                             </button>
+
+                            <button
+                                type="button"
+                                class="period-button"
+                                data-period="custom"
+                            >
+                                <i class="fas fa-sliders"></i>
+                                فترة مخصصة
+                            </button>
+
                         </div>
 
-                        <div class="date-range-panel hidden" id="singleDatePanel">
-                            <div class="date-field">
-                                <label for="reportSingleDate" id="reportSingleDateLabel">التاريخ</label>
-                                <input type="date" id="reportSingleDate" class="form-input">
-                            </div>
-                            <div class="date-field" id="singleDateExplanation">
-                                <span class="date-help" id="reportSingleDateHelp">اختر تاريخًا لعرض التقرير.</span>
-                            </div>
-                        </div>
 
                         <div
                             id="customDateRange"
@@ -1387,7 +1457,7 @@
                                 <i class="fas fa-calendar-check"></i>
 
                                 <span id="selectedReportPeriod">
-                                    تقرير لحظي — اليوم حتى الآن
+                                    تقرير اليوم
                                 </span>
 
                             </div>
@@ -1436,11 +1506,11 @@
                         <span class="report-status-dot"></span>
 
                         <strong id="reportStatusTitle">
-                            التقرير لحظي — تحديث كل 30 ثانية
+                            التقرير جاهز
                         </strong>
 
                         <span id="reportStatusDescription">
-                            تُجلب آخر البيانات من الخادم بشكل تلقائي عندما تكون الصفحة مفتوحة.
+                            يتم عرض بيانات الفترة المحددة.
                         </span>
 
                     </div>
@@ -1504,7 +1574,7 @@
                             </div>
 
                             <div class="report-kpi-label">
-                                إجمالي المطلوب للحجوزات
+                                إجمالي الفواتير
                             </div>
 
                             <div
@@ -1564,7 +1634,7 @@
                             </div>
 
                             <div class="report-kpi-label">
-                                متبقي حجوزات الفترة
+                                المتبقي على العملاء
                             </div>
 
                             <div
@@ -1627,7 +1697,7 @@
                             </h2>
 
                             <p class="report-section-subtitle">
-                                مقارنة المطلوب على حجوزات الفترة والمدفوعات النقدية خلالها وفرق فواتير الموردين عن مدفوعاتهم.
+                                مقارنة الفواتير والمدفوعات والمبالغ المستحقة للعملاء والموردين.
                             </p>
 
                         </div>
@@ -1742,7 +1812,7 @@
                                 </div>
 
                                 <div class="financial-card-title">
-                                    متبقي حجوزات الفترة
+                                    مستحقات العملاء
                                 </div>
 
                             </div>
@@ -1757,7 +1827,7 @@
                             <div class="financial-card-meta">
 
                                 <span>
-                                    متبقي حجوزات الفترة
+                                    إجمالي المتبقي
                                 </span>
 
                                 <strong id="customerRemainingCount">
@@ -1874,7 +1944,7 @@
                                 </div>
 
                                 <div class="financial-card-title">
-                                    فرق فواتير ومدفوعات الفترة
+                                    مستحقات الموردين
                                 </div>
 
                             </div>
@@ -1889,7 +1959,7 @@
                             <div class="financial-card-meta">
 
                                 <span>
-                                    الفرق الحسابي
+                                    إجمالي المستحق
                                 </span>
 
                                 <strong id="supplierRemainingCount">
@@ -1904,18 +1974,6 @@
 
                 </section>
 
-
-                <section class="report-section" id="platesDepositReportSection">
-                    <div class="report-section-header"><div>
-                        <h2 class="report-section-title"><i class="fas fa-plate-wheat"></i> تأمين الصحون</h2>
-                        <p class="report-section-subtitle">تأمين قابل للاسترداد للحجوزات الواقعة ضمن الفترة. تاريخ إرجاع التأمين غير متاح حاليًا لذلك لا يُحسب ضمن التدفق النقدي اليومي.</p>
-                    </div></div>
-                    <div class="supplier-summary-grid">
-                        <div class="supplier-summary-card"><div class="supplier-summary-card-label">التأمين المطلوب</div><div class="supplier-summary-card-value" id="reportPlateDeposits">—</div></div>
-                        <div class="supplier-summary-card"><div class="supplier-summary-card-label">المبلغ المعاد حتى الآن</div><div class="supplier-summary-card-value paid" id="reportPlateReturns">—</div></div>
-                        <div class="supplier-summary-card"><div class="supplier-summary-card-label">المتبقي للإرجاع</div><div class="supplier-summary-card-value due" id="reportPlatePending">—</div></div>
-                    </div>
-                </section>
 
                 <!-- =================================================
                      OPERATIONAL SUMMARY
@@ -2199,7 +2257,7 @@
                                             "
                                         ></i>
 
-                                        متبقي حجوزات الفترة
+                                        المبالغ المتبقية
 
                                     </div>
 
@@ -2240,7 +2298,7 @@
                             </h2>
 
                             <p class="report-section-subtitle">
-                                الحجوزات حسب تاريخ المناسبة؛ المدفوع والمتبقي لكل حجز يشمل دفعاته المسجلة حتى الآن.
+                                جميع الحجوزات الواقعة ضمن الفترة المحددة.
                             </p>
 
                         </div>
@@ -2366,7 +2424,7 @@
                             </h2>
 
                             <p class="report-section-subtitle">
-                                ملخص فواتير الموردين ومدفوعاتهم خلال الفترة والفرق الحسابي بينهما.
+                                ملخص فواتير الموردين ومدفوعاتهم والمبالغ المستحقة.
                             </p>
 
                         </div>
@@ -2411,7 +2469,7 @@
                         <div class="supplier-summary-card">
 
                             <div class="supplier-summary-card-label">
-                                فرق فواتير ومدفوعات الفترة
+                                إجمالي المستحق للموردين
                             </div>
 
                             <div
@@ -2489,7 +2547,7 @@
                                         </th>
 
                                         <th>
-                                            التفاصيل
+                                            الحالة
                                         </th>
 
                                     </tr>
@@ -2723,12 +2781,6 @@
                 </section>
 
 
-                <p class="report-period-note" style="color:var(--reports-muted);font-size:11px;line-height:1.8;margin-bottom:15px;">
-                    <i class="fas fa-circle-info"></i>
-                    المتبقي على حجوزات الفترة يشمل مدفوعات تلك الحجوزات حتى الآن، أما المقبوض والمدفوع للموردين فيعكسان حركات الدفع التي تمت خلال الفترة المختارة.
-                    تأمين الصحون لا يمثل إيرادًا نهائيًا، وإرجاعه لا يُخصم من الحركة النقدية للفترة لعدم وجود تاريخ مستقل لكل استرداد.
-                </p>
-
                 <!-- =================================================
                      REPORT FOOTER SUMMARY
                 ================================================== -->
@@ -2886,6 +2938,23 @@
     ></div>
 
 
+    <!-- نافذة معاينة نسخة التقرير المعدة للطباعة -->
+    <div id="reportPreviewModal" class="report-preview-modal" role="dialog" aria-modal="true" aria-label="معاينة التقرير" aria-hidden="true">
+        <div class="report-preview-box">
+            <div class="report-preview-toolbar">
+                <strong><i class="fas fa-file-lines"></i> معاينة التقرير للطباعة والتصدير</strong>
+                <div class="report-preview-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" id="previewPrintBtn"><i class="fas fa-print"></i> طباعة</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="previewPdfBtn"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="closeReportPreviewBtn" aria-label="إغلاق المعاينة"><i class="fas fa-xmark"></i> إغلاق</button>
+                </div>
+            </div>
+            <div id="reportPreviewContent" class="report-preview-content"></div>
+        </div>
+    </div>
+    <!-- منطقة طباعة منفصلة حتى لا تظهر عناصر لوحة التحكم داخل PDF -->
+    <div id="reportPrintRoot" aria-hidden="true"></div>
+
     <!-- =========================================================
          SCRIPTS
     ========================================================== -->
@@ -2893,6 +2962,9 @@
     <script src="assets/js/core/utils.js"></script>
     <script src="assets/js/core/api.js"></script>
     <script src="assets/js/components/layout.js"></script>
+    <!-- مكتبتا إنشاء PDF وملف Excel الفعلي: تتطلبان اتصالًا بالإنترنت أو استضافة محلية -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="assets/js/pages/reports.js"></script>
 
 </body>
