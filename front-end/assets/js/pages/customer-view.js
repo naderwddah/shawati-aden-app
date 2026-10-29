@@ -26,6 +26,10 @@
     saving: false,
     loading: false,
     statementView: 'normal',
+    statementRange: { from: '', to: '' },
+    statementDraft: { from: '', to: '' },
+    receiptPayment: null,
+    receiptRequest: 0,
     activeTab: 'bookings',
     statusBookingId: null,
     savingStatus: false
@@ -78,6 +82,18 @@
   }
 
   function dateOnly(v) { return v ? String(v).slice(0, 10) : ''; }
+
+  function dateTimeDisplay(value) {
+    if (!value) return '—';
+    const date = formatDateDisplay(value);
+    const match = String(value).match(/[ T](\d{2}):(\d{2})/);
+    return match ? `${date} · ${formatTime12(match[1] + ':' + match[2])}` : date;
+  }
+
+  function signedBalanceText(amount) {
+    return amount > 0.009 ? 'مستحق على العميل' : amount < -0.009 ? 'رصيد دائن للعميل' : 'الحساب مسدد';
+  }
+
 
   function dateTimeLocalNow() {
     const d = new Date();
@@ -411,8 +427,8 @@
           <span class="value success">${moneyShort(a.totalPaid)}</span>
         </div>
         <div class="stat">
-          <span class="label">الرصيد المستحق</span>
-          <span class="value ${balance > 0 ? 'danger' : 'success'}">${moneyShort(balance)}</span>
+          <span class="label">${signedBalanceText(balance)}</span>
+          <span class="value ${balance > 0 ? 'danger' : 'success'}">${moneyShort(Math.abs(balance))}</span>
         </div>
       </section>
     `;
@@ -577,29 +593,29 @@
 
   function renderPaymentCard(payment) {
     const bid = payment.booking_id ?? payment.bookingId;
-    const methodName = paymentMethodName(payment);
-    const dateStr = formatDateDisplay(payment.payment_date || payment.paymentDate);
-
+    const dateStr = dateTimeDisplay(payment.payment_date || payment.paymentDate);
+    const id = esc(payment.id);
     return `
-      <article class="cv-payment-card" data-id="${payment.id}">
-        <div class="cv-pay-icon"><i class="fas fa-money-bill-wave"></i></div>
+      <article class="cv-payment-card" data-id="${id}">
+        <div class="cv-pay-icon"><i class="fas fa-wallet"></i></div>
         <div class="cv-pay-info">
-          <div class="cv-pay-title">دفعة #${esc(payment.id)} · ${esc(methodName)}</div>
-          <div class="cv-pay-sub">
-            ${esc(dateStr)}
-            ${bid ? ` · <a href="#" data-action="gotoBooking" data-id="${esc(bid)}" style="color:var(--primary);font-weight:700;text-decoration:none;">حجز #${esc(bid)}</a>` : ' · دفعة عامة'}
-          </div>
-          ${payment.notes ? `<div class="cv-pay-sub">${esc(payment.notes)}</div>` : ''}
+          <div class="cv-pay-title">إيصال دفعة #${id}</div>
+          <div class="cv-pay-sub">${esc(dateStr)} · ${esc(paymentMethodName(payment))}</div>
+          <div class="cv-pay-sub">${bid ? `الحجز #${esc(bid)}` : 'دفعة عامة غير مرتبطة بحجز'}</div>
+          ${payment.notes ? `<div class="cv-pay-sub cv-pay-note">${esc(payment.notes)}</div>` : ''}
         </div>
-        <div class="cv-pay-amount">+${moneyShort(payment.amount)}</div>
-        <button class="cv-pay-del" data-action="deletePayment" data-id="${payment.id}" title="حذف">
-          <i class="fas fa-trash"></i>
-        </button>
-      </article>
-    `;
+        <div class="cv-pay-right">
+          <div class="cv-pay-amount">${money(payment.amount)}</div>
+          <div class="cv-pay-actions">
+            <button type="button" class="cv-small-action" data-action="viewPayment" data-id="${id}" title="عرض إيصال الدفعة"><i class="fas fa-eye"></i> عرض</button>
+            <button type="button" class="cv-small-action" data-action="printPayment" data-id="${id}" title="طباعة إيصال الدفعة"><i class="fas fa-print"></i> طباعة</button>
+            <button type="button" class="cv-pay-del" data-action="deletePayment" data-id="${id}" title="حذف الدفعة" aria-label="حذف الدفعة"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      </article>`;
   }
 
-  function renderPaymentsList() {
+    function renderPaymentsList() {
     if (!state.payments.length) {
       return `<div class="cv-empty">
         <i class="fas fa-money-bill-transfer"></i>
@@ -616,145 +632,238 @@
   }
 
   /* =========================================================
-   * 10) كشف الحساب
+   * إيصال دفعة فردية: معاينة + طباعة
    * ========================================================= */
-
-  function renderStatementRows(rows, detailed) {
-    if (!rows.length) {
-      return `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text-muted);">
-        لا توجد حركات
-      </td></tr>`;
-    }
-
-    let balance = 0;
-
-    return rows.map((row) => {
-      balance += row.debit - row.credit;
-
-      let detailHtml = '';
-      if (detailed && row.type === 'booking' && row.booking) {
-        const items = Array.isArray(row.booking.items) ? row.booking.items : [];
-        const deposit = number(row.booking.plate_deposit);
-
-        let detailRows = '';
-        if (deposit > 0) {
-          detailRows += `
-            <div class="cv-stmt-detail-row" style="background:#fff7ed;border-radius:5px;padding:5px 8px;margin-bottom:2px;">
-              <span class="name" style="color:#c2410c;">تأمين الصحون</span>
-              <span class="num">1</span>
-              <span class="num">${moneyShort(deposit)}</span>
-              <span class="num" style="color:#c2410c;font-weight:800;">${moneyShort(deposit)}</span>
-            </div>`;
-        }
-        if (items.length) {
-          detailRows += items.map((it) => `
-            <div class="cv-stmt-detail-row">
-              <span class="name">${esc(it.item_name ?? it.name ?? 'صنف')}</span>
-              <span class="num">${number(it.quantity)}</span>
-              <span class="num">${moneyShort(it.unit_price ?? it.price)}</span>
-              <span class="num">${moneyShort(it.total_price ?? (number(it.quantity) * number(it.unit_price ?? it.price)))}</span>
-            </div>
-          `).join('');
-        }
-
-        detailHtml = `
-          <div class="cv-stmt-detail">
-            <div class="cv-stmt-detail-title"><i class="fas fa-utensils"></i> تفاصيل الأصناف</div>
-            ${detailRows || '<div style="color:var(--text-muted);font-size:11px;">لا توجد أصناف</div>'}
-          </div>
-        `;
-      }
-
-      if (detailed && row.type === 'payment' && row.payment) {
-        const method = paymentMethodName(row.payment);
-        detailHtml = `
-          <div class="cv-stmt-detail">
-            <div class="cv-stmt-detail-title"><i class="fas fa-credit-card"></i> تفاصيل الدفعة</div>
-            <div class="cv-stmt-detail-row">
-              <span class="name">طريقة الدفع</span>
-              <span class="num" style="grid-column:2/-1;text-align:right;direction:rtl;">${esc(method)}</span>
-            </div>
-            ${row.payment.notes ? `
-              <div class="cv-stmt-detail-row">
-                <span class="name">ملاحظات</span>
-                <span class="num" style="grid-column:2/-1;text-align:right;direction:rtl;">${esc(row.payment.notes)}</span>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }
-
-      return `
-        <tr>
-          <td class="desc">
-            ${esc(row.description)}
-            <span class="date">${formatDateDisplay(row.date)}</span>
-          </td>
-          <td class="num debit">${row.debit ? moneyShort(row.debit) : '—'}</td>
-          <td class="num credit">${row.credit ? moneyShort(row.credit) : '—'}</td>
-          <td class="num balance">${moneyShort(balance)}</td>
-        </tr>
-        ${detailHtml ? `<tr><td colspan="4" style="padding:0 8px 8px;">${detailHtml}</td></tr>` : ''}
-      `;
-    }).join('');
+  function receiptContent(payment) {
+    const bid = payment.booking_id ?? payment.bookingId;
+    const method = paymentMethodName(payment);
+    const id = esc(payment.id);
+    return `<div class="cv-receipt-paper">
+      <div class="cv-receipt-brand"><i class="fas fa-utensils"></i> مطابخ شواطئ عدن</div>
+      <h3>إيصال استلام دفعة</h3>
+      <div class="cv-receipt-number">رقم الإيصال: <strong>#${id}</strong></div>
+      <div class="cv-receipt-amount"><span>المبلغ المستلم</span><strong>${money(payment.amount)}</strong></div>
+      <dl class="cv-receipt-fields">
+        <div><dt>اسم العميل</dt><dd>${esc(state.customer?.name || '—')}</dd></div>
+        <div><dt>رقم الجوال</dt><dd dir="ltr">${esc(state.customer?.phone || '—')}</dd></div>
+        <div><dt>التاريخ والوقت</dt><dd>${esc(dateTimeDisplay(payment.payment_date || payment.paymentDate))}</dd></div>
+        <div><dt>طريقة الدفع</dt><dd>${esc(method)}</dd></div>
+        <div><dt>الحجز المرتبط</dt><dd>${bid ? 'حجز #' + esc(bid) : 'دفعة عامة'}</dd></div>
+        ${payment.notes ? `<div><dt>ملاحظات</dt><dd>${esc(payment.notes)}</dd></div>` : ''}
+      </dl>
+      <p class="cv-receipt-footer">إيصال بالمبلغ المسجل في النظام، وليس فاتورة جديدة أو إثباتًا لتسديد كامل الحجز.</p>
+    </div>`;
   }
 
-  function renderStatementContent() {
-    const rows = computeStatementRows();
-    const detailed = state.statementView === 'detailed';
-
-    const toggle = `
-      <div class="cv-stmt-toggle" id="stmtToggle">
-        <button type="button" class="cv-stmt-btn ${!detailed ? 'active' : ''}" data-view="normal">
-          <i class="fas fa-list"></i> كشف عادي
-        </button>
-        <button type="button" class="cv-stmt-btn ${detailed ? 'active' : ''}" data-view="detailed">
-          <i class="fas fa-list-ul"></i> كشف تفصيلي
-        </button>
-      </div>
-    `;
-
-    if (!rows.length) {
-      return `
-        ${toggle}
-        <div class="cv-empty">
-          <i class="fas fa-receipt"></i>
-          <h4>لا يوجد كشف حساب</h4>
-          <p>لم يتم تسجيل أي حركة بعد</p>
-        </div>
-      `;
+  async function viewPaymentReceipt(id) {
+    const old = state.payments.find(p => Number(p.id) === Number(id));
+    if (!old) { toast('الدفعة غير موجودة', 'error'); return; }
+    const modal = $('cvPaymentReceiptModal');
+    const content = $('cvPaymentReceiptContent');
+    if (!modal || !content) { toast('نافذة الإيصال غير متاحة', 'error'); return; }
+    content.innerHTML = '<div class="cv-receipt-loading"><i class="fas fa-spinner fa-spin"></i> جاري تحميل إيصال الدفعة...</div>';
+    state.receiptPayment = null;
+    const requestNumber = ++state.receiptRequest;
+    $('cvPrintReceiptBtn').disabled = true;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    try {
+      const payment = await apiCall(['getCustomerPayment'], Number(id));
+      if (!payment?.id || Number(payment.id) !== Number(id) ||
+          Number(payment.customer_id ?? payment.customer?.id ?? state.customerId) !== Number(state.customerId)) {
+        throw new Error('الإيصال لا يطابق هذا العميل');
+      }
+      if (!modal.classList.contains('active') || requestNumber !== state.receiptRequest) return;
+      state.receiptPayment = payment;
+      content.innerHTML = receiptContent(payment);
+      $('cvPrintReceiptBtn').disabled = false;
+    } catch (error) {
+      if (requestNumber !== state.receiptRequest) return;
+      content.innerHTML = `<div class="cv-receipt-error">${esc(error.message || 'تعذر تحميل الدفعة')}</div>`;
+      toast(error.message || 'تعذر عرض الإيصال', 'error');
     }
+  }
 
-    const table = `
-      <div class="cv-stmt-card">
-        <table class="cv-stmt-table">
-          <thead>
-            <tr>
-              <th>البيان</th>
-              <th class="num">مدين</th>
-              <th class="num">دائن</th>
-              <th class="num">الرصيد</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${renderStatementRows(rows, detailed)}
-          </tbody>
-        </table>
-      </div>
-    `;
+  function closePaymentReceipt() {
+    state.receiptRequest++;
+    $('cvPaymentReceiptModal')?.classList.remove('active');
+    $('cvPaymentReceiptModal')?.setAttribute('aria-hidden', 'true');
+    $('cvPrintReceiptBtn').disabled = true;
+    state.receiptPayment = null;
+    document.body.style.overflow = '';
+  }
 
-    const printBtn = `
-      <div style="display:flex;justify-content:flex-start;margin-top:12px;">
-        <button type="button" class="btn btn-secondary" data-action="printStatement">
-          <i class="fas fa-print"></i> طباعة الكشف
-        </button>
-      </div>
-    `;
+  function printDocument(title, body, extraCss = '') {
+    const win = window.open('', '_blank');
+    if (!win) { toast('يرجى السماح بفتح النوافذ لطباعة المستند', 'error'); return; }
+    const css = `@page{size:A4;margin:13mm}*{box-sizing:border-box}body{font-family:Tajawal,Arial,sans-serif;direction:rtl;color:#251d1d;background:#fff;margin:0;padding:14px;font-size:12px}
+      h3{color:#481b1a}table{width:100%;border-collapse:collapse;table-layout:auto}th,td{border-bottom:1px solid #e8e3e1;padding:10px 7px;text-align:right;vertical-align:top}
+      thead th{background:#f8f2ef;color:#542021;font-weight:800}tfoot th{background:#f8f2ef}tr{break-inside:avoid}
+      .cv-receipt-paper{max-width:480px;margin:0 auto;border:1px solid #d9c8c4;border-radius:12px;padding:22px}
+      .cv-receipt-brand{text-align:center;color:#601d22;font-weight:800}.cv-receipt-paper h3{text-align:center;font-size:22px;margin:14px 0}
+      .cv-receipt-number{text-align:center;color:#777}.cv-receipt-amount{background:#f6edea;border-radius:10px;padding:18px;text-align:center;margin:20px 0}
+      .cv-receipt-amount span{display:block;font-size:12px}.cv-receipt-amount strong{display:block;font-size:27px;margin-top:8px;color:#601d22}
+      .cv-receipt-fields{margin:0}.cv-receipt-fields div{display:flex;justify-content:space-between;gap:12px;padding:11px 3px;border-bottom:1px dashed #ddd}
+      .cv-receipt-fields dt{color:#777}.cv-receipt-fields dd{margin:0;font-weight:800;overflow-wrap:anywhere}
+      .cv-receipt-footer{color:#777;text-align:center;margin-top:24px;font-size:11px}
+      .cv-stmt-type{font-weight:700}.cv-stmt-money{text-align:left;white-space:nowrap;direction:ltr}.cv-stmt-detail{margin:7px 0;padding:6px 10px;background:#faf8f6}
+      .cv-stmt-detail-row{display:grid;grid-template-columns:1fr 55px 70px 80px;gap:10px;padding:5px;border-bottom:1px solid #eee}
+      .cv-stmt-info-grid{display:grid;grid-template-columns:100px 1fr;gap:8px}.cv-stmt-expander summary{display:none}
+      .cv-stmt-refunds{margin-top:16px;padding:12px;border:1px solid #eee}.cv-stmt-refunds p,.cv-stmt-footnote{font-size:11px;color:#666}
+      .cv-stmt-refunds-list span{display:block;margin:4px}.cv-stmt-opening{background:#fafafa}.cv-stmt-description{min-width:140px}
+      ${extraCss}`;
+    win.addEventListener('load', () => { win.focus(); win.print(); }, { once: true });
+    win.document.open();
+    win.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"><style>${css}</style></head><body>${body}</body></html>`);
+    win.document.close();
+    win.focus();
+    // User-initiated preview opens a separate print window.
+  }
 
-    return toggle + table + printBtn;
+  function printPaymentReceipt(paymentOrId) {
+    const payment = typeof paymentOrId === 'object' ? paymentOrId :
+      state.payments.find(p => Number(p.id) === Number(paymentOrId));
+    if (!payment) { toast('الدفعة غير موجودة', 'error'); return; }
+    printDocument(`إيصال دفعة #${payment.id}`, receiptContent(payment));
   }
 
   /* =========================================================
+   * 10) كشف الحساب
+   * ========================================================= */
+
+  function statementModel() {
+    const all = computeStatementRows();
+    // The refund is a cumulative informational field, not a dated accounting payment.
+    const financialRows = all.filter(row => row.type !== 'refund_note');
+    const refunds = all.filter(row => row.type === 'refund_note');
+    const { from, to } = state.statementRange;
+    let opening = 0;
+    let debit = 0;
+    let credit = 0;
+    const visible = [];
+    for (const row of financialRows) {
+      const date = dateOnly(row.date);
+      if (from && date && date < from) {
+        opening += number(row.debit) - number(row.credit);
+      } else if ((!from || date >= from) && (!to || date <= to)) {
+        visible.push(row);
+        debit += number(row.debit);
+        credit += number(row.credit);
+      }
+    }
+    return { rows: visible, refunds, opening, debit, credit, closing: opening + debit - credit };
+  }
+
+  function statementDetail(row) {
+    if (row.type === 'booking') {
+      const booking = row.booking || {};
+      const items = Array.isArray(booking.items) ? booking.items : [];
+      const deposit = number(booking.plate_deposit);
+      const contents = items.map(it => `
+        <div class="cv-stmt-detail-row">
+          <span class="name">${esc(it.item_name ?? it.name ?? 'صنف')}</span>
+          <span class="num">${number(it.quantity)}</span>
+          <span class="num">${moneyShort(it.unit_price)}</span>
+          <span class="num">${moneyShort(it.total_price ?? (number(it.quantity) * number(it.unit_price)))}</span>
+        </div>`).join('');
+      return `<div class="cv-stmt-detail">
+        <div class="cv-stmt-detail-title"><i class="fas fa-utensils"></i> أصناف الحجز</div>
+        <div class="cv-stmt-detail-row cv-stmt-detail-head"><span>الصنف</span><span>الكمية</span><span>السعر</span><span>الإجمالي</span></div>
+        ${contents || '<div class="cv-stmt-muted">لا تتوفر تفاصيل الأصناف في البيانات المحمّلة</div>'}
+        ${deposit > 0 ? `<div class="cv-stmt-deposit">تأمين الصحون (مشمول ضمن قيمة الحجز): <strong>${money(deposit)}</strong></div>` : ''}
+      </div>`;
+    }
+    const p = row.payment || {};
+    return `<div class="cv-stmt-detail">
+      <div class="cv-stmt-detail-title"><i class="fas fa-receipt"></i> تفاصيل الدفعة #${esc(p.id)}</div>
+      <div class="cv-stmt-info-grid">
+        <span>طريقة الدفع</span><strong>${esc(paymentMethodName(p))}</strong>
+        <span>تاريخ العملية</span><strong>${esc(dateTimeDisplay(p.payment_date))}</strong>
+        ${p.notes ? `<span>ملاحظات</span><strong>${esc(p.notes)}</strong>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function statementTableRows(model, detailed = false, printed = false) {
+    let running = model.opening;
+    const openingRow = model.opening !== 0 || state.statementRange.from
+      ? `<tr class="cv-stmt-opening"><td>—</td><td colspan="3">رصيد أول الفترة</td><td>—</td><td class="cv-stmt-money">${moneyShort(model.opening)}</td></tr>`
+      : '';
+    const lines = model.rows.map(row => {
+      running += number(row.debit) - number(row.credit);
+      const desc = esc(row.description);
+      const detail = detailed ? statementDetail(row) : '';
+      const expander = detail ? (printed ? detail : `<details class="cv-stmt-expander" open><summary>تفاصيل الحركة</summary>${detail}</details>`) : '';
+      const badge = row.type === 'booking' ? '<span class="cv-stmt-type booking">حجز</span>' : '<span class="cv-stmt-type payment">دفعة</span>';
+      return `<tr>
+        <td class="cv-stmt-date">${esc(formatDateDisplay(row.date))}</td>
+        <td>${badge}</td>
+        <td class="cv-stmt-description">${desc}${expander}</td>
+        <td class="cv-stmt-money debit">${row.debit ? moneyShort(row.debit) : '—'}</td>
+        <td class="cv-stmt-money credit">${row.credit ? moneyShort(row.credit) : '—'}</td>
+        <td class="cv-stmt-money ${running < -0.009 ? 'cv-credit-balance' : ''}">${moneyShort(running)}</td>
+      </tr>`;
+    }).join('');
+    return openingRow + (lines || '<tr><td colspan="6" class="cv-stmt-empty">لا توجد حركات مالية ضمن الفترة المختارة</td></tr>');
+  }
+
+  function statementRefundNotes(refunds) {
+    if (!refunds.length) return '';
+    const sum = refunds.reduce((total, row) => total + number(row.refundAmount), 0);
+    return `<section class="cv-stmt-refunds">
+      <div class="cv-stmt-refunds-head"><i class="fas fa-circle-info"></i> معلومات تأمين الصحون المرتجع <strong>${money(sum)}</strong></div>
+      <p>هذه مبالغ استرداد تراكمية مسجلة على الحجوزات؛ تاريخ كل استرداد غير محفوظ، لذلك لا تُعامل كحركات مؤرخة في كشف الحساب ولا تُضاف للمدين أو الدائن.</p>
+      <div class="cv-stmt-refunds-list">${refunds.map(row => `<span>${esc(row.description)}</span>`).join('')}</div>
+    </section>`;
+  }
+
+  function renderStatementContent() {
+    const model = statementModel();
+    const detailed = state.statementView === 'detailed';
+    const f = state.statementDraft.from;
+    const t = state.statementDraft.to;
+    const period = state.statementRange.from || state.statementRange.to
+      ? `${formatDateDisplay(state.statementRange.from)} — ${formatDateDisplay(state.statementRange.to)}`
+      : 'جميع الحركات المسجلة';
+    return `
+      <div class="cv-stmt-dashboard">
+        <div class="cv-stmt-dashboard-heading">
+          <div><div class="cv-stmt-eyebrow">كشف حساب العميل</div><h4>${esc(state.customer?.name || 'العميل')}</h4><p>${esc(period)}</p></div>
+          <span class="cv-stmt-summary-status">${signedBalanceText(model.closing)}</span>
+        </div>
+        <div class="cv-stmt-metrics">
+          <div class="cv-stmt-metric"><span>إجمالي الحركات المدينة</span><strong>${money(model.debit)}</strong><small>قيمة الحجوزات ضمن الفترة</small></div>
+          <div class="cv-stmt-metric"><span>إجمالي الحركات الدائنة</span><strong>${money(model.credit)}</strong><small>المبالغ المستلمة ضمن الفترة</small></div>
+          <div class="cv-stmt-metric emphasis"><span>رصيد نهاية الفترة</span><strong>${money(Math.abs(model.closing))}</strong><small>${signedBalanceText(model.closing)}</small></div>
+        </div>
+      </div>
+      <div class="cv-stmt-toolbar">
+        <div class="cv-stmt-filters">
+          <label>من تاريخ <input type="date" class="form-input" id="cvStmtFrom" value="${esc(f)}"></label>
+          <label>إلى تاريخ <input type="date" class="form-input" id="cvStmtTo" value="${esc(t)}"></label>
+          <button type="button" class="btn btn-primary btn-sm" data-action="applyStatement"><i class="fas fa-filter"></i> تطبيق</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="resetStatement"><i class="fas fa-rotate-left"></i> الكل</button>
+        </div>
+        <div class="cv-stmt-toolbar-actions">
+          <div class="cv-statement-toggle" id="stmtToggle" role="group" aria-label="مستوى التفاصيل">
+            <button type="button" class="cv-stmt-btn ${!detailed ? 'active' : ''}" data-view="normal">مختصر</button>
+            <button type="button" class="cv-stmt-btn ${detailed ? 'active' : ''}" data-view="detailed">تفصيلي</button>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="printStatement"><i class="fas fa-print"></i> طباعة الكشف</button>
+        </div>
+      </div>
+      <div class="cv-stmt-card"><div class="cv-stmt-table-scroll"><table class="cv-stmt-table">
+        <thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+        <tbody>${statementTableRows(model, detailed)}</tbody>
+        <tfoot><tr><th colspan="3">إجمالي الفترة</th><th>${moneyShort(model.debit)}</th><th>${moneyShort(model.credit)}</th><th>${moneyShort(model.closing)}</th></tr></tfoot>
+      </table></div></div>
+      ${statementRefundNotes(model.refunds)}
+      <div class="cv-stmt-footnote"><i class="fas fa-info-circle"></i> الرصيد السالب يعني وجود مبلغ دائن لصالح العميل. تُحسب التأمينات ضمن إجمالي الحجوزات، بينما الاستردادات تُعرض كمعلومات مستقلة.</div>
+    `;
+  }
+
+    /* =========================================================
    * 11) العرض العام
    * ========================================================= */
 
@@ -1583,93 +1692,25 @@ $$('.cv-status-opt').forEach((label) => {
    * ========================================================= */
 
   function printStatement() {
-    const rows = computeStatementRows();
+    const model = statementModel();
     const detailed = state.statementView === 'detailed';
-
-    let balance = 0;
-    const body = rows.map((row) => {
-      balance += row.debit - row.credit;
-
-      let detailHtml = '';
-      if (detailed && row.type === 'booking' && row.booking) {
-        const items = Array.isArray(row.booking.items) ? row.booking.items : [];
-        if (items.length) {
-          detailHtml = `
-            <tr style="background:#f9fafb;">
-              <td colspan="5" style="padding:8px 12px;">
-                <table style="width:100%;border-collapse:collapse;font-size:11px;">
-                  <thead>
-                    <tr style="background:#f3f4f6;">
-                      <th style="border:1px solid #ddd;padding:4px;text-align:right;">الصنف</th>
-                      <th style="border:1px solid #ddd;padding:4px;text-align:center;">الكمية</th>
-                      <th style="border:1px solid #ddd;padding:4px;text-align:center;">السعر</th>
-                      <th style="border:1px solid #ddd;padding:4px;text-align:center;">الإجمالي</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${items.map((it) => `
-                      <tr>
-                        <td style="border:1px solid #ddd;padding:4px;">${esc(it.item_name ?? it.name ?? '')}</td>
-                        <td style="border:1px solid #ddd;padding:4px;text-align:center;">${number(it.quantity)}</td>
-                        <td style="border:1px solid #ddd;padding:4px;text-align:center;">${money(it.unit_price ?? it.price)}</td>
-                        <td style="border:1px solid #ddd;padding:4px;text-align:center;">${money(it.total_price ?? (number(it.quantity) * number(it.unit_price ?? it.price)))}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </td>
-            </tr>`;
-        }
-      }
-
-      return `
-        <tr>
-          <td>${esc(dateOnly(row.date))}</td>
-          <td>${esc(row.description)}</td>
-          <td>${row.debit ? money(row.debit) : '—'}</td>
-          <td>${row.credit ? money(row.credit) : '—'}</td>
-          <td>${money(balance)}</td>
-        </tr>
-        ${detailHtml}
-      `;
-    }).join('');
-
-    const html = `
-      <!doctype html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="utf-8">
-        <title>كشف حساب - ${esc(state.customer?.name || '')}</title>
-        <style>
-          body{font-family:Arial,sans-serif;padding:24px;color:#222}
-          h1{font-size:20px}
-          table{width:100%;border-collapse:collapse;margin-top:16px}
-          th,td{border:1px solid #ddd;padding:8px;text-align:right;font-size:13px}
-          th{background:#f5f5f5}
-        </style>
-      </head>
-      <body>
-        <h1>كشف حساب ${detailed ? 'تفصيلي' : ''} - ${esc(state.customer?.name || '')}</h1>
-        <div>الجوال: ${esc(state.customer?.phone || '—')}</div>
-        <div>التاريخ: ${todayString()}</div>
-        <table>
-          <thead>
-            <tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr>
-          </thead>
-          <tbody>${body}</tbody>
-        </table>
-        <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
-      </body>
-      </html>`;
-
-    const win = window.open('', '_blank');
-    if (!win) { toast('تعذر فتح نافذة الطباعة', 'error'); return; }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+    const rangeLabel = state.statementRange.from || state.statementRange.to
+      ? `${formatDateDisplay(state.statementRange.from)} — ${formatDateDisplay(state.statementRange.to)}`
+      : 'جميع الحركات المسجلة';
+    const body = `<div class="cv-stmt-print-head" style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #5b1c20;padding-bottom:14px;margin-bottom:18px">
+       <div><div style="color:#5b1c20;font-weight:800;font-size:18px">مطابخ شواطئ عدن</div><h2 style="margin:6px 0 0">كشف حساب عميل ${detailed ? 'تفصيلي' : ''}</h2></div>
+       <div style="text-align:left"><div>${esc(todayString())}</div><div>${esc(rangeLabel)}</div></div>
+      </div>
+      <div style="margin:10px 0 17px">العميل: <strong>${esc(state.customer?.name || '—')}</strong>　|　الجوال: <strong>${esc(state.customer?.phone || '—')}</strong></div>
+      <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap"><div>المدين: <strong>${money(model.debit)}</strong></div><div>الدائن: <strong>${money(model.credit)}</strong></div><div>رصيد آخر الفترة: <strong>${money(Math.abs(model.closing))}</strong> (${signedBalanceText(model.closing)})</div></div>
+      <table class="cv-stmt-table"><thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead>
+      <tbody>${statementTableRows(model, detailed, true)}</tbody><tfoot><tr><th colspan="3">إجمالي الفترة</th><th>${money(model.debit)}</th><th>${money(model.credit)}</th><th>${money(model.closing)}</th></tr></tfoot></table>
+      ${statementRefundNotes(model.refunds)}
+      <p class="cv-stmt-footnote">يعبر الرصيد الدائن عن المبلغ المستحق للعميل. والتأمين المرتجع مسجل بشكل تراكمي دون تاريخ لكل إرجاع، ولا يُضاف إلى الحركات المالية المؤرخة في الكشف.</p>`;
+    printDocument(`كشف حساب - ${state.customer?.name || 'عميل'}`, body);
   }
 
-  /* =========================================================
+    /* =========================================================
    * 18) الأحداث
    * ========================================================= */
 
@@ -1705,6 +1746,23 @@ $$('.cv-status-opt').forEach((label) => {
         case 'printBooking': printBooking(id); break;
         case 'deleteBooking': deleteBooking(id); break;
         case 'deletePayment': deletePayment(id); break;
+        case 'viewPayment': viewPaymentReceipt(id); break;
+        case 'printPayment': printPaymentReceipt(id); break;
+        case 'applyStatement': {
+          const from = state.statementDraft.from;
+          const to = state.statementDraft.to;
+          if ((from && !to) || (!from && to)) { toast('اختر تاريخ البداية والنهاية معًا', 'warning'); break; }
+          if (from && to && from > to) { toast('تاريخ البداية لا يمكن أن يتجاوز النهاية', 'warning'); break; }
+          state.statementRange = { from, to };
+          $('statementContent').innerHTML = renderStatementContent();
+          break;
+        }
+        case 'resetStatement': {
+          state.statementRange = { from: '', to: '' };
+          state.statementDraft = { from: '', to: '' };
+          $('statementContent').innerHTML = renderStatementContent();
+          break;
+        }
         case 'printStatement': printStatement(); break;
         case 'refundDeposit': openRefundDialog(id); break;
         case 'gotoBooking': {
@@ -1715,6 +1773,10 @@ $$('.cv-status-opt').forEach((label) => {
         }
         default: break;
       }
+    });
+    container.addEventListener('change', (event) => {
+      if (event.target.id === 'cvStmtFrom') state.statementDraft.from = event.target.value;
+      if (event.target.id === 'cvStmtTo') state.statementDraft.to = event.target.value;
     });
   }
 
@@ -1783,12 +1845,17 @@ $$('.cv-status-opt').forEach((label) => {
     });
     $('cvConfirmStatusBtn')?.addEventListener('click', confirmStatusChange);
     $('cvRefundSave')?.addEventListener('click', saveRefund);
+    $('cvPrintReceiptBtn')?.addEventListener('click', () => {
+      if (state.receiptPayment) printPaymentReceipt(state.receiptPayment);
+    });
+    $$('[data-close="cvPaymentReceiptModal"]').forEach(btn => btn.addEventListener('click', closePaymentReceipt));
     $$('[data-cv-refund="cancel"]').forEach(b => b.addEventListener('click', closeRefundDialog));
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if ($('transactionModal')?.classList.contains('active')) closeModal();
         if ($('cvStatusModal')?.classList.contains('active')) closeStatusModal();
+        if ($('cvPaymentReceiptModal')?.classList.contains('active')) closePaymentReceipt();
       }
     });
   }

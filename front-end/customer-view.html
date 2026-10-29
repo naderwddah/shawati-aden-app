@@ -660,6 +660,97 @@
         font-size: 10.5px;
       }
     }
+
+    /* v7 — بطاقات الدفعات وإيصالاتها */
+    .cv-pay-right{display:flex;flex-direction:column;align-items:flex-end;gap:9px;flex-shrink:0}
+    .cv-pay-actions{display:flex;align-items:center;gap:5px}
+    .cv-small-action{background:var(--surface-card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:9px;padding:7px 9px;min-height:34px;font:700 11px Tajawal,sans-serif;color:var(--text-secondary,#374151);cursor:pointer;white-space:nowrap}
+    .cv-small-action:hover{border-color:var(--primary,#8f1720);color:var(--primary,#8f1720);background:var(--primary-soft,#faf4f4)}
+    .cv-pay-note{overflow-wrap:anywhere;max-width:500px}
+    .cv-receipt-dialog{max-width:min(540px,calc(100vw - 20px));width:100%;max-height:90vh;overflow-y:auto}
+    .cv-receipt-dialog .cv-modal-header{border-bottom:1px solid var(--border)}
+    .cv-receipt-paper{border:1px solid #e7d5d2;border-radius:14px;background:#fff;padding:20px;color:#342725}
+    .cv-receipt-brand{color:#672329;font-weight:800;font-size:14px;text-align:center}
+    .cv-receipt-paper h3{margin:10px 0 5px;text-align:center;font-size:19px;color:#451c1e;font-weight:900}
+    .cv-receipt-number{text-align:center;font-size:12px;color:#6b7280}
+    .cv-receipt-amount{margin:20px 0;background:#faf1ef;border:1px solid #f4e2de;border-radius:12px;padding:15px;text-align:center}
+    .cv-receipt-amount span{display:block;font-size:12px;color:#644f4f}
+    .cv-receipt-amount strong{display:block;margin-top:6px;font-size:26px;color:#70212a;font-weight:900}
+    .cv-receipt-fields{margin:0}
+    .cv-receipt-fields>div{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;padding:11px 2px;border-bottom:1px dashed #e5e2df}
+    .cv-receipt-fields dt{font-size:12px;color:#716765;flex-shrink:0}
+    .cv-receipt-fields dd{margin:0;text-align:left;overflow-wrap:anywhere;font-size:12px;font-weight:800;color:#282323}
+    .cv-receipt-footer{text-align:center;color:#6b7280;font-size:11px;margin:18px 0 0;line-height:1.6}
+    .cv-receipt-loading,.cv-receipt-error{padding:40px 12px;text-align:center;color:var(--text-muted)}
+    /* v7 — لوحة كشف حساب عملية، قابلة للتصفية والطباعة */
+    .cv-stmt-dashboard{border-radius:15px;border:1px solid #e7d8d6;background:linear-gradient(130deg,#fff,#fff8f7);padding:18px;margin-bottom:12px}
+    .cv-stmt-dashboard-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}
+    .cv-stmt-eyebrow{text-transform:uppercase;font-size:11px;color:var(--primary,#8f1720);font-weight:800}
+    .cv-stmt-dashboard-heading h4{font-size:19px;margin:4px 0;color:var(--text,#282828);font-weight:900}
+    .cv-stmt-dashboard-heading p{margin:0;font-size:12px;color:var(--text-muted)}
+    .cv-stmt-summary-status{border-radius:999px;background:#f6e5e3;color:#6f2228;padding:7px 11px;font-size:11px;font-weight:800;white-space:nowrap}
+    .cv-stmt-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .cv-stmt-metric{border:1px solid #ede9e7;background:white;padding:14px;border-radius:12px;min-width:0}
+    .cv-stmt-metric>span{display:block;color:var(--text-muted);font-size:11px}
+    .cv-stmt-metric strong{display:block;font-size:19px;font-weight:900;margin:7px 0;color:#333;overflow-wrap:anywhere}
+    .cv-stmt-metric small{font-size:10px;color:var(--text-muted)}
+    .cv-stmt-metric.emphasis{border-color:#e3c6c5;background:#fff9f8}
+    .cv-stmt-metric.emphasis strong{color:#6e2328}
+    .cv-stmt-toolbar{display:flex;flex-direction:column;gap:11px;border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:12px;background:var(--surface-card,#fff)}
+    .cv-stmt-filters{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+    .cv-stmt-filters label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--text-muted);font-weight:700}
+    .cv-stmt-filters input{min-width:138px;max-width:180px;height:36px;padding:5px 7px;font-size:12px}
+    .cv-stmt-filters .btn{min-height:36px}
+    .cv-stmt-toolbar-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .cv-stmt-toolbar .cv-statement-toggle{margin-bottom:0}
+    .cv-stmt-table-scroll{overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch}
+    .cv-stmt-card{overflow:hidden}
+    .cv-stmt-table{min-width:630px;table-layout:auto}
+    .cv-stmt-table thead th,.cv-stmt-table tfoot th{padding:12px 10px;background:#f9f4f3;color:#5d3030;font-size:11px}
+    .cv-stmt-table tbody tr:nth-child(even){background:#fcfbfa}
+    .cv-stmt-table td{padding:12px 10px}
+    .cv-stmt-table .cv-stmt-description{font-weight:700;color:var(--text);min-width:170px;max-width:370px;overflow-wrap:anywhere}
+    .cv-stmt-date{white-space:nowrap;font-size:11px;color:var(--text-muted)}
+    .cv-stmt-type{display:inline-flex;border-radius:7px;padding:5px 8px;font-size:10px;font-weight:800;white-space:nowrap}
+    .cv-stmt-type.booking{background:#fce9e8;color:#8b2731}
+    .cv-stmt-type.payment{background:#e5f6ee;color:#047857}
+    .cv-stmt-money{text-align:left!important;direction:ltr;white-space:nowrap;font-size:12px;font-weight:800;color:var(--text)}
+    .cv-stmt-money.debit{color:#ad3139}.cv-stmt-money.credit{color:#08774f}
+    .cv-stmt-money.cv-credit-balance{color:#08774f}
+    .cv-stmt-opening{background:#faf6f5;font-weight:800}
+    .cv-stmt-empty{text-align:center!important;padding:24px!important;color:var(--text-muted)}
+    .cv-stmt-expander{margin-top:7px;font-weight:400}
+    .cv-stmt-expander summary{color:var(--primary);font-size:11px;cursor:pointer;list-style:revert}
+    .cv-stmt-detail{margin-top:8px;min-width:235px;overflow-wrap:anywhere}
+    .cv-stmt-detail-row{grid-template-columns:minmax(75px,1fr) 45px 60px 70px}
+    .cv-stmt-detail-head{color:var(--text-muted);font-weight:800}
+    .cv-stmt-info-grid{display:grid;grid-template-columns:110px 1fr;gap:8px;font-size:11px}
+    .cv-stmt-info-grid span{color:var(--text-muted)}
+    .cv-stmt-deposit{padding-top:8px;color:#9a601d}
+    .cv-stmt-muted{color:var(--text-muted);font-size:11px}
+    .cv-stmt-refunds{padding:14px;margin-top:12px;border:1px solid #f0dfc1;background:#fffbf4;border-radius:12px}
+    .cv-stmt-refunds-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:#86561f;flex-wrap:wrap}
+    .cv-stmt-refunds p,.cv-stmt-footnote{line-height:1.7;color:var(--text-muted);font-size:11px;margin:7px 0}
+    .cv-stmt-refunds-list{display:flex;flex-direction:column;gap:6px;font-size:11px;color:#7c5e38}
+    .cv-stmt-footnote{padding:10px 2px}
+    @media(max-width:600px){
+      .cv-payment-card{align-items:flex-start;flex-wrap:wrap}
+      .cv-pay-right{width:100%;align-items:stretch;padding-top:8px;border-top:1px solid var(--border)}
+      .cv-pay-actions{justify-content:flex-start;flex-wrap:wrap}
+      .cv-pay-amount{font-size:17px;text-align:right}
+      .cv-stmt-dashboard{padding:12px}
+      .cv-stmt-dashboard-heading{align-items:flex-start;flex-wrap:wrap}
+      .cv-stmt-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+      .cv-stmt-metric.emphasis{grid-column:span 2}
+      .cv-stmt-metric{padding:10px}
+      .cv-stmt-metric strong{font-size:15px}
+      .cv-stmt-filters label{flex:1 1 125px;min-width:0}
+      .cv-stmt-filters input{min-width:0;max-width:none;width:100%}
+      .cv-stmt-table{min-width:630px}
+      .cv-receipt-paper{padding:12px}
+    }
+    @media(max-width:350px){.cv-small-action{padding:7px 8px}}
+
   </style>
 </head>
 
@@ -926,6 +1017,23 @@
       <div class="cv-modal-footer">
         <button type="button" class="btn-cancel" data-cv-refund="cancel">إلغاء</button>
         <button type="button" class="btn-confirm" id="cvRefundSave">تسجيل الاسترداد</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- إيصال فردي للدفعة: معاينة وطباعة دون تعديل السجل -->
+  <div class="cv-modal" id="cvPaymentReceiptModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="cvPaymentReceiptTitle">
+    <div class="cv-modal-overlay" data-close="cvPaymentReceiptModal"></div>
+    <div class="cv-modal-dialog cv-receipt-dialog">
+      <div class="cv-modal-header">
+        <h3 id="cvPaymentReceiptTitle">إيصال دفعة عميل</h3>
+        <button type="button" class="cv-modal-close" data-close="cvPaymentReceiptModal" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="cv-modal-body" id="cvPaymentReceiptContent"></div>
+      <div class="cv-modal-footer">
+        <button type="button" class="btn-cancel" data-close="cvPaymentReceiptModal">إغلاق</button>
+        <button type="button" class="btn-confirm" id="cvPrintReceiptBtn" disabled><i class="fas fa-print"></i> طباعة الإيصال</button>
       </div>
     </div>
   </div>
