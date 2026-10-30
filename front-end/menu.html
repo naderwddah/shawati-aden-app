@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#682536"><meta name="description" content="تصفح أطباق وخدمات مطابخ شواطئ عدن، أضف للسلة وأرسل استفسارك عبر واتساب دون حساب أو تسجيل دخول.">
+  <title>قائمة الأطباق والخدمات | مطابخ شواطئ عدن</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/menu-public.css"><link rel="icon" href="assets/images/menu-favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true">
+ <symbol id="i-bag" viewBox="0 0 24 24"><path d="M4 8h16l-1 13H5L4 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></symbol>
+ <symbol id="i-food" viewBox="0 0 24 24"><path d="M3 18h18M5 17a7 7 0 0 1 14 0M12 10V8m-2-3 2-2 2 2"/><path d="M4 21h16"/></symbol>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></symbol>
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+ <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M20 12H4m7-7-7 7 7 7"/></symbol>
+ <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7z"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+ <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9V20a2 2 0 0 1-2.2 2C10 21 3 14 2 4.2A2 2 0 0 1 4 2h3.1a2 2 0 0 1 2 1.6l.6 3a2 2 0 0 1-.6 1.9L7 10a16 16 0 0 0 7 7l1.5-2.1a2 2 0 0 1 1.9-.6l3 .6a2 2 0 0 1 1.6 2Z"/></symbol>
+ <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 2 2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2Z"/></symbol>
+ <symbol id="i-location" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.7"/></symbol>
+</svg>
+<div class="micro-top"></div>
+<div class="demo-strip" id="demoBar" hidden>وضع المعاينة التجريبية — المنتجات والبيانات هنا أمثلة، ولن يُرسل أي طلب حقيقي.</div>
+<header class="site-header"><div class="shell header-wrap">
+  <a class="brand" href="menu.html" id="guestHomeLink" aria-label="العودة إلى القائمة"><span class="brand-logo" data-shop-logo><svg class="ico" style="width:30px;height:30px"><use href="#i-food"></use></svg></span>
+    <span><span class="brand-name" data-shop-name>مطابخ شواطئ عدن</span><span class="brand-sub" style="display:block">الولائم والمناسبات</span></span></a>
+  <nav class="desktop-nav" aria-label="القائمة الرئيسية"><a href="#start">الرئيسية</a><a href="#products">قائمة المنتجات</a><a href="#contact">تواصل معنا</a></nav>
+  <div class="header-actions"><a class="quiet-action" href="#contact"><svg class="ico"><use href="#i-phone"></use></svg> تواصل</a>
+    <button class="cart-header-button" type="button" data-open-cart><svg class="ico"><use href="#i-bag"></use></svg> السلة <b id="cartCount">0</b></button></div>
+</div></header>
+<main>
+  <section class="hero shell" id="start"><div class="hero-grid">
+    <div class="hero-copy"><span class="eyebrow">من مطبخنا إلى مناسبتك</span>
+      <h1 class="hero-title">نكهة <span>المناسبة</span><br> تبدأ من هنا.</h1>
+      <p class="hero-text">استكشف أطباقنا وخدماتنا، واختر ما يناسب ضيوفك وأرسل طلبك عبر واتساب. دون حساب أو تعقيد.</p><p class="hero-about" data-shop-about>للحجوزات والولائم والمناسبات</p>
+      <div class="hero-buttons"><a href="#products" class="primary-btn">تصفح القائمة <svg class="ico"><use href="#i-arrow"></use></svg></a><button class="outlined-btn" data-open-cart type="button"><svg class="ico"><use href="#i-bag"></use></svg> سلة الطلب</button></div>
+      <div class="feature-bits"><span><svg class="ico"><use href="#i-check"></use></svg> بلا تسجيل دخول</span><span><svg class="ico"><use href="#i-check"></use></svg> صور ومواصفات واضحة</span><span><svg class="ico"><use href="#i-check"></use></svg> الاتفاق عبر واتساب</span></div>
+    </div>
+    <div class="hero-art" aria-hidden="true"><div class="hero-picture" id="heroPhoto"></div><div class="hero-mini" id="heroMiniPhoto"></div><div class="hero-seal"><svg class="ico"><use href="#i-sparkle"></use></svg> تفاصيل تليق بضيوفك</div></div>
+  </div></section>
+  <section class="section-wrap" id="products"><div class="shell">
+    <div class="section-heading"><div><span class="section-tag">اختر من القائمة</span><h2>أطباق وخدمات تستحق التجربة</h2><p>تصفح الصور والتفاصيل، ثم أضف ما يعجبك إلى السلة.</p></div><span class="count-chip" id="productCount">جاري التحميل...</span></div>
+    <label class="search-bar" for="menuSearch"><svg class="ico"><use href="#i-search"></use></svg><input id="menuSearch" type="search" autocomplete="off" placeholder="ابحث عن طبخة أو خدمة..." aria-label="البحث عن منتج"></label>
+    <div class="catalog-error" id="catalogError" hidden role="alert"></div>
+    <div class="product-grid" id="productGrid" aria-live="polite"></div>
+  </div></section>
+  <section class="bottom-cta" id="contact"><div class="shell cta-inner"><div><span style="color:#e0ba82;font-weight:800;font-size:13px">يسعدنا خدمتك</span><h2>مناسبتك تستحق اهتمامًا خاصًا</h2><p data-shop-address>للاستفسار عن الموقع تواصل معنا</p><p style="margin-top:7px" data-shop-phone>بيانات التواصل</p><p id="restaurantError" data-restaurant-error hidden style="color:#edb5b0"></p></div><a class="outlined-btn" data-shop-whatsapp href="#contact"><svg class="ico"><use href="#i-phone"></use></svg> تواصل مع المطعم</a></div></section>
+</main>
+<footer class="site-footer"><div class="shell"><div class="footer-grid"><div><strong data-shop-name>مطابخ شواطئ عدن</strong><p>أطباق وخدمات للولائم والمناسبات؛ الأسعار النهائية حسب الاتفاق مع المطعم.</p></div><div><strong>روابط سريعة</strong><p><a href="#products">المنتجات والخدمات</a></p><p><a href="#start">الرئيسية</a></p></div><div><strong>تواصل</strong><p data-shop-phone>—</p><p><a data-shop-instagram href="#" hidden target="_blank" rel="noopener noreferrer">إنستغرام</a> <a data-shop-facebook href="#" hidden target="_blank" rel="noopener noreferrer">فيسبوك</a></p></div></div><div class="footer-bottom">منيو إلكتروني للاطلاع وإرسال طلب استفسار؛ لا يُعد الطلب حجزًا مؤكدًا.</div></div></footer>
+<button type="button" class="mobile-cart-bar" data-open-cart><span><svg class="ico" style="vertical-align:middle"><use href="#i-bag"></use></svg> السلة (<span id="mobileCartCount">0</span>)</span><b id="mobileCartTotal">0 ر.س</b></button>
+<div class="guest-overlay" id="detailsModal" hidden role="dialog" aria-modal="true" aria-label="تفاصيل المنتج"><div class="guest-modal"><button class="modal-close" type="button" data-close aria-label="إغلاق"><svg class="ico"><use href="#i-close"></use></svg></button><div class="detail-layout"><div><div class="detail-media" id="detailMedia"></div><div class="detail-thumbs" id="detailThumbs"></div></div><div class="detail-content"><span class="section-tag">تفاصيل الطبق أو الخدمة</span><h2 id="detailName">—</h2><p id="detailDescription">—</p><div class="detail-price" id="detailPrice">—</div><div class="detail-actions"><div class="quantity-control"><button id="detailQtyMinus" type="button" aria-label="تقليل">−</button><input id="detailQty" type="number" min="1" max="99" value="1" inputmode="numeric" aria-label="الكمية"><button id="detailQtyPlus" type="button" aria-label="زيادة">+</button></div><button class="primary-btn" type="button" id="detailAddToCart"><svg class="ico"><use href="#i-plus"></use></svg> أضف إلى السلة</button></div></div></div></div></div>
+<div class="guest-overlay cart-overlay" id="cartDrawer" hidden role="dialog" aria-modal="true" aria-label="سلة الطلب"><aside class="cart-drawer"><div class="cart-head"><div><h2>سلة الطلب</h2><span id="cartPanelCount">0 منتجات</span></div><button class="close-plain" type="button" data-close aria-label="إغلاق"><svg class="ico"><use href="#i-close"></use></svg></button></div><div class="cart-scroll" id="drawerCartList"></div><div class="cart-bottom"><div class="total-line"><span>الإجمالي المبدئي</span><strong id="cartPanelTotal">0 ر.س</strong></div><p>الأسعار والتوفر والتوصيل تؤكد مع المطعم عبر واتساب.</p><button class="primary-btn" id="cartCheckout" type="button">متابعة الطلب <svg class="ico"><use href="#i-arrow"></use></svg></button></div></aside></div>
+<div id="guestToast" class="guest-toast" role="status" aria-live="polite"></div>
+<script src="assets/js/pages/menu-public-core.js"></script><script src="assets/js/pages/menu-public.js"></script>
+</body></html>

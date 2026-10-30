@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -16,70 +17,197 @@ use App\Http\Controllers\CustomerAccountController;
 use App\Http\Controllers\SupplierAccountController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MenuItemController;
 
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes - بدون تسجيل دخول
+|--------------------------------------------------------------------------
+*/
+
+// تسجيل الدخول
 Route::post('login', [AuthController::class, 'login']);
+
+// عرض المنتجات المنشورة فقط للعملاء
+Route::get('public/menu-items', [
+    MenuItemController::class,
+    'publicIndex'
+]);
+
+// عرض معلومات المطعم للعميل
+Route::get('public/restaurant', [
+    RestaurantController::class,
+    'show'
+]);
+
+
+/*
+|--------------------------------------------------------------------------
+| Protected Routes - تتطلب تسجيل الدخول
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware('auth:sanctum')->group(function () {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('me', [AuthController::class, 'me']);
 
-    // Independent, lightweight dashboard sections.
-    Route::get('dashboard/today', [DashboardController::class, 'today']);
-    Route::get('dashboard/upcoming', [DashboardController::class, 'upcoming']);
-    Route::get('dashboard/receivables', [DashboardController::class, 'receivables']);
-    Route::get('dashboard/overview', [DashboardController::class, 'overview']);
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::post('change-password', [AuthController::class, 'changePassword']);
+    Route::post('logout', [
+        AuthController::class,
+        'logout'
+    ]);
 
-    Route::apiResource('customers', CustomerController::class);
+    Route::post('change-password', [
+        AuthController::class,
+        'changePassword'
+    ]);
 
-    Route::get(
-        'customers/{customer}/account',
-        [CustomerAccountController::class, 'show']
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('dashboard/today', [
+        DashboardController::class,
+        'today'
+    ]);
+
+    Route::get('dashboard/upcoming', [
+        DashboardController::class,
+        'upcoming'
+    ]);
+
+    Route::get('dashboard/receivables', [
+        DashboardController::class,
+        'receivables'
+    ]);
+
+    Route::get('dashboard/overview', [
+        DashboardController::class,
+        'overview'
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customers
+    |--------------------------------------------------------------------------
+    */
+
+    Route::apiResource(
+        'customers',
+        CustomerController::class
     );
 
-    Route::get(
-        'customers/{customer}/statement',
-        [CustomerAccountController::class, 'statement']
+    Route::get('customers/{customer}/account', [
+        CustomerAccountController::class,
+        'show'
+    ]);
+
+    Route::get('customers/{customer}/statement', [
+        CustomerAccountController::class,
+        'statement'
+    ]);
+
+    Route::get('customer-accounts', [
+        CustomerAccountController::class,
+        'index'
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Suppliers
+    |--------------------------------------------------------------------------
+    */
+
+    Route::apiResource(
+        'suppliers',
+        SupplierController::class
     );
 
-    Route::get(
-        'customer-accounts',
-        [CustomerAccountController::class, 'index']
+    Route::get('suppliers/{supplier}/account', [
+        SupplierAccountController::class,
+        'show'
+    ]);
+
+    Route::get('suppliers/{supplier}/statement', [
+        SupplierAccountController::class,
+        'statement'
+    ]);
+
+    Route::get('supplier-accounts', [
+        SupplierAccountController::class,
+        'index'
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Items - أصناف الحجوزات والفواتير
+    |--------------------------------------------------------------------------
+    */
+
+    Route::apiResource(
+        'items',
+        ItemController::class
     );
 
-    Route::apiResource('suppliers', SupplierController::class);
 
-    Route::get(
-        'suppliers/{supplier}/account',
-        [SupplierAccountController::class, 'show']
+    /*
+    |--------------------------------------------------------------------------
+    | Menu Items - إدارة المنيو المستقل
+    |--------------------------------------------------------------------------
+    */
+
+    Route::apiResource(
+        'menu-items',
+        MenuItemController::class
+    )->parameters([
+        'menu-items' => 'menuItem'
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Bookings
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post('bookings/{booking}/complete', [
+        BookingController::class,
+        'complete'
+    ]);
+
+    Route::apiResource(
+        'bookings',
+        BookingController::class
     );
 
-    Route::get(
-        'suppliers/{supplier}/statement',
-        [SupplierAccountController::class, 'statement']
-    );
+    Route::get('bookings-by-date', [
+        BookingController::class,
+        'byDate'
+    ]);
 
-    Route::get(
-        'supplier-accounts',
-        [SupplierAccountController::class, 'index']
-    );
+    Route::get('upcoming-bookings', [
+        BookingController::class,
+        'upcoming'
+    ]);
 
-    Route::apiResource('items', ItemController::class);
 
-    // Must coexist with the standard bookings resource and dashboard routes.
-    Route::post('bookings/{booking}/complete', [BookingController::class, 'complete']);
-    Route::apiResource('bookings', BookingController::class);
-
-    Route::get(
-        'bookings-by-date',
-        [BookingController::class, 'byDate']
-    );
-
-    Route::get(
-        'upcoming-bookings',
-        [BookingController::class, 'upcoming']
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | Customer Payments
+    |--------------------------------------------------------------------------
+    */
 
     Route::apiResource(
         'customer-payments',
@@ -88,8 +216,15 @@ Route::middleware('auth:sanctum')->group(function () {
         'index',
         'store',
         'show',
-        'destroy',
+        'destroy'
     ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supplier Payments
+    |--------------------------------------------------------------------------
+    */
 
     Route::apiResource(
         'supplier-payments',
@@ -99,66 +234,95 @@ Route::middleware('auth:sanctum')->group(function () {
         'store',
         'show',
         'update',
-        'destroy',
+        'destroy'
     ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supplier Invoices
+    |--------------------------------------------------------------------------
+    */
 
     Route::apiResource(
         'supplier-invoices',
         SupplierInvoiceController::class
     );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Methods
+    |--------------------------------------------------------------------------
+    */
+
     Route::apiResource(
         'payment-methods',
         PaymentMethodController::class
     );
 
-    Route::get(
-        'restaurant',
-        [RestaurantController::class, 'show']
-    );
 
-    Route::put(
-        'restaurant',
-        [RestaurantController::class, 'update']
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | Restaurant Settings
+    |--------------------------------------------------------------------------
+    */
 
-    Route::post(
-        'restaurant',
-        [RestaurantController::class, 'update']
-    );
+    Route::get('restaurant', [
+        RestaurantController::class,
+        'show'
+    ]);
 
-    Route::delete(
-        'restaurant/logo',
-        [RestaurantController::class, 'deleteLogo']
-    );
+    Route::put('restaurant', [
+        RestaurantController::class,
+        'update'
+    ]);
 
-    Route::get(
-        'reports/daily-summary',
-        [ReportController::class, 'dailySummary']
-    );
+    Route::post('restaurant', [
+        RestaurantController::class,
+        'update'
+    ]);
 
-    Route::get(
-        'reports/bookings-by-date',
-        [ReportController::class, 'bookingsByDate']
-    );
+    Route::delete('restaurant/logo', [
+        RestaurantController::class,
+        'deleteLogo'
+    ]);
 
-    Route::get(
-        'reports/upcoming-bookings',
-        [ReportController::class, 'upcomingBookings']
-    );
 
-    Route::get(
-        'reports/customer-accounts',
-        [ReportController::class, 'customerAccountsSummary']
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | Reports
+    |--------------------------------------------------------------------------
+    */
 
-    Route::get(
-        'reports/supplier-accounts',
-        [ReportController::class, 'supplierAccountsSummary']
-    );
+    Route::get('reports/daily-summary', [
+        ReportController::class,
+        'dailySummary'
+    ]);
 
-    Route::get(
-        'reports/financial-summary',
-        [ReportController::class, 'financialSummary']
-    );
+    Route::get('reports/bookings-by-date', [
+        ReportController::class,
+        'bookingsByDate'
+    ]);
+
+    Route::get('reports/upcoming-bookings', [
+        ReportController::class,
+        'upcomingBookings'
+    ]);
+
+    Route::get('reports/customer-accounts', [
+        ReportController::class,
+        'customerAccountsSummary'
+    ]);
+
+    Route::get('reports/supplier-accounts', [
+        ReportController::class,
+        'supplierAccountsSummary'
+    ]);
+
+    Route::get('reports/financial-summary', [
+        ReportController::class,
+        'financialSummary'
+    ]);
+
 });
