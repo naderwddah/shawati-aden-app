@@ -2,7 +2,7 @@
   'use strict';
   const M = window.GuestMenu;
   const $ = id => document.getElementById(id);
-  const state = {items:[], visible:[], selected:null, galleryIndex:0, restaurant:null, requestId:0};
+  const state = {items:[], visible:[], selected:null, galleryIndex:0, restaurant:null, requestId:0, filter:'all', sort:'default'};
   function cartPaint() {
     const cart = M.cartGet(), totals = M.cartSummary(cart);
     $('cartCount').textContent = totals.quantity;
@@ -18,39 +18,42 @@
       <button type="button" class="remove-line" data-cart-remove="${it.id}" aria-label="حذف المنتج">${M.icon('close')}</button>
       </article>`).join('') : `<div class="empty-cart">${M.icon('bag')}<h3>السلة فارغة</h3><p>اختر ما يعجبك من الأطباق والخدمات وأضفه هنا.</p></div>`;
   }
-  function itemCard(it, index) {
-    const imgs = M.media(it,'image');const video=M.media(it,'video');
+  function itemCard(it) {
+    const imgs=M.media(it,'image'), video=M.media(it,'video');
+    const image=imgs.length ? `<img src="${M.esc(M.imageUrl(imgs[0].url))}" alt="${M.esc(it.name)}" loading="lazy" decoding="async" onerror="this.onerror=null;this.style.visibility='hidden'">` : M.placeholder();
     return `<article class="product-card" data-id="${it.id}">
-      <button type="button" class="product-image" data-details="${it.id}" aria-label="عرض تفاصيل ${M.esc(it.name)}">
-        ${imgs.length ? `<img src="${M.esc(M.imageUrl(imgs[0].url))}" alt="${M.esc(it.name)}" loading="lazy">` : M.placeholder()}
+      <button type="button" class="product-image" data-details="${it.id}" aria-label="عرض صور وتفاصيل ${M.esc(it.name)}">
+        ${image}
         ${video.length ? `<span class="media-tag">${M.icon('play')} فيديو</span>` : ''}
-        ${imgs.length > 1 ? `<span class="photos-tag">${imgs.length} صور</span>` : ''}
+        ${imgs.length>1 ? `<span class="photos-tag">${imgs.length} صور</span>` : ''}
       </button>
-      <div class="product-copy"><div class="product-kicker">${M.esc(index.toString().padStart(2,'0'))} · من قائمتنا</div>
-        <h3>${M.esc(it.name)}</h3><p>${M.esc(it.description || 'اطلع على تفاصيل الطبق أو الخدمة وتواصل معنا لتحديد طلبك.')}</p>
-        <div class="product-bottom"><div class="price-label"><span>السعر</span><strong>${M.priceText(it.price)}</strong></div>
+      <div class="product-copy"><div class="product-kicker">من قائمة المطعم</div>
+        <h3>${M.esc(it.name)}</h3><p>${M.esc(it.description || 'اكتشف المزيد عن هذا الطبق أو الخدمة، وأضفه لطلبك.')}</p>
+        <div class="product-bottom"><div class="price-label"><span>السعر المبدئي</span><strong>${M.priceText(it.price)}</strong></div>
         <button type="button" class="add-product" data-add="${it.id}" aria-label="إضافة ${M.esc(it.name)} للسلة">${M.icon('plus')}</button></div>
       </div>
     </article>`;
   }
   function renderProducts() {
-    $('productCount').textContent = `${M.countFmt.format(state.visible.length)} منتج وخدمة`;
-    $('productGrid').innerHTML = state.visible.length ? state.visible.map(itemCard).join('') : `<div class="menu-empty">${M.icon('search')}<h3>لا توجد منتجات مطابقة</h3><p>جرّب كلمة أخرى للبحث.</p><button type="button" id="clearSearch">إظهار الكل</button></div>`;
-    $('clearSearch')?.addEventListener('click',()=>{$('menuSearch').value=''; applySearch();});
+    $('productCount').textContent = `${M.countFmt.format(state.visible.length)} صنف وخدمة`;
+    $('catalogShowing').textContent = state.visible.length ? `نعرض ${M.countFmt.format(state.visible.length)} من قائمتنا` : 'لا توجد نتائج مطابقة';
+    $('productGrid').innerHTML = state.visible.length ? state.visible.map(itemCard).join('') : `<div class="menu-empty">${M.icon('search')}<h3>لا توجد منتجات مطابقة</h3><p>جرّب تغيير البحث أو الفلتر لعرض المزيد.</p><button type="button" id="clearSearch">إظهار كل الأصناف</button></div>`;
+    $('clearSearch')?.addEventListener('click',()=>{$('menuSearch').value='';state.filter='all'; document.querySelectorAll('[data-filter]').forEach(btn=>{btn.classList.toggle('active',btn.dataset.filter==='all');btn.setAttribute('aria-pressed',String(btn.dataset.filter==='all'));});applySearch();});
   }
   function applySearch() {
-    const query = $('menuSearch').value.trim().toLocaleLowerCase('ar');
-    state.visible = state.items.filter(it => (it.name+' '+(it.description||'')).toLocaleLowerCase('ar').includes(query));
+    const query=$('menuSearch').value.trim().toLocaleLowerCase('ar');
+    state.visible=state.items.filter(it=>{
+      if (!(it.name+' '+(it.description||'')).toLocaleLowerCase('ar').includes(query)) return false;
+      if(state.filter==='priced') return Number(it.price)>0;
+      if(state.filter==='quote') return !(Number(it.price)>0);
+      return true;
+    });
+    if(state.sort==='price-asc') state.visible.sort((a,b)=>Number(a.price)-Number(b.price)||Number(a.sort_order||0)-Number(b.sort_order||0));
+    else if(state.sort==='price-desc') state.visible.sort((a,b)=>Number(b.price)-Number(a.price));
+    else if(state.sort==='newest') state.visible.sort((a,b)=>Number(b.id)-Number(a.id));
+    else if(state.sort==='name') state.visible.sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
+    else state.visible.sort((a,b)=>Number(a.sort_order||0)-Number(b.sort_order||0)||Number(a.id)-Number(b.id));
     renderProducts();
-  }
-  function renderHero() {
-    const pics = state.items.filter(it => M.firstImage(it)).slice(0,3);
-    const main = $('heroPhoto');
-    if (pics.length) main.innerHTML = `<img src="${M.esc(M.firstImage(pics[0]))}" alt="من أطباق المطعم">`;
-    else main.innerHTML = `<div class="hero-placeholder"><span class="hero-star">✳</span><div class="hero-plate">${M.icon('food')}</div><span class="hero-ph-label">نكهة تليق بمناسبتك</span></div>`;
-    const little=$('heroMiniPhoto');
-    if (pics.length>1) little.innerHTML=`<img src="${M.esc(M.firstImage(pics[1]))}" alt="طبق آخر">`;
-    else little.innerHTML = `<div class="mini-placeholder">${M.icon('sparkle')}<span>طعام · ضيافة · مناسبات</span></div>`;
   }
   function gallery() {
     const it=state.selected;if(!it)return;
@@ -87,7 +90,7 @@
     try {
       const result=await M.products();if(req!==state.requestId)return;
       state.items=result.items;
-      applySearch();renderHero();
+      applySearch();
       if ($('totalCatalog')) $('totalCatalog').textContent=M.countFmt.format(state.items.length);
       if(!state.items.length){$('catalogError').hidden=false;$('catalogError').innerHTML='لا توجد منتجات منشورة حاليًا. أضف منتجًا وانشره من لوحة الإدارة.';}
     }catch(err){
@@ -99,12 +102,15 @@
   }
   async function init() {
     if(M.DEMO){$('demoBar').hidden=false;$('guestHomeLink').href='menu.html?demo=1';}
+    if ($('footerYear')) $('footerYear').textContent=String(new Date().getFullYear());
     cartPaint();
     document.addEventListener('menu:cart-changed',cartPaint);
     window.addEventListener('storage',cartPaint);
     M.restaurant().then(r=>{state.restaurant=r;M.renderBrand(r);});
     await load();
     let debounce; $('menuSearch').addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(applySearch,180);});
+    $('menuSort')?.addEventListener('change',e=>{state.sort=e.target.value;applySearch();});
+    document.querySelectorAll('[data-filter]').forEach(btn=>btn.addEventListener('click',()=>{state.filter=btn.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>{const on=b===btn;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});applySearch();}));
     document.addEventListener('click',e=>{
       const add=e.target.closest('[data-add]'),details=e.target.closest('[data-details]'),showCart=e.target.closest('[data-open-cart]');
       if(add){const item=state.items.find(x=>x.id===Number(add.dataset.add));if(item){M.add(item);M.toast('أُضيف المنتج إلى السلة');}} 
